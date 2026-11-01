@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "cozy-sanctuary-app-2026"
+  },
+  "targets": {
+    "cozy-sanctuary-app-2026": {
+      "hosting": {
+        "zen-arena": [
+          "zen-sanctuary-arena"
+        ]
+      }
+    }
+  }
+}

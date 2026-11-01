@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zen Sanctuary - Three.js Voxel World</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+        canvas { display: block; }
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-black">
+
+    <!-- UI Overlay -->
+    <div id="ui" class="fixed top-4 left-4 z-10 flex flex-col gap-4 pointer-events-none">
+        <div class="glass p-6 rounded-xl text-white shadow-2xl max-w-xs pointer-events-auto">
+            <h1 class="text-xl font-bold mb-2 text-red-500 uppercase tracking-widest">Zen Sanctuary</h1>
+            <p class="text-sm opacity-80 mb-4">Voxel Japanese Landscape</p>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Time of Day</label>
+                    <div class="flex gap-2">
+                        <button onclick="window.setTime('morning')" class="bg-orange-400 hover:bg-orange-500 px-3 py-1 rounded text-xs transition text-black font-bold">Morning</button>
+                        <button onclick="window.setTime('sunset')" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs transition">Sunset</button>
+                        <button onclick="window.setTime('night')" class="bg-indigo-900 hover:bg-indigo-800 px-3 py-1 rounded text-xs transition">Night</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Camera Presets</label>
+                    <select id="cameraPreset" onchange="window.setCamera(this.value)" class="w-full bg-black/40 border border-white/20 rounded px-2 py-1 text-xs outline-none focus:border-red-500 transition">
+                        <option value="pagoda">Pagoda Front</option>
+                        <option value="samurai">Samurai Closeup</option>
+                        <option value="meadow">Pastoral Meadow</option>
+                        <option value="mountain">Mountain Vista</option>
+                        <option value="birdseye">Bird's Eye</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass p-4 rounded-xl text-white shadow-2xl max-w-xs flex items-center gap-3 pointer-events-auto">
+             <div id="audioStatus" class="text-xs opacity-70 italic">Audio: Muted</div>
+             <button onclick="window.toggleAudio()" id="audioBtn" class="bg-white/20 hover:bg-white/30 p-1 rounded transition text-sm">🔇</button>
+        </div>
+    </div>
+
+    <!-- Three.js Setup -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- CONFIG & STATE ---
+        const state = {
+            time: 'morning',
+            audioEnabled: false,
+            cameraPreset: 'pagoda'
+        };
+
+        let scene, camera, renderer, controls, audioCtx, oscillator, noiseNode;
+        const animatedObjects = []; 
+        const lights = {};
+        const textures = {};
+
+        // --- INITIALIZATION ---
+        async function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(30, 20, 50);
+
+            renderer = new THREE.WebGLRenderer({ antialias: false });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+             renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            // 1. Create Textures
+            createAllTextures();
+
+            // 2. Setup Environment (Sky & Lighting)
+            setupEnvironment();
+
+            // 3. Build World Components
+            buildTerrain();
+            buildMountains();
+            buildPagoda();
+            buildToriiGate();
+            buildBridgeAndPond();
+            buildNature();
+            buildCharacters();
+
+            // 4. Start Loops
+            window.animate = animate;
+            animate();
+
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        function createAllTextures() {
+            const size = 16;
+            const generate = (color) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = color;
+                ctx.fillRect(0, 0, size, size);
+                // Noise
+                for (let i = 0; i < 16; i++) {
+                    ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.15})`;
+                    ctx.fillRect(Math.floor(Math.random() * size), Math.floor(Math.random() * size), 1, 1);
+                }
+                const tex = new THREE.CanvasTexture(canvas);
+                tex.magFilter = THREE.NearestFilter;
+                tex.minFilter = THREE.NearestFilter;
+                return tex;
+            };
+
+            textures.grass = generate('#4d7c0f');
+            textures.dirt = generate('#451a03');
+                textures.wood = generate('#451a03');
+            textures.redWood = generate('#991b1b');
+            textures.white = generate('#f8fafc');
+            textures.gold = generate('#fbbf24');
+            textures.water = generate('#0ea5e9');
+            textures.stone = generate('#4b5563');
+            textures.snow = generate('#ffffff');
+            textures.sakura = generate('#f472b6');
+        }
+
+        function setupEnvironment() {
+            scene.background = new THREE.Color(0x87ceeb); // Default Sky Blue
+            
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            lights.sun = new THREE.DirectionalLight(0xffffff, 1);
+            lights.sun.position.set(50, 100, 50);
+            lights.sun.castShadow = true;
+            lights.sun.shadow.mapSize.width = 2048;
+            lights.sun.shadow.mapSize.height = 2048;
+            scene.add(lights.sun);
+
+            // Sun/Moon Visual (Voxel)
+            const sunGeo = new THREE.BoxGeometry(5, 5, 5);
+            const sunMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            lights.sunVisual = new THREE.Mesh(sunGeo, sunMat);
+            scene.add(lights.sunVisual);
+        }
+
+        function buildTerrain() {
+            const groundGeo = new THREE.BoxGeometry(200, 2, 200);
+            const groundMat = new THREE.MeshStandardMaterial({ map: textures.grass });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.position.y = -1;
+            ground.receiveShadow = true;
+            scene.add(ground);
+        }
+
+        function buildMountains() {
+            const mtGroup = new THREE.Group();
+            for (let i = 0; i < 8; i++) {
+                const size = 30 + Math.random() * 40;
+                const height = 60 + Math.random() * 50;
+                const geo = new THREE.BoxGeometry(size, height, size);
+                const mat = new THREE.MeshStandardMaterial({ map: textures.stone });
+                const mt = new THREE.Mesh(geo, mat);
+                mt.position.set((Math.random() - 0.5) * 300, height / 2 - 1, (Math.random() - 0.5) * 300);
+                // Simple snow cap
+                const snowGeo = new THREE.BoxGeometry(size + 0.5, 10, size + 0.5);
+                const snowMat = new THREE.MeshStandardMaterial({ map: textures.snow });
+                const snow = new THREE.Mesh(snowGeo, snowMat);
+                snow.position.y = height / 2 - 5;
+                mt.add(snow);
+                mt.castShadow = true;
+                mt.receiveShadow = true;
+                mtGroup.add(mt);
+            }
+            scene.add(mtGroup);
+        }
+
+        function buildPagoda() {
+            const pagoda = new THREE.Group();
+            const baseSize = 15;
+            
+            // Levels (3 levels)
+            for (let i = 0; i < 3; i++) {
+                const levelY = i * 8;
+                const levelSize = baseSize - i * 4;
+
+                // Walls/Beams
+                const wallGeo = new THREE.BoxGeometry(levelSize, 6, levelSize);
+                const wallMat = new THREE.MeshStandardMaterial({ color: 0x2d1b0e }); // Dark wood
+                const wall = new THREE.Mesh(wallGeo, wallMat);
+                wall.position.y = levelY + 3;
+                wall.castShadow = true;
+                pagoda.add(wall);
+
+                // Roofs (Tiered)
+                const roofSize = levelSize + 4;
+                const roofGeo = new THREE.BoxGeometry(roofSize, 1, roofSize);
+                const roofMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a }); // Darker
+                const roof = new THREE.Mesh(roofGeo, roofMat);
+                roof.position.y = levelY + 6;
+                pagoda.add(roof);
+
+                // Lanterns (Small light sources)
+                if (i === 0) {
+                    const lanternGeo = new THREE.BoxGeometry(1, 1.5, 1);
+                    const lanternMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+                    const lantern = new THREE.Mesh(lanternGeo, lanternMat);
+                    lantern.position.set(levelSize/2 + 1, levelY + 3, 0);
+                    pagoda.add(lantern);
+
+                    const pLight = new THREE.PointLight(0xffaa00, 50, 15);
+                    pLight.position.copy(lantern.position);
+                    pagoda.add(pLight);
+                }
+            }
+
+            // Gold Spire (Sorin)
+            const spireGeo = new THREE.BoxGeometry(0.5, 4, 0.5);
+            const spireMat = new THREE.MeshBasicMaterial({ color: 0xffd700 });
+            const spire = new THREE.Mesh(spireGeo, spireMat);
+            spire.position.y = 24;
+            pagoda.add(spire);
+
+            pagoda.position.set(0, 0, 0);
+            scene.add(pagoda);
+        }
+
+        function buildToriiGate() {
+            const torii = new THREE.Group();
+            const pillarGeo = new THREE.BoxGeometry(2, 15, 2);
+            const beamGeo = new THREE.BoxGeometry(15, 2, 2);
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x991b1b }); // Red
+
+            const p1 = new THREE.Mesh(pillarGeo, woodMat);
+            p1.position.set(-7, 7.5, 0);
+            p1.castShadow = true;
+            torii.add(p1);
+
+            const p2 = new THREE.Mesh(pillarGeo, woodMat);
+            p2.position.set(7, 7.5, 0);
+            p2.castShadow = true;
+            torii.add(p2);
+
+            const beam = new THREE.Mesh(beamGeo, woodMat);
+            beam.position.y = 14;
+            beam.castShadow = true;
+            torii.add(beam);
+
+            torii.position.set(30, 0, -30);
+            scene.add(torii);
+        }
+
+        function buildBridgeAndPond() {
+            // Pond
+            const pondGeo = new THREE.BoxGeometry(40, 0.5, 40);
+             const pondMat = new THREE.MeshStandardMaterial({ map: textures.water, transparent: true, opacity: 0.8 });
+            const pond = new THREE.Mesh(pondGeo, pondMat);
+            pond.position.set(35, -0.5, -20);
+            scene.add(pond);
+
+            // Bridge (Taiko-bashi)
+            const bridgeGroup = new THREE.Group();
+            const bGeo = new THREE.BoxGeometry(20, 1, 6);
+            const bMat = new THREE.MeshStandardMaterial({ color: 0x991b1b });
+            const bridge = new THREE.Mesh(bGeo, bMat);
+            bridge.position.set(35, 0.5, -20);
+            bridgeGroup.add(bridge);
+
+            // Curve simulation (just adding segments)
+            for(let i=1; i<4; i++) {
+                const segment = new THREE.Mesh(new THREE.BoxGeometry(5, 0.5, 6), bMat);
+                segment.position.set(35 + (i*5) - 10, i * 0.5, -20);
+                bridgeGroup.add(segment);
+            }
+
+            scene.add(bridgeGroup);
+        }
+
+        function buildNature() {
+            // Bamboo
+            for(let i=0; i<20; i++) {
+                const bamboo = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.5, 8, 0.5),
+                    new THREE.MeshStandardMaterial({ color: 0x2d5a27 })
+                );
+                bamboo.position.set((Math.random()-0.5)*100, 4, (Math.random()-0.5)*100);
+                if(Math.abs(bamboo.position.x) < 30 && Math.abs(bamboo.position.z) < 30) continue; // Avoid pagoda area
+                scene.add(bamboo);
+            }
+
+            // Sakura Trees
+            for(let i=0; i<5; i++) {
+                const tree = new THREE.Group();
+                const trunk = new THREE.Mesh(new THREE.BoxGeometry(1, 6, 1), new THREE.MeshStandardMaterial({color: 0x4b2c20}));
+                trunk.position.y = 3;
+                tree.add(trunk);
+
+                const canopy = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 5), new THREE.MeshStandardMaterial({map: textures.sakura}));
+                canopy.position.y = 7;
+                tree.add(canopy);
+
+                tree.position.set((Math.random()-0.5)*150, 0, (Math.random()-0.5)*150);
+                scene.add(tree);
+            }
+        }
+
+        function buildCharacters() {
+            // Samurai
+            const samurai = createVoxelCharacter('samurai');
+            samurai.position.set(-10, 0, -10);
+            scene.add(samurai);
+            animatedObjects.push({ mesh: samurai, type: 'breathing', offset: 0 });
+
+            // Sheep
+             for(let i=0; i<5; i++) {
+                const sheep = createVoxelCharacter('sheep');
+                sheep.position.set(20 + Math.random()*20, 0, 20 + Math.random()*20);
+                scene.add(sheep);
+                animatedObjects.push({ mesh: sheep, type: 'bobbing', offset: Math.random() * 10 });
+            }
+        }
+
+        function createVoxelCharacter(type) {
+            const group = new THREE.Group();
+            if (type === 'samurai') {
+                // Body
+                const body = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), new THREE.MeshStandardMaterial({color: 0x333333}));
+                body.position.y = 1;
+                group.add(body);
+                // Helmet (Kabuto)
+                const helm = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 1.2), new THREE.MeshStandardMaterial({color: 0x111111}));
+                helm.position.y = 2.4;
+                group.add(helm);
+                // Sword (Katana)
+                const sword = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.5, 0.2), new THREE.MeshStandardMaterial({color: 0xcccccc}));
+                sword.position.set(0.6, 1, 0);
+                group.add(sword);
+            } else if (type === 'sheep') {
+                const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1, 2), new THREE.MeshStandardMaterial({color: 0xffffff}));
+                body.position.y = 1;
+                group.add(body);
+                const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshStandardMaterial({color: 0xeeeeee}));
+                head.position.set(0, 1.2, -1);
+                group.add(head);
+            }
+            return group;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = Date.now() * 0.001;
+
+            // Animate Characters
+            animatedObjects.forEach(obj => {
+                if (obj.type === 'breathing') {
+                    obj.mesh.scale.y = 1 + Math.sin(time * 2) * 0.05;
+                } else if (obj.type === 'bobbing') {
+                    obj.mesh.position.y = Math.abs(Math.sin(time + obj.offset)) * 0.3;
+                }
+            });
+
+            // Sun/Moon Orbit
+            const angle = time * 0.1;
+            lights.sunVisual.position.set(Math.cos(angle) * 100, Math.sin(angle) * 100, 50);
+            lights.sun.position.copy(lights.sunVisual.position);
+            
+            // Update Sky Color based on time
+            const skyColor = getSkyColor(Math.sin(angle));
+            scene.background.set(skyColor);
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function getSkyColor(sinVal) {
+            if (sinVal > 0.5) return new THREE.Color(0x87ceeb); // Morning/Day
+            if (sinVal > -0.2) return new THREE.Color(0xffa500); // Sunset
+            return new THREE.Color(0x0c0c1e); // Night
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- PUBLIC API FOR UI ---
+        window.setTime = (mode) => {
+            state.time = mode;
+            const angleMap = { 'morning': 0.5, 'sunset': -0.2, 'night': -1.5 };
+            // We'll simulate the shift by rotating our sun/moon concept
+            // For a real implementation, we would adjust the lighting intensity and colors globally
+            if(mode === 'night') {
+                scene.fog = new THREE.FogExp2(0x0c0c1e, 0.01);
+                lights.sun.intensity = 0;
+            } else if (mode === 'sunset') {
+                scene.fog = new THREE.FogExp2(0xffa500, 0.005);
+                lights.sun.intensity = 1;
+            } else {
+                scene.fog = new THREE.FogExp2(0x87ceeb, 0.002);
+                lights.sun.intensity = 1;
+            }
+        };
+
+        window.setCamera = (preset) => {
+            const presets = {
+                pagoda: { x: 30, y: 20, z: 50 },
+                samurai: { x: -10, y: 3, z: 5 },
+                meander: { x: 40, y: 10, z: 20 }, // Meadow/Bridge area
+                mountain: { x: 100, y: 80, z: 100 },
+                birdseye: { x: 0, y: 150, z: 0 }
+            };
+            const p = presets[preset] || presets.pagoda;
+            camera.position.set(p.x, p.y, p.z);
+            controls.target.set(0, 0, 0);
+        };
+
+        window.toggleAudio = () => {
+            state.audioEnabled = !state.audioEnabled;
+            const btn = document.getElementById('audioBtn');
+            const status = document.getElementById('audioStatus');
+            
+            if (state.audioEnabled) {
+                btn.innerText = '🔊';
+                status.innerText = 'Audio: Active';
+                startWebAudio();
+            } else {
+                btn.innerText = '🔇';
+                status.innerText = 'Audio: Muted';
+                if(oscillator) oscillator.stop();
+            }
+        };
+
+        function startWebAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+            
+            gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+        }
+
+        // Boot the app
+        init();
+    </script>
+</body>
+</html>

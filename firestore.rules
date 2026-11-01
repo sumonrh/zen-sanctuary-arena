@@ -1,0 +1,38 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // A ballot is append-only. Names and roster data never live here.
+    function validBallot(d) {
+      return d.keys().hasOnly([
+          'v', 'voter', 'pairKey', 'a', 'b',
+          'winner', 'broken', 'dwellMs', 'phase', 'createdAt'
+        ])
+        && d.v == 1
+        && d.voter is string && d.voter.size() >= 8 && d.voter.size() <= 64
+        && d.pairKey is string && d.pairKey.size() >= 21 && d.pairKey.size() <= 64
+        && d.a is string && d.a.size() == 10
+        && d.b is string && d.b.size() == 10
+        && d.a != d.b
+        && d.pairKey == (d.a < d.b ? d.a + '__' + d.b : d.b + '__' + d.a)
+        && d.winner in ['a', 'b', 'tie', 'skip']
+        && (d.broken == null || d.broken == 'both' || d.broken == d.a || d.broken == d.b)
+        && d.dwellMs is int && d.dwellMs >= 0 && d.dwellMs <= 7200000
+        && d.phase is int && d.phase >= 1 && d.phase <= 9
+        && d.createdAt == request.time;
+    }
+
+    match /ballots/{ballotId} {
+      allow read: if true;
+      allow create: if validBallot(request.resource.data)
+        && ballotId == request.resource.data.voter + '__' + request.resource.data.pairKey;
+      allow update, delete: if false;
+    }
+
+    // Everything else is closed (the encrypted roster is a static file, not a document).
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zen Sanctuary</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0b1026; }
+  #app canvas { display: block; }
+  .glass { background: rgba(255,255,255,0.10); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+           border: 1px solid rgba(255,255,255,0.22); box-shadow: 0 8px 32px rgba(0,0,0,0.28); }
+  .glass-btn { background: rgba(255,255,255,0.10); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+           border: 1px solid rgba(255,255,255,0.22); transition: all .18s ease; }
+  .glass-btn:hover { background: rgba(255,255,255,0.28); transform: translateY(-1px); }
+  .glass-btn.active { background: rgba(252,211,77,0.85); color: #1e293b; border-color: rgba(252,211,77,0.9); font-weight: 600; }
+  #loading { transition: opacity .8s ease; }
+  .spinner { width: 54px; height: 54px; border: 5px solid rgba(255,255,255,.18); border-top-color: #fcd34d;
+             border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .fade-in { animation: fadeIn 1.2s ease both; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body class="text-white select-none">
+
+<div id="app" class="fixed inset-0"></div>
+
+<!-- Loading overlay -->
+<div id="loading" class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5"
+     style="background: radial-gradient(ellipse at center, #16213e 0%, #0b1026 70%);">
+  <div class="spinner"></div>
+  <div class="text-xl tracking-wide text-amber-100/90">Raising the sanctuary...</div>
+  <div id="loading-sub" class="text-sm text-white/50">carving voxel mountains</div>
+</div>
+
+<!-- Title card -->
+<div class="fixed top-4 left-4 z-20 glass rounded-2xl px-5 py-4 max-w-xs fade-in">
+  <h1 class="text-xl font-bold tracking-wide text-amber-100">Zen Sanctuary</h1>
+  <p class="text-xs text-white/70 mt-0.5">Voxel Japanese mountain retreat</p>
+  <div class="mt-2 flex items-center gap-2 text-xs">
+    <span id="mode-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-amber-300"></span>
+    <span id="mode-label" class="text-white/85">Morning Sun</span>
+  </div>
+</div>
+
+<!-- Top-right buttons -->
+<div class="fixed top-4 right-4 z-20 flex gap-2 fade-in">
+  <button id="audio-btn" title="Toggle ambient sound"
+    class="glass-btn rounded-xl w-11 h-11 flex items-center justify-center text-xl">🔇</button>
+  <button id="info-btn" title="About this scene"
+    class="glass-btn rounded-xl w-11 h-11 flex items-center justify-center text-xl font-bold">i</button>
+</div>
+
+<!-- Info card -->
+<div id="info-card" class="fixed top-16 right-4 z-20 glass rounded-2xl p-5 w-72 hidden text-sm text-white/85">
+  <h2 class="font-bold text-amber-100 mb-2">Inside the sanctuary</h2>
+  <ul class="space-y-1.5 text-xs leading-relaxed">
+    <li>⛩️ Vermilion torii gate guarding the stone path</li>
+    <li>🏯 Three-tier pagoda with glowing shoji and gold sorin spire</li>
+    <li>🌉 Arched taiko bridge over the lily pond</li>
+    <li>⚔️ Two samurai guardians standing watch</li>
+    <li>🐑 Sheep and alpacas grazing the meadow</li>
+    <li>🌸 Sakura trees shedding petals, bamboo grove, stone lanterns</li>
+    <li>🏔️ Snow-capped voxel peaks, drifting clouds, circling birds</li>
+  </ul>
+  <p class="mt-3 text-xs text-white/60">Drag to orbit · scroll to zoom · right-drag to pan.<br>Sound: soft wind with random bamboo chimes.</p>
+</div>
+
+<!-- Camera presets -->
+<div class="fixed left-4 bottom-4 z-20 glass rounded-2xl p-3 fade-in">
+  <div class="text-[11px] uppercase tracking-widest text-white/60 px-1 mb-2">Views</div>
+  <div class="flex flex-wrap gap-1.5 max-w-[240px]">
+    <button data-view="pagoda"   class="view-btn glass-btn rounded-lg px-2.5 py-1.5 text-xs">Pagoda Front</button>
+    <button data-view="samurai"  class="view-btn glass-btn rounded-lg px-2.5 py-1.5 text-xs">Samurai</button>
+    <button data-view="meadow"   class="view-btn glass-btn rounded-lg px-2.5 py-1.5 text-xs">Meadow</button>
+    <button data-view="mountain" class="view-btn glass-btn rounded-lg px-2.5 py-1.5 text-xs">Mountain Vista</button>
+    <button data-view="bird"     class="view-btn glass-btn rounded-lg px-2.5 py-1.5 text-xs">Bird's Eye</button>
+  </div>
+</div>
+
+<!-- Time modes -->
+<div class="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 glass rounded-2xl p-2 flex gap-1.5 fade-in">
+  <button data-mode="morning" class="mode-btn glass-btn active rounded-xl px-4 py-2 text-sm">🌅 Morning</button>
+  <button data-mode="sunset"  class="mode-btn glass-btn rounded-xl px-4 py-2 text-sm">🌇 Sunset</button>
+  <button data-mode="night"   class="mode-btn glass-btn rounded-xl px-4 py-2 text-sm">🌙 Night</button>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ============================================================
+   Zen Sanctuary - a voxel Japanese mountain retreat
+   Single-file Three.js build. All textures are procedural
+   16x16 canvas pixel art with NearestFilter.
+   ============================================================ */
+
+const loadingEl = document.getElementById('loading');
+const loadingSub = document.getElementById('loading-sub');
+const setLoad = (t) => { if (loadingSub) loadingSub.textContent = t; };
+
+let renderer, scene, camera, controls;
+try { init(); } catch (err) {
+  loadingSub.textContent = 'Something went wrong starting WebGL: ' + err.message;
+  throw err;
+}
+
+function init() {
+
+/* ---------------- renderer / scene / camera ---------------- */
+renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.getElementById('app').appendChild(renderer.domElement);
+
+scene = new THREE.Scene();
+scene.background = new THREE.Color(0x8fc3ea);
+scene.fog = new THREE.Fog(0x9fcbe8, 95, 250);
+
+camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 700);
+camera.position.set(0, 10, 44);
+
+controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 7, -4);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.maxPolarAngle = Math.PI * 0.495;
+controls.minDistance = 4;
+controls.maxDistance = 170;
+
+/* ---------------- procedural 16x16 pixel textures ---------------- */
+function makeTex(draw, repeat) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 16;
+  draw(c.getContext('2d'));
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = THREE.NearestFilter;
+  t.minFilter = THREE.NearestFilter;
+  t.generateMipmaps = false;
+  t.colorSpace = THREE.SRGBColorSpace;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; }
+  return t;
+}
+function speckle(g, base, colors, n) {
+  g.fillStyle = base; g.fillRect(0, 0, 16, 16);
+  for (let i = 0; i < n; i++) {
+    g.fillStyle = colors[(Math.random() * colors.length) | 0];
+    g.fillRect((Math.random() * 16) | 0, (Math.random() * 16) | 0, 1, 1);
+  }
+}
+const T = {};
+T.grassTop  = makeTex(g => speckle(g, '#63b34e', ['#54963f', '#74c45e', '#4e8f3a', '#7fd06a'], 70));
+T.grassSide = makeTex(g => { speckle(g, '#7a5230', ['#6b4527', '#8a5f38', '#5e3d22'], 60);
+  g.fillStyle = '#63b34e'; g.fillRect(0, 0, 16, 4);
+  g.fillStyle = '#54963f'; for (let x = 0; x < 16; x += 2) g.fillRect(x, 4, 1, 1); });
+T.dirt      = makeTex(g => speckle(g, '#7a5230', ['#6b4527', '#8a5f38', '#5e3d22'], 70));
+T.stone     = makeTex(g => { speckle(g, '#9a9a98', ['#868684', '#ababA9', '#767674'], 70);
+  g.fillStyle = '#6f6f6d'; g.fillRect(3, 5, 5, 1); g.fillRect(9, 10, 4, 1); });
+T.darkWood  = makeTex(g => { speckle(g, '#4a3220', ['#3e2a1a', '#574026', '#38271a'], 40);
+  g.fillStyle = '#33241a'; for (let y = 3; y < 16; y += 4) g.fillRect(0, y, 16, 1); });
+T.beam      = makeTex(g => { speckle(g, '#3a2818', ['#2f2013', '#46311e'], 40);
+  g.fillStyle = '#2b1d11'; for (let y = 0; y < 16; y += 5) g.fillRect(0, y, 16, 1); });
+T.red       = makeTex(g => { speckle(g, '#b3241a', ['#a11e15', '#c43126', '#8f1a12'], 45);
+  g.fillStyle = '#d14a3a'; g.fillRect(0, 0, 16, 2); });
+T.roof      = makeTex(g => { speckle(g, '#2e3138', ['#26292f', '#3a3e46', '#22252b'], 50);
+  g.fillStyle = '#1d1f24'; for (let y = 2; y < 16; y += 4) g.fillRect(0, y, 16, 1);
+  g.fillStyle = '#454a54'; for (let y = 0; y < 16; y += 4) g.fillRect(0, y, 16, 1); });
+T.gold      = makeTex(g => speckle(g, '#d8a923', ['#c1901c', '#e8bc40', '#b3811a'], 55));
+T.snow      = makeTex(g => speckle(g, '#eef3fa', ['#dde6f2', '#ffffff', '#d3dcea'], 45));
+T.sand      = makeTex(g => speckle(g, '#d9c184', ['#c9ae6e', '#e6d194', '#bfa065'], 60));
+T.rock      = makeTex(g => speckle(g, '#6f6a63', ['#5f5a54', '#7f7a72', '#54504a'], 70));
+T.water     = makeTex(g => { speckle(g, '#3f7fc4', ['#3570ae', '#4f8fd4', '#2f639c'], 50);
+  g.fillStyle = 'rgba(255,255,255,0.25)'; for (let i = 0; i < 8; i++) g.fillRect((Math.random()*16)|0, (Math.random()*16)|0, 3, 1); }, true);
+T.shoji     = makeTex(g => { g.fillStyle = '#ffe9c4'; g.fillRect(0, 0, 16, 16);
+  g.fillStyle = '#7a5a34'; for (let i = 0; i <= 16; i += 4) { g.fillRect(i, 0, 1, 16); g.fillRect(0, i, 16, 1); }
+  g.fillStyle = '#fff6e2'; g.fillRect(1, 1, 2, 2); });
+T.bamboo    = makeTex(g => { speckle(g, '#58a34c', ['#4b8f41', '#66b358', '#3f7f36'], 40);
+  g.fillStyle = '#3c7a33'; g.fillRect(0, 0, 16, 2); g.fillRect(0, 15, 16, 1); });
+T.sakura    = makeTex(g => speckle(g, '#f0a4c0', ['#e28fb0', '#f9bcd4', '#d67fa0'], 80));
+T.trunk     = makeTex(g => { speckle(g, '#5a4030', ['#4c3527', '#684a36', '#423023'], 50);
+  g.fillStyle = '#3c2c20'; for (let y = 1; y < 16; y += 5) g.fillRect(0, y, 16, 1); });
+T.leaf      = makeTex(g => speckle(g, '#3f8f3f', ['#357a35', '#4da34d', '#2f6e2f'], 70));
+T.paperLan  = makeTex(g => { speckle(g, '#ffd9a0', ['#f7c684', '#ffe4b8'], 30);
+  g.fillStyle = '#c98f4e'; for (let y = 2; y < 16; y += 4) g.fillRect(0, y, 16, 1); });
+T.armor     = makeTex(g => { speckle(g, '#2b4a7a', ['#243d66', '#33568c'], 40);
+  g.fillStyle = '#c9a44a'; for (let y = 3; y < 16; y += 4) g.fillRect(0, y, 16, 1); });
+T.skin      = makeTex(g => speckle(g, '#e8b88a', ['#dfaa7c', '#f0c496'], 30));
+T.darkCloth = makeTex(g => speckle(g, '#232a3a', ['#1c2230', '#2b3448'], 40));
+T.wool      = makeTex(g => speckle(g, '#f2f2ee', ['#e2e2dc', '#ffffff', '#d4d4ce'], 80));
+T.alpaca    = makeTex(g => speckle(g, '#c9a06a', ['#b78e5c', '#d8b07a'], 60));
+T.petal     = makeTex(g => { g.clearRect(0, 0, 16, 16); g.fillStyle = '#f7b8d0'; g.fillRect(4, 4, 8, 8);
+  g.fillStyle = '#fbd9e6'; g.fillRect(5, 5, 3, 3); });
+T.cloud     = makeTex(g => speckle(g, '#ffffff', ['#f2f5fa', '#e4eaf2'], 35));
+
+/* ---------------- materials ---------------- */
+function lam(tex, extra) {
+  return new THREE.MeshLambertMaterial(Object.assign({ map: tex }, extra || {}));
+}
+const MAT = {
+  grassTop: lam(T.grassTop), grassSide: lam(T.grassSide), dirt: lam(T.dirt),
+  stone: lam(T.stone), darkWood: lam(T.darkWood), beam: lam(T.beam),
+  red: lam(T.red), roof: lam(T.roof), gold: lam(T.gold),
+  snow: lam(T.snow), sand: lam(T.sand), rock: lam(T.rock),
+  trunk: lam(T.trunk), bamboo: lam(T.bamboo), sakura: lam(T.sakura),
+  leaf: lam(T.leaf), armor: lam(T.armor), skin: lam(T.skin),
+  darkCloth: lam(T.darkCloth), wool: lam(T.wool), alpaca: lam(T.alpaca),
+  cloud: lam(T.cloud),
+  shoji: new THREE.MeshLambertMaterial({ map: T.shoji, emissive: 0xffb45e,
+          emissiveMap: T.shoji, emissiveIntensity: 0.25 }),
+  paperLan: new THREE.MeshLambertMaterial({ map: T.paperLan, emissive: 0xffa54d,
+          emissiveMap: T.paperLan, emissiveIntensity: 0.4 }),
+  water: new THREE.MeshLambertMaterial({ map: T.water, transparent: true,
+          opacity: 0.78, color: 0xbfe0ff }),
+  birdBody: lam(T.darkCloth),
+};
+// per-face material sets for terrain columns: [+x, -x, +y, -y, +z, -z]
+const SET = {
+  grass: [MAT.grassSide, MAT.grassSide, MAT.grassTop, MAT.dirt, MAT.grassSide, MAT.grassSide],
+  sand:  [MAT.sand, MAT.sand, MAT.sand, MAT.dirt, MAT.sand, MAT.sand],
+  snow:  [MAT.rock, MAT.rock, MAT.snow, MAT.rock, MAT.rock, MAT.rock],
+  rock:  [MAT.rock, MAT.rock, MAT.rock, MAT.rock, MAT.rock, MAT.rock],
+  meadowRock: [MAT.rock, MAT.rock, MAT.grassTop, MAT.dirt, MAT.rock, MAT.rock],
+};
+
+/* ---------------- voxel batcher (instanced) ---------------- */
+class VoxelBatch {
+  constructor() { this.map = new Map(); }
+  add(w, h, d, x, y, z, mats, rot) {
+    const mkey = Array.isArray(mats) ? mats.map(m => m.uuid).join('|') : mats.uuid;
+    const key = w.toFixed(3) + 'x' + h.toFixed(3) + 'x' + d.toFixed(3) + '#' + mkey;
+    let e = this.map.get(key);
+    if (!e) { e = { geo: new THREE.BoxGeometry(w, h, d), mats, list: [] }; this.map.set(key, e); }
+    e.list.push({ x, y, z, rx: (rot && rot.x) || 0, ry: (rot && rot.y) || 0, rz: (rot && rot.z) || 0 });
+    return this;
+  }
+  build(parent, castShadow) {
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(),
+          eu = new THREE.Euler(), s = new THREE.Vector3(1, 1, 1), p = new THREE.Vector3();
+    for (const e of this.map.values()) {
+      const im = new THREE.InstancedMesh(e.geo, e.mats, e.list.length);
+      e.list.forEach((it, i) => {
+        eu.set(it.rx, it.ry, it.rz); q.setFromEuler(eu); p.set(it.x, it.y, it.z);
+        m4.compose(p, q, s); im.setMatrixAt(i, m4);
+      });
+      im.instanceMatrix.needsUpdate = true;
+      im.castShadow = castShadow !== false;
+      im.receiveShadow = true;
+      parent.add(im);
+    }
+    return this;
+  }
+}
+
+/* ---------------- lights ---------------- */
+const hemi = new THREE.HemisphereLight(0xbfd9ff, 0x6a7f5a, 0.75);
+scene.add(hemi);
+const amb = new THREE.AmbientLight(0xffffff, 0.16);
+scene.add(amb);
+const sun = new THREE.DirectionalLight(0xfff1d6, 1.7);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -62; sun.shadow.camera.right = 62;
+sun.shadow.camera.top = 62; sun.shadow.camera.bottom = -62;
+sun.shadow.camera.near = 10; sun.shadow.camera.far = 400;
+sun.shadow.bias = -0.0006;
+scene.add(sun); scene.add(sun.target);
+
+// square celestial voxel (sun / moon)
+const celestial = new THREE.Mesh(
+  new THREE.BoxGeometry(9, 9, 1.5),
+  new THREE.MeshBasicMaterial({ color: 0xffe27a, fog: false })
+);
+scene.add(celestial);
+
+// localized warm lights (filled in by builders)
+const lanternLights = [];
+
+/* ---------------- terrain ---------------- */
+const POND = { x: 16, z: 8, r: 6 };
+const WATER_Y = -1.0;
+const FLAT = [
+  { x: 0,   z: -12, r: 11, y: 2 },   // pagoda platform
+  { x: 0,   z: 26,  r: 7,  y: 1 },   // torii gate
+  { x: -14, z: 14,  r: 9,  y: 1 },   // meadow
+  { x: 16,  z: 8,   r: 9,  y: -1 },  // pond basin
+  { x: -24, z: -2,  r: 6,  y: 1 },   // bamboo grove
+];
+function groundHeight(x, z) {
+  let h = 1.6 * Math.sin(x * 0.07) * Math.cos(z * 0.05)
+        + 1.0 * Math.sin(x * 0.021 + z * 0.043)
+        + 0.5 * Math.sin(x * 0.15 - z * 0.11);
+  const d = Math.hypot(x, z);
+  if (d > 46) { const m = Math.min(1, (d - 46) / 26); h += Math.pow(m, 1.7) * 26; }  // mountain ring
+  for (const f of FLAT) {                                                          // flatten pads
+    const fd = Math.hypot(x - f.x, z - f.z);
+    if (fd < f.r) { const t = Math.min(1, fd / f.r), s = t * t * (3 - 2 * t); h = f.y * (1 - s) + h * s; }
+  }
+  const pd = Math.hypot(x - POND.x, z - POND.z);                                    // pond carve
+  if (pd < POND.r + 2.5) { const t = Math.min(1, Math.max(0, (pd - POND.r) / 2.5)); h -= 3.2 * (1 - t * t); }
+  return Math.round(h);
+}
+
+setLoad('carving voxel mountains');
+const terrain = new VoxelBatch();
+const waterB = new VoxelBatch();
+const BASE_Y = -7;
+function terrainCell(cx, cz, size) {
+  const h = groundHeight(cx, cz);
+  const boxH = h - BASE_Y;
+  const pd = Math.hypot(cx - POND.x, cz - POND.z);
+  let set;
+  if (h >= 14) set = SET.snow;
+  else if (pd < POND.r + 2.5 && h >= WATER_Y) set = SET.sand;
+  else if (h >= 7) set = SET.meadowRock;
+  else set = SET.grass;
+  terrain.add(size, boxH, size, cx, BASE_Y + boxH / 2, cz, set);
+  if (h < WATER_Y) waterB.add(size, 1.4, size, cx, WATER_Y - 0.7, cz, MAT.water);
+}
+// inner meadow: fine 2x2 voxels
+for (let x = -40; x <= 40; x += 2)
+  for (let z = -40; z <= 40; z += 2) terrainCell(x, z, 2);
+// outer mountains: chunky 4x4 voxels
+for (let x = -80; x <= 80; x += 4)
+  for (let z = -80; z <= 80; z += 4) {
+    if (Math.abs(x) < 40 && Math.abs(z) < 40) continue;
+    terrainCell(x, z, 4);
+  }
+terrain.build(scene, true);
+waterB.build(scene, false);
+
+/* ---------------- static world batch (structures & flora) ---------------- */
+const S = new VoxelBatch();   // everything static goes through here
+
+/* stone stepping path: torii -> pagoda, with a spur to the bridge */
+setLoad('laying stepping stones');
+function steppingPath() {
+  for (let z = 24; z >= -8; z -= 2.2) {
+    const x = 2.5 * Math.sin(z * 0.12);
+    const y = groundHeight(x, z);
+    S.add(1.5, 0.35, 1.15, x + (Math.random() - 0.5) * 0.2, y + 0.18, z, MAT.stone,
+          { ry: (Math.random() - 0.5) * 0.25 });
+  }
+  for (let x = 3; x <= 6.5; x += 1.9) {   // spur to bridge
+    const y = groundHeight(x, 10.5);
+    S.add(1.4, 0.35, 1.1, x, y + 0.18, 10.5 + (Math.random() - 0.5) * 0.3, MAT.stone,
+          { ry: (Math.random() - 0.5) * 0.3 });
+  }
+}
+steppingPath();
+
+/* ---------------- pagoda temple ---------------- */
+setLoad('raising the pagoda');
+const PAG = { x: 0, z: -12 };
+const py = groundHeight(PAG.x, PAG.z);
+S.add(16, 1.2, 16, PAG.x, py + 0.6, PAG.z, MAT.stone);                 // stone base
+S.add(13, 0.7, 13, PAG.x, py + 1.55, PAG.z, MAT.darkWood);             // wooden deck
+const deckY = py + 1.9;
+
+let pagodaTopY = deckY;
+for (let i = 0; i < 3; i++) {
+  const tierW = 11 - i * 2.6;
+  const floorY = deckY + i * 6.6;
+  const wallBase = floorY + 0.25;
+  S.add(tierW, 0.5, tierW, PAG.x, floorY + 0.25, PAG.z, MAT.darkWood);  // floor slab
+  const inset = tierW / 2 - 0.7;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1])
+    S.add(0.9, 3.3, 0.9, PAG.x + sx * inset, wallBase + 1.65, PAG.z + sz * inset, MAT.beam); // pillars
+  const wallW = tierW - 2.2, wallY = wallBase + 1.4;
+  S.add(wallW, 2.8, 0.3, PAG.x, wallY, PAG.z + tierW / 2 - 0.45, MAT.shoji);  // shoji N/S/E/W
+  S.add(wallW, 2.8, 0.3, PAG.x, wallY, PAG.z - tierW / 2 + 0.45, MAT.shoji);
+  S.add(0.3, 2.8, wallW, PAG.x + tierW / 2 - 0.45, wallY, PAG.z, MAT.shoji);
+  S.add(0.3, 2.8, wallW, PAG.x - tierW / 2 + 0.45, wallY, PAG.z, MAT.shoji);
+  // tiered roof with flared eaves
+  const roofBaseY = wallBase + 2.8, roofW = tierW + 3.6;
+  for (let L = 0; L < 5; L++) {
+    const w = roofW - L * 1.75;
+    S.add(w, 0.6, w, PAG.x, roofBaseY + L * 0.6 + 0.3, PAG.z, MAT.roof);
+  }
+  const e0 = roofW, ey = roofBaseY + 0.3;                               // flared eave lips
+  S.add(e0 + 1.4, 0.4, 1.8, PAG.x, ey + 0.45, PAG.z - e0 / 2 - 0.4, MAT.roof, { rx: 0.28 });
+  S.add(e0 + 1.4, 0.4, 1.8, PAG.x, ey + 0.45, PAG.z + e0 / 2 + 0.4, MAT.roof, { rx: -0.28 });
+  S.add(1.8, 0.4, e0 + 1.4, PAG.x + e0 / 2 + 0.4, ey + 0.45, PAG.z, MAT.roof, { rz: 0.28 });
+  S.add(1.8, 0.4, e0 + 1.4, PAG.x - e0 / 2 - 0.4, ey + 0.45, PAG.z, MAT.roof, { rz: -0.28 });
+  // hanging paper lanterns under the eaves
+  for (const sx of [-1, 1]) for (const sz of [-1, 1])
+    S.add(0.55, 0.7, 0.55, PAG.x + sx * (tierW / 2 + 0.9), roofBaseY - 0.35, PAG.z + sz * (tierW / 2 + 0.9), MAT.paperLan);
+  pagodaTopY = roofBaseY + 5 * 0.6;
+}
+// gold sorin spire
+S.add(1.4, 0.7, 1.4, PAG.x, pagodaTopY + 0.35, PAG.z, MAT.gold);
+S.add(0.5, 2.4, 0.5, PAG.x, pagodaTopY + 1.6, PAG.z, MAT.gold);
+for (let r = 0; r < 7; r++)
+  S.add(1.7 - r * 0.13, 0.16, 1.7 - r * 0.13, PAG.x, pagodaTopY + 1.1 + r * 0.34, PAG.z, MAT.gold);
+S.add(0.55, 0.55, 0.55, PAG.x, pagodaTopY + 3.75, PAG.z, MAT.gold);
+S.add(0.22, 0.9, 0.22, PAG.x, pagodaTopY + 4.4, PAG.z, MAT.gold);
+
+for (const dy of [3.2, 9.6]) {                                          // pagoda interior glow
+  const pl = new THREE.PointLight(0xffa54d, 0.5, 30, 2);
+  pl.position.set(PAG.x, deckY + dy, PAG.z);
+  scene.add(pl); lanternLights.push(pl);
+}
+
+/* ---------------- red torii gate ---------------- */
+setLoad('raising the torii gate');
+const TOR = { x: 0, z: 26 };
+const ty = groundHeight(TOR.x, TOR.z);
+for (const sx of [-1, 1]) {
+  S.add(2.0, 0.7, 2.0, TOR.x + sx * 4.2, ty + 0.35, TOR.z, MAT.stone);
+  S.add(1.3, 9.5, 1.3, TOR.x + sx * 4.2, ty + 0.7 + 4.75, TOR.z, MAT.red);
+}
+S.add(10.6, 0.9, 0.9, TOR.x, ty + 8.3, TOR.z, MAT.red);                 // nuki (lower lintel)
+S.add(12.6, 1.1, 1.5, TOR.x, ty + 10.55, TOR.z, MAT.red);               // kasagi (top lintel)
+S.add(3.6, 1.0, 1.4, TOR.x - 5.6, ty + 10.8, TOR.z, MAT.red, { rz: -0.10 });
+S.add(3.6, 1.0, 1.4, TOR.x + 5.6, ty + 10.8, TOR.z, MAT.red, { rz: 0.10 });
+S.add(1.2, 1.5, 0.35, TOR.x, ty + 9.4, TOR.z + 0.55, MAT.gold);         // center plaque
+
+/* ---------------- arched taiko bridge & lily pond ---------------- */
+setLoad('arching the taiko bridge');
+const BR = { x0: 6.5, x1: 25.5, z: 8, n: 19, peak: 2.3 };
+const bgy0 = groundHeight(BR.x0, BR.z), bgy1 = groundHeight(BR.x1, BR.z);
+function bridgeY(t) { return bgy0 + (bgy1 - bgy0) * t + Math.sin(Math.PI * t) * BR.peak + 0.35; }
+function bridgeSlope(t) {
+  const dx = (BR.x1 - BR.x0) / BR.n;
+  const dy = (bgy1 - bgy0) / BR.n + Math.PI * BR.peak * Math.cos(Math.PI * t) / BR.n;
+  return dy / dx;
+}
+for (let k = 0; k <= BR.n; k++) {
+  const t = k / BR.n, x = BR.x0 + (BR.x1 - BR.x0) * t;
+  S.add(1.15, 0.28, 3.4, x, bridgeY(t), BR.z, MAT.red, { rz: Math.atan(bridgeSlope(t)) });
+}
+for (let k = 0; k <= 8; k++) {
+  const t = k / 8, x = BR.x0 + (BR.x1 - BR.x0) * t, y = bridgeY(t);
+  for (const sz of [-1, 1]) S.add(0.28, 1.3, 0.28, x, y + 0.75, BR.z + sz * 1.55, MAT.red);
+  if (k < 8) {
+    const t2 = (k + 1) / 8, x2 = BR.x0 + (BR.x1 - BR.x0) * t2, y2 = bridgeY(t2);
+    const len = Math.hypot(x2 - x, y2 - y);
+    for (const sz of [-1, 1])
+      S.add(len + 0.2, 0.24, 0.24, (x + x2) / 2, (y + y2) / 2 + 1.35, BR.z + sz * 1.55, MAT.red,
+            { rz: Math.atan2(y2 - y, x2 - x) });
+  }
+}
+for (let i = 0; i < 9; i++) {                                           // lily pads
+  const a = Math.random() * Math.PI * 2, r = 1.5 + Math.random() * 3.6;
+  const px = POND.x + Math.cos(a) * r, pz = POND.z + Math.sin(a) * r * 0.8;
+  if (groundHeight(px, pz) >= WATER_Y) continue;
+  S.add(0.9, 0.08, 0.9, px, WATER_Y + 0.06, pz, MAT.leaf, { ry: Math.random() * 3 });
+  if (i % 3 === 0) S.add(0.35, 0.3, 0.35, px, WATER_Y + 0.22, pz, MAT.sakura);
+}
+
+/* ---------------- stone lanterns (kasuga-doro) ---------------- */
+setLoad('lighting the stone lanterns');
+function stoneLantern(x, z) {
+  const y = groundHeight(x, z);
+  S.add(1.3, 0.45, 1.3, x, y + 0.22, z, MAT.stone);
+  S.add(0.55, 1.3, 0.55, x, y + 1.1, z, MAT.stone);
+  S.add(1.05, 0.85, 1.05, x, y + 2.17, z, MAT.stone);
+  const wy = y + 2.17;
+  S.add(0.62, 0.45, 0.14, x, wy, z + 0.53, MAT.shoji);
+  S.add(0.62, 0.45, 0.14, x, wy, z - 0.53, MAT.shoji);
+  S.add(0.14, 0.45, 0.62, x + 0.53, wy, z, MAT.shoji);
+  S.add(0.14, 0.45, 0.62, x - 0.53, wy, z, MAT.shoji);
+  S.add(1.7, 0.4, 1.7, x, y + 2.8, z, MAT.stone);
+  S.add(0.4, 0.5, 0.4, x, y + 3.25, z, MAT.stone);
+  const L = new THREE.PointLight(0xffa54d, 0.45, 20, 2);
+  L.position.set(x, y + 2.4, z);
+  scene.add(L); lanternLights.push(L);
+}
+stoneLantern(-4.2, 18); stoneLantern(4.2, 10);
+stoneLantern(-4.2, 2);  stoneLantern(4.2, -6);
+
+/* ---------------- flora: bamboo, sakura, bushes ---------------- */
+setLoad('planting the bamboo grove');
+const geoCache = new Map();
+function box(w, h, d) {
+  const k = w.toFixed(3) + ',' + h.toFixed(3) + ',' + d.toFixed(3);
+  if (!geoCache.has(k)) geoCache.set(k, new THREE.BoxGeometry(w, h, d));
+  return geoCache.get(k);
+}
+function part(parent, w, h, d, mat, x, y, z) {
+  const m = new THREE.Mesh(box(w, h, d), mat);
+  m.position.set(x, y, z);
+  m.castShadow = true; m.receiveShadow = true;
+  parent.add(m);
+  return m;
+}
+function bambooStalk(x, z) {
+  const y = groundHeight(x, z), h = 7 + Math.random() * 3;
+  S.add(0.22, h, 0.22, x, y + h / 2, z, MAT.bamboo);
+  for (let i = 0; i < 4; i++)
+    S.add(0.9, 0.12, 0.3, x + (Math.random() - 0.5) * 1.4, y + h - 1 - Math.random() * 2.5,
+          z + (Math.random() - 0.5) * 1.4, MAT.leaf, { ry: Math.random() * 3 });
+}
+for (let i = 0; i < 16; i++) {
+  const a = Math.random() * Math.PI * 2, r = Math.random() * 5;
+  bambooStalk(-24 + Math.cos(a) * r, -2 + Math.sin(a) * r);
+}
+const sakuraSpots = [[-10, -20, 1.1], [12, -22, 0.95], [-22, 4, 1.0]];
+function sakuraTree(x, z, s) {
+  const y = groundHeight(x, z);
+  let tx = x, tz = z;
+  for (let i = 0; i < 5; i++) {
+    S.add(0.7 * s, 0.85 * s, 0.7 * s, tx, y + 0.42 * s + i * 0.78 * s, tz, MAT.trunk);
+    tx += (Math.random() - 0.5) * 0.5 * s; tz += (Math.random() - 0.5) * 0.5 * s;
+  }
+  const topY = y + 3.9 * s;
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + Math.random() * 0.6;
+    S.add(2.2 * s, 0.35 * s, 0.35 * s, tx + Math.cos(a) * 1.1 * s, topY - 0.5 * s,
+          tz + Math.sin(a) * 1.1 * s, MAT.trunk, { ry: -a });
+  }
+  for (let i = 0; i < 26; i++) {
+    const a = Math.random() * Math.PI * 2, rr = Math.random() * 2.7 * s;
+    const b = (1.5 + Math.random() * 1.6) * s;
+    S.add(b, b * 0.75, b, tx + Math.cos(a) * rr, topY + (Math.random() - 0.3) * 1.8 * s,
+          tz + Math.sin(a) * rr, MAT.sakura, { ry: Math.random() * 3 });
+  }
+}
+for (const [x, z, s] of sakuraSpots) sakuraTree(x, z, s);
+function bush(x, z, s) {
+  const y = groundHeight(x, z);
+  S.add(1.6 * s, 1.0 * s, 1.6 * s, x, y + 0.5 * s, z, MAT.leaf);
+  S.add(1.1 * s, 0.8 * s, 1.1 * s, x + 0.5 * s, y + 1.05 * s, z + 0.3 * s, MAT.leaf, { ry: 0.4 });
+  S.add(0.9 * s, 0.7 * s, 0.9 * s, x - 0.55 * s, y + 0.95 * s, z - 0.3 * s, MAT.leaf, { ry: 1.2 });
+}
+bush(-4.5, 22, 1); bush(4.5, 14, 0.85); bush(-5.5, -4, 1.1);
+bush(5.5, -16, 0.9); bush(-8, -9, 1); bush(10, 20, 0.8); bush(8, -20, 1.05);
+S.build(scene, true);
+
+/* ---------------- samurai guardians (micro-voxels) ---------------- */
+setLoad('waking the samurai');
+function makeSamurai() {
+  const g = new THREE.Group();
+  const lower = new THREE.Group(); g.add(lower);
+  const upper = new THREE.Group(); upper.position.y = 0.9; g.add(upper);
+  part(lower, 0.25, 0.55, 0.25, MAT.darkCloth, -0.16, 0.275, 0);
+  part(lower, 0.25, 0.55, 0.25, MAT.darkCloth, 0.16, 0.275, 0);
+  part(lower, 0.8, 0.35, 0.55, MAT.darkCloth, 0, 0.72, 0);
+  part(upper, 0.8, 0.62, 0.5, MAT.armor, 0, 0.31, 0);                    // do cuirass
+  for (let i = 0; i < 3; i++) part(upper, 0.84, 0.07, 0.54, MAT.gold, 0, 0.14 + i * 0.18, 0);
+  const sodeL = part(upper, 0.32, 0.55, 0.14, MAT.armor, -0.56, 0.5, 0); sodeL.rotation.z = 0.18;
+  const sodeR = part(upper, 0.32, 0.55, 0.14, MAT.armor, 0.56, 0.5, 0);  sodeR.rotation.z = -0.18;
+  part(upper, 0.22, 0.5, 0.22, MAT.darkCloth, -0.5, 0.12, 0);
+  part(upper, 0.22, 0.5, 0.22, MAT.darkCloth, 0.5, 0.12, 0);
+  part(upper, 0.2, 0.18, 0.2, MAT.skin, -0.5, -0.2, 0.02);
+  part(upper, 0.2, 0.18, 0.2, MAT.skin, 0.5, -0.2, 0.02);
+  const head = new THREE.Group(); head.position.y = 0.78; upper.add(head);
+  part(head, 0.4, 0.38, 0.4, MAT.skin, 0, 0.19, 0);
+  part(head, 0.52, 0.3, 0.52, MAT.darkCloth, 0, 0.5, 0);                // kabuto bowl
+  part(head, 0.56, 0.12, 0.56, MAT.darkCloth, 0, 0.62, 0);              // brim
+  part(head, 0.1, 0.34, 0.08, MAT.gold, 0, 0.72, 0.3);                  // crescent crest
+  const c1 = part(head, 0.1, 0.22, 0.08, MAT.gold, -0.12, 0.84, 0.3); c1.rotation.z = 0.5;
+  const c2 = part(head, 0.1, 0.22, 0.08, MAT.gold, 0.12, 0.84, 0.3);  c2.rotation.z = -0.5;
+  const kat = new THREE.Group();                                       // sheathed katana
+  kat.position.set(0.52, 0.05, 0.1); kat.rotation.z = -0.35; kat.rotation.y = 0.15;
+  upper.add(kat);
+  part(kat, 0.13, 0.13, 1.05, MAT.darkCloth, 0, 0, 0.35);
+  part(kat, 0.15, 0.15, 0.3, MAT.gold, 0, 0, -0.28);
+  part(kat, 0.16, 0.16, 0.06, MAT.gold, 0, 0, -0.12);
+  return { g, upper, head };
+}
+const samurai = [];
+for (const sx of [-1, 1]) {
+  const s = makeSamurai();
+  s.g.position.set(sx * 3.4, groundHeight(sx * 3.4, 20), 20);
+  scene.add(s.g);
+  samurai.push({ ...s, phase: sx > 0 ? 0 : 2.1 });
+}
+
+/* ---------------- pastoral animals ---------------- */
+function makeSheep() {
+  const g = new THREE.Group();
+  const body = new THREE.Group(); g.add(body);
+  part(body, 1.0, 0.65, 0.7, MAT.wool, 0, 0.85, 0);
+  part(body, 0.6, 0.5, 0.5, MAT.wool, 0.35, 1.15, -0.1);
+  part(body, 0.5, 0.45, 0.55, MAT.wool, -0.35, 1.1, 0.08);
+  part(body, 0.45, 0.4, 0.45, MAT.wool, 0, 1.28, 0);
+  const headG = new THREE.Group(); headG.position.set(0.55, 0.95, 0.1); g.add(headG);
+  part(headG, 0.34, 0.4, 0.3, MAT.darkCloth, 0.12, -0.05, 0);
+  part(headG, 0.12, 0.18, 0.1, MAT.wool, 0.02, 0.24, 0.14);
+  part(headG, 0.12, 0.18, 0.1, MAT.wool, 0.02, 0.24, -0.14);
+  for (const lx of [-0.35, 0.35]) for (const lz of [-0.22, 0.22])
+    part(g, 0.18, 0.55, 0.18, MAT.darkCloth, lx, 0.275, lz);
+  return { g, body, headG };
+}
+function makeAlpaca() {
+  const g = new THREE.Group();
+  part(g, 0.95, 0.6, 0.55, MAT.alpaca, 0, 0.75, 0);
+  part(g, 0.6, 0.5, 0.45, MAT.alpaca, -0.2, 1.0, 0);
+  const neck = new THREE.Group(); neck.position.set(0.42, 0.9, 0); g.add(neck);
+  part(neck, 0.24, 0.95, 0.24, MAT.alpaca, 0, 0.45, 0);
+  part(neck, 0.3, 0.32, 0.34, MAT.alpaca, 0.05, 0.98, 0);
+  part(neck, 0.09, 0.34, 0.09, MAT.alpaca, -0.02, 1.3, 0.1);
+  part(neck, 0.09, 0.34, 0.09, MAT.alpaca, -0.02, 1.3, -0.1);
+  for (const lx of [-0.32, 0.32]) for (const lz of [-0.18, 0.18])
+    part(g, 0.16, 0.5, 0.16, MAT.darkCloth, lx, 0.25, lz);
+  return { g, neck };
+}
+const animals = [];
+const MEADOW = { x: -14, z: 14, r: 8 };
+function addAnimal(mk, n, kind) {
+  for (let i = 0; i < n; i++) {
+    const a = mk();
+    const x = MEADOW.x + (Math.random() - 0.5) * 10, z = MEADOW.z + (Math.random() - 0.5) * 10;
+    a.g.position.set(x, groundHeight(x, z), z);
+    a.g.rotation.y = Math.random() * Math.PI * 2;
+    scene.add(a.g);
+    animals.push(Object.assign(a, { kind, tx: x, tz: z, state: 'idle',
+      timer: 1 + Math.random() * 3, speed: 0.7 + Math.random() * 0.5, phase: Math.random() * 10 }));
+  }
+}
+addAnimal(makeSheep, 4, 'sheep');
+addAnimal(makeAlpaca, 3, 'alpaca');
+
+/* ---------------- birds ---------------- */
+function makeBird() {
+  const g = new THREE.Group();
+  part(g, 0.34, 0.2, 0.5, MAT.birdBody, 0, 0, 0);
+  part(g, 0.16, 0.14, 0.24, MAT.birdBody, 0, 0.02, -0.34);
+  const wgl = new THREE.BoxGeometry(0.6, 0.07, 0.3); wgl.translate(0.3, 0, 0);
+  const wgr = new THREE.BoxGeometry(0.6, 0.07, 0.3); wgr.translate(-0.3, 0, 0);
+  const wl = new THREE.Mesh(wgl, MAT.birdBody); wl.position.set(0.14, 0.06, 0);
+  const wr = new THREE.Mesh(wgr, MAT.birdBody); wr.position.set(-0.14, 0.06, 0);
+  wl.castShadow = wr.castShadow = true;
+  g.add(wl, wr);
+  return { g, wl, wr };
+}
+const flocks = [];
+function addFlock(cx, cy, cz, R, n, speed, dir) {
+  const birds = [];
+  for (let i = 0; i < n; i++) {
+    const b = makeBird(); scene.add(b.g);
+    birds.push(Object.assign(b, { off: (i / n) * Math.PI * 2, r: R * (0.85 + Math.random() * 0.3), ph: Math.random() * 10 }));
+  }
+  flocks.push({ cx, cy, cz, birds, speed, dir });
+}
+addFlock(0, 34, -20, 26, 6, 0.12, 1);
+addFlock(-30, 30, 12, 17, 5, -0.16, -1);
+
+/* ---------------- drifting blocky clouds ---------------- */
+setLoad('gathering clouds');
+const clouds = [];
+function addCloud(x, y, z, s) {
+  const g = new THREE.Group();
+  const n = 8 + ((Math.random() * 6) | 0);
+  for (let i = 0; i < n; i++)
+    part(g, (1.5 + Math.random() * 2.5) * s, (0.8 + Math.random() * 0.8) * s, (1.5 + Math.random() * 2) * s,
+         MAT.cloud, (Math.random() - 0.5) * 7 * s, (Math.random() - 0.5) * 1.2 * s, (Math.random() - 0.5) * 4 * s);
+  g.traverse(o => { o.castShadow = false; });
+  g.position.set(x, y, z);
+  scene.add(g);
+  clouds.push({ g, speed: 0.5 + Math.random() * 0.7 });
+}
+for (let i = 0; i < 7; i++)
+  addCloud(-100 + Math.random() * 200, 44 + Math.random() * 14, -60 + Math.random() * 120, 1.6 + Math.random() * 1.2);
+
+/* ---------------- falling sakura petals ---------------- */
+const PETAL_N = 220;
+const petalGeo = new THREE.BufferGeometry();
+const pPos = new Float32Array(PETAL_N * 3);
+const pVel = [];
+function resetPetal(i, randomY) {
+  const tr = sakuraSpots[i % sakuraSpots.length];
+  pPos[i * 3] = tr[0] + (Math.random() - 0.5) * 9;
+  pPos[i * 3 + 1] = randomY ? Math.random() * 12 : 6 + Math.random() * 6;
+  pPos[i * 3 + 2] = tr[1] + (Math.random() - 0.5) * 9;
+  pVel[i] = { fall: 0.6 + Math.random() * 0.9, ph: Math.random() * 10, sw: 0.5 + Math.random() * 0.8 };
+}
+for (let i = 0; i < PETAL_N; i++) resetPetal(i, true);
+petalGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+const petals = new THREE.Points(petalGeo, new THREE.PointsMaterial({
+  map: T.petal, size: 0.42, transparent: true, depthWrite: false
+}));
+petals.frustumCulled = false;
+scene.add(petals);
+
+/* ---------------- stars & fireflies ---------------- */
+const starGeo = new THREE.BufferGeometry();
+const sPos = new Float32Array(400 * 3);
+for (let i = 0; i < 400; i++) {
+  const a = Math.random() * Math.PI * 2, e = Math.random() * Math.PI * 0.45 + 0.08;
+  sPos[i * 3] = Math.cos(a) * Math.cos(e) * 280;
+  sPos[i * 3 + 1] = Math.sin(e) * 280;
+  sPos[i * 3 + 2] = Math.sin(a) * Math.cos(e) * 280;
+}
+starGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+const starMat = new THREE.PointsMaterial({ color: 0xcfd8ff, size: 1.4, sizeAttenuation: false,
+  transparent: true, opacity: 0, fog: false, depthWrite: false });
+const stars = new THREE.Points(starGeo, starMat);
+stars.frustumCulled = false;
+scene.add(stars);
+
+const FF_N = 46;
+const ffGeo = new THREE.BufferGeometry();
+const fPos = new Float32Array(FF_N * 3);
+const fSeed = [];
+const ffSpots = [[-4.5, 22], [4.5, 14], [-5.5, -4], [5.5, -16], [-10, -20], [12, -22]];
+for (let i = 0; i < FF_N; i++) {
+  const spt = ffSpots[i % ffSpots.length];
+  const x = spt[0] + (Math.random() - 0.5) * 6, z = spt[1] + (Math.random() - 0.5) * 6;
+  fPos[i * 3] = x; fPos[i * 3 + 1] = groundHeight(x, z) + 0.8 + Math.random() * 1.6; fPos[i * 3 + 2] = z;
+  fSeed[i] = { bx: x, bz: z, by: fPos[i * 3 + 1], ph: Math.random() * 10, r: 0.6 + Math.random() * 1.4 };
+}
+ffGeo.setAttribute('position', new THREE.BufferAttribute(fPos, 3));
+const ffMat = new THREE.PointsMaterial({ color: 0xd8ff9a, size: 0.35, transparent: true, opacity: 0,
+  blending: THREE.AdditiveBlending, depthWrite: false });
+const fireflies = new THREE.Points(ffGeo, ffMat);
+fireflies.frustumCulled = false;
+scene.add(fireflies);
+
+/* ---------------- day / night modes ---------------- */
+const MODES = {
+  morning: {
+    label: 'Morning Sun', dot: '#fcd34d',
+    sky: new THREE.Color(0x8fc3ea), fog: new THREE.Color(0x9fcbe8),
+    sunCol: new THREE.Color(0xfff1d6), sunI: 1.7, hemiI: 0.75, ambI: 0.16,
+    sunPos: new THREE.Vector3(120, 95, 45), celCol: new THREE.Color(0xffe27a), celSize: 9,
+    lantern: 0.45, shoji: 0.25, stars: 0
+  },
+  sunset: {
+    label: 'Sunset Glow', dot: '#fb923c',
+    sky: new THREE.Color(0xdd7f4e), fog: new THREE.Color(0xe08a52),
+    sunCol: new THREE.Color(0xff9a4d), sunI: 1.35, hemiI: 0.5, ambI: 0.12,
+    sunPos: new THREE.Vector3(-135, 24, 35), celCol: new THREE.Color(0xff7a3c), celSize: 11,
+    lantern: 1.3, shoji: 0.95, stars: 0.06
+  },
+  night: {
+    label: 'Night', dot: '#818cf8',
+    sky: new THREE.Color(0x0b1026), fog: new THREE.Color(0x0d1330),
+    sunCol: new THREE.Color(0x8fa8ff), sunI: 0.35, hemiI: 0.18, ambI: 0.07,
+    sunPos: new THREE.Vector3(-60, 115, -50), celCol: new THREE.Color(0xe8efff), celSize: 6.5,
+    lantern: 2.4, shoji: 1.7, stars: 0.9
+  }
+};
+const cur = {
+  sky: MODES.morning.sky.clone(), fog: MODES.morning.fog.clone(),
+  sunCol: MODES.morning.sunCol.clone(), celCol: MODES.morning.celCol.clone(),
+  sunPos: MODES.morning.sunPos.clone(),
+  sunI: 1.7, hemiI: 0.75, ambI: 0.16, celSize: 9, lantern: 0.45, shoji: 0.25, stars: 0
+};
+let target = MODES.morning;
+function applyEnv(k) {
+  cur.sky.lerp(target.sky, k); cur.fog.lerp(target.fog, k);
+  cur.sunCol.lerp(target.sunCol, k); cur.celCol.lerp(target.celCol, k);
+  cur.sunPos.lerp(target.sunPos, k);
+  for (const key of ['sunI', 'hemiI', 'ambI', 'lantern', 'shoji', 'stars', 'celSize'])
+    cur[key] += (target[key] - cur[key]) * k;
+  scene.background.copy(cur.sky);
+  scene.fog.color.copy(cur.fog);
+  sun.color.copy(cur.sunCol); sun.intensity = cur.sunI;
+  sun.position.copy(cur.sunPos);
+  hemi.intensity = cur.hemiI; amb.intensity = cur.ambI;
+  celestial.material.color.copy(cur.celCol);
+  celestial.scale.setScalar(cur.celSize / 9);
+  celestial.position.copy(cur.sunPos).normalize().multiplyScalar(260);
+  celestial.lookAt(0, 0, 0);
+  MAT.shoji.emissiveIntensity = cur.shoji;
+  MAT.paperLan.emissiveIntensity = 0.3 + cur.lantern * 0.55;
+  for (const L of lanternLights) L.intensity = cur.lantern;
+  starMat.opacity = cur.stars;
+  ffMat.opacity = cur.stars * 0.95;
+}
+
+/* ---------------- camera presets ---------------- */
+const VIEWS = {
+  pagoda:   { p: [0, 10, 38],      t: [0, 11, -10] },
+  samurai:  { p: [7.6, 3.6, 25.5], t: [3.2, 1.8, 20] },
+  meadow:   { p: [-24, 7, 27],     t: [-12, 1.5, 12] },
+  mountain: { p: [0, 30, 74],      t: [0, 20, -50] },
+  bird:     { p: [0.1, 85, 24],    t: [0, 0, -2] }
+};
+let camGoal = null;
+function flyTo(v) {
+  camGoal = { p: new THREE.Vector3(v.p[0], v.p[1], v.p[2]),
+              t: new THREE.Vector3(v.t[0], v.t[1], v.t[2]) };
+}
+controls.addEventListener('start', () => { camGoal = null; });
+document.querySelectorAll('.view-btn').forEach(b =>
+  b.addEventListener('click', () => flyTo(VIEWS[b.dataset.view])));
+
+/* ---------------- UI wiring ---------------- */
+const modeLabel = document.getElementById('mode-label');
+const modeDot = document.getElementById('mode-dot');
+document.querySelectorAll('.mode-btn').forEach(b =>
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    target = MODES[b.dataset.mode];
+    modeLabel.textContent = target.label;
+    modeDot.style.background = target.dot;
+  }));
+const infoCard = document.getElementById('info-card');
+document.getElementById('info-btn').addEventListener('click', () => infoCard.classList.toggle('hidden'));
+
+/* ---------------- ambient sound: wind + bamboo chimes (Web Audio) ---------------- */
+let actx = null, masterGain = null, chimeTimer = null, audioOn = false;
+const audioBtn = document.getElementById('audio-btn');
+const PENTA = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5, 1174.7];
+function startAudio() {
+  actx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = actx.createGain(); masterGain.gain.value = 0.55;
+  masterGain.connect(actx.destination);
+  const len = actx.sampleRate * 3;
+  const buf = actx.createBuffer(1, len, actx.sampleRate);
+  const ch = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1;
+  const noise = actx.createBufferSource(); noise.buffer = buf; noise.loop = true;
+  const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420; lp.Q.value = 0.6;
+  const wg = actx.createGain(); wg.gain.value = 0.05;
+  const lfo = actx.createOscillator(); lfo.frequency.value = 0.08;
+  const lfoG = actx.createGain(); lfoG.gain.value = 0.028;
+  lfo.connect(lfoG); lfoG.connect(wg.gain);
+  const lfo2 = actx.createOscillator(); lfo2.frequency.value = 0.031;
+  const lfo2G = actx.createGain(); lfo2G.gain.value = 0.02;
+  lfo2.connect(lfo2G); lfo2G.connect(wg.gain);
+  noise.connect(lp); lp.connect(wg); wg.connect(masterGain);
+  noise.start(); lfo.start(); lfo2.start();
+  scheduleChime();
+}
+function playChime() {
+  if (!actx || !audioOn) return;
+  const f = PENTA[(Math.random() * PENTA.length) | 0];
+  const t0 = actx.currentTime;
+  const g = actx.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(0.22, t0 + 0.03);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 3.2);
+  const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200;
+  const o1 = actx.createOscillator(); o1.type = 'sine'; o1.frequency.value = f;
+  const o2 = actx.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * 2.76;
+  const g2 = actx.createGain(); g2.gain.value = 0.22;
+  o1.connect(g); o2.connect(g2); g2.connect(g);
+  g.connect(lp); lp.connect(masterGain);
+  o1.start(t0); o2.start(t0); o1.stop(t0 + 3.4); o2.stop(t0 + 3.4);
+  const o3 = actx.createOscillator(); o3.type = 'triangle'; o3.frequency.value = f / 4;
+  const g3 = actx.createGain();
+  g3.gain.setValueAtTime(0.0001, t0);
+  g3.gain.exponentialRampToValueAtTime(0.07, t0 + 0.02);
+  g3.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5);
+  o3.connect(g3); g3.connect(masterGain);
+  o3.start(t0); o3.stop(t0 + 0.6);
+}
+function scheduleChime() {
+  if (!audioOn) return;
+  playChime();
+  chimeTimer = setTimeout(scheduleChime, 4000 + Math.random() * 6000);
+}
+audioBtn.addEventListener('click', () => {
+  audioOn = !audioOn;
+  audioBtn.textContent = audioOn ? '🔊' : '🔇';
+  if (audioOn) {
+    if (!actx) startAudio();
+    else { actx.resume(); scheduleChime(); }
+  } else {
+    if (actx) actx.suspend();
+    clearTimeout(chimeTimer);
+  }
+});
+
+/* ---------------- animation: life & atmosphere ---------------- */
+function updateAnimals(dt, t) {
+  for (const a of animals) {
+    a.timer -= dt;
+    const g = a.g;
+    if (a.state === 'idle') {
+      if (a.kind === 'sheep') {
+        const cyc = (t + a.phase) % 7;
+        const want = cyc < 3.5 ? -0.85 : 0.05;      // graze down, then lift head
+        a.headG.rotation.z += (want - a.headG.rotation.z) * Math.min(1, dt * 3);
+        a.body.position.y = Math.sin(t * 2 + a.phase) * 0.03;
+      } else {
+        a.neck.rotation.z = Math.sin(t * 0.9 + a.phase) * 0.08;
+      }
+      if (a.timer <= 0) {
+        const ang = Math.random() * Math.PI * 2, r = Math.random() * MEADOW.r;
+        a.tx = MEADOW.x + Math.cos(ang) * r;
+        a.tz = MEADOW.z + Math.sin(ang) * r;
+        a.state = 'walk'; a.timer = 20;
+      }
+    } else {
+      const dx = a.tx - g.position.x, dz = a.tz - g.position.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist < 0.4 || a.timer <= 0) { a.state = 'idle'; a.timer = 2 + Math.random() * 5; }
+      else {
+        const yaw = Math.atan2(dx, dz);
+        let d = yaw - g.rotation.y;
+        while (d > Math.PI) d -= Math.PI * 2;
+        while (d < -Math.PI) d += Math.PI * 2;
+        g.rotation.y += THREE.MathUtils.clamp(d, -2 * dt, 2 * dt);
+        g.position.x += Math.sin(g.rotation.y) * a.speed * dt;
+        g.position.z += Math.cos(g.rotation.y) * a.speed * dt;
+        g.position.y = groundHeight(g.position.x, g.position.z) + Math.abs(Math.sin(t * 7 + a.phase)) * 0.06;
+        if (a.kind === 'sheep') a.headG.rotation.z += (0.05 - a.headG.rotation.z) * Math.min(1, dt * 4);
+      }
+    }
+  }
+}
+function updateBirds(dt, t) {
+  for (const f of flocks) {
+    for (const b of f.birds) {
+      const a = t * f.speed * f.dir + b.off;
+      b.g.position.set(
+        f.cx + Math.cos(a) * b.r,
+        f.cy + Math.sin(t * 0.7 + b.ph) * 1.6,
+        f.cz + Math.sin(a) * b.r
+      );
+      b.g.rotation.y = Math.atan2(-Math.sin(a) * f.dir, Math.cos(a) * f.dir);
+      const flap = Math.sin(t * 9 + b.ph) * 0.6;
+      b.wl.rotation.z = 0.15 + flap;
+      b.wr.rotation.z = -0.15 - flap;
+    }
+  }
+}
+
+const clock = new THREE.Clock();
+let firstFrame = true;
+applyEnv(1);
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+  applyEnv(1 - Math.exp(-dt * 2.2));
+  T.water.offset.x += dt * 0.03;
+  T.water.offset.y += dt * 0.017;
+  for (const s of samurai) {                                     // idle breathing
+    s.upper.scale.y = 1 + 0.022 * Math.sin(t * 1.4 + s.phase);
+    s.head.rotation.y = 0.12 * Math.sin(t * 0.35 + s.phase);
+    s.head.rotation.x = 0.03 * Math.sin(t * 1.4 + s.phase);
+  }
+  updateAnimals(dt, t);
+  updateBirds(dt, t);
+  for (const c of clouds) {                                      // drifting clouds
+    c.g.position.x += c.speed * dt;
+    if (c.g.position.x > 130) c.g.position.x = -130;
+  }
+  const pa = petalGeo.attributes.position;                       // falling petals
+  for (let i = 0; i < PETAL_N; i++) {
+    const v = pVel[i];
+    const nx = pa.getX(i) + Math.sin(t * 1.6 + v.ph) * v.sw * dt;
+    const ny = pa.getY(i) - v.fall * dt;
+    const nz = pa.getZ(i) + Math.cos(t * 1.2 + v.ph) * v.sw * 0.6 * dt;
+    pa.setXYZ(i, nx, ny, nz);
+    if (ny < groundHeight(nx, nz) + 0.25) resetPetal(i, false);
+  }
+  pa.needsUpdate = true;
+  if (ffMat.opacity > 0.02) {                                    // fireflies at night
+    const fa = ffGeo.attributes.position;
+    for (let i = 0; i < FF_N; i++) {
+      const s = fSeed[i];
+      fa.setXYZ(i,
+        s.bx + Math.sin(t * 0.7 + s.ph) * s.r,
+        s.by + Math.sin(t * 1.1 + s.ph * 1.7) * 0.5,
+        s.bz + Math.cos(t * 0.5 + s.ph) * s.r);
+    }
+    fa.needsUpdate = true;
+  }
+  if (camGoal) {                                                 // camera fly-to
+    const ck = 1 - Math.exp(-dt * 2.6);
+    camera.position.lerp(camGoal.p, ck);
+    controls.target.lerp(camGoal.t, ck);
+    if (camera.position.distanceTo(camGoal.p) < 0.2) camGoal = null;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+  if (firstFrame) {
+    firstFrame = false;
+    loadingEl.style.opacity = '0';
+    setTimeout(() => { loadingEl.style.display = 'none'; }, 850);
+  }
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+} // end init()
+</script>
+</body>
+</html>

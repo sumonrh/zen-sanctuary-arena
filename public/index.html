@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f2efe6">
+  <meta name="description" content="A blind comparison of 80 AI-built Zen Sanctuary worlds. Vote on five pairs, then see the current ranking.">
+  <meta name="robots" content="noindex">
+  <title>Zen Arena — A Blind Sanctuary Test</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23b4472e'/%3E%3Ctext x='50' y='72' font-size='62' text-anchor='middle' fill='%23fbf9f3' font-family='serif'%3E禅%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/arena.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Zen Arena home">
+      <span class="seal" aria-hidden="true">禅</span>
+      <span class="brand-word">Zen Arena</span>
+    </a>
+    <nav class="topnav" aria-label="Primary">
+      <span class="world-count"><span id="sim-count">80</span> worlds</span>
+      <button class="text-btn" id="about-btn" type="button">How it works</button>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="intro" id="intro" aria-labelledby="intro-title">
+      <div class="intro-copy">
+        <p class="kicker">A blind comparison <span aria-hidden="true">·</span> <span id="intro-count">80</span> worlds</p>
+        <h1 id="intro-title">Two worlds.<br>One breath.<br><em>You choose.</em></h1>
+        <p class="lede">Each pairing is drawn at random from single-file sanctuaries built by different AI models. Names and scores stay hidden while you choose. After five comparisons, you can stop and see the current ranking.</p>
+        <div class="intro-actions">
+          <button class="primary-btn" id="start-btn" type="button">
+            Enter the garden
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+          </button>
+          <span class="fine">5 comparisons · about 2–3 minutes · anonymous</span>
+        </div>
+        <p class="view-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4"/></svg>
+          <span><strong>Maximize this browser window</strong> (or go full-screen) for the full scene. Each world is built for a large screen; use the expand button to focus one.</span>
+        </p>
+      </div>
+
+      <div class="intro-art" aria-hidden="true">
+        <div class="enso-wrap">
+          <svg class="enso" viewBox="0 0 420 420" role="presentation">
+            <circle cx="210" cy="210" r="152" fill="none" stroke="currentColor" stroke-width="13"
+                    stroke-linecap="round" stroke-dasharray="835 120" transform="rotate(-38 210 210)"/>
+            <circle class="sun" cx="322" cy="102" r="17" fill="currentColor"/>
+          </svg>
+          <span class="vertical-text">静寂</span>
+        </div>
+        <p class="art-caption">Stillness, compared.</p>
+      </div>
+    </section>
+
+    <section class="arena" id="arena" hidden aria-labelledby="match-prompt">
+      <div class="match-head">
+        <div>
+          <p class="kicker" id="match-number">Matchup 1</p>
+          <h2 id="match-prompt">Which world feels more alive?</h2>
+        </div>
+        <div class="match-meta">
+          <span id="dwell" class="dwell">0:00</span>
+          <span class="meta-sep" aria-hidden="true">·</span>
+          <span id="pair-state">Take your time</span>
+        </div>
+      </div>
+
+      <p class="view-tip">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4"/></svg>
+        <span><strong>Maximize your window</strong> for the full simulation. On a smaller screen, tap A/B and use the expand button.</span>
+      </p>
+
+      <div class="side-toggle" id="side-toggle" role="group" aria-label="Choose which world to view">
+        <button type="button" data-show="a" class="is-active" aria-pressed="true">A</button>
+        <button type="button" data-show="b" aria-pressed="false">B</button>
+      </div>
+
+      <div class="stage" id="stage" data-view="a">
+        <figure class="panel" id="panel-a" data-side="a">
+          <figcaption class="panel-bar">
+            <span class="side-badge">A</span>
+            <span class="panel-hint">Click inside to explore</span>
+            <span class="panel-tools">
+              <button type="button" class="icon-btn" data-reload="a" aria-label="Reload world A" title="Reload">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg>
+              </button>
+              <button type="button" class="icon-btn" data-focus="a" aria-label="Expand world A" title="Expand">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4"/></svg>
+              </button>
+            </span>
+          </figcaption>
+          <div class="frame-wrap" id="frame-a">
+            <div class="panel-loading"><span class="loading-mark" aria-hidden="true"></span><span>Preparing world A</span></div>
+          </div>
+        </figure>
+
+        <figure class="panel" id="panel-b" data-side="b">
+          <figcaption class="panel-bar">
+            <span class="side-badge">B</span>
+            <span class="panel-hint">Click inside to explore</span>
+            <span class="panel-tools">
+              <button type="button" class="icon-btn" data-reload="b" aria-label="Reload world B" title="Reload">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg>
+              </button>
+              <button type="button" class="icon-btn" data-focus="b" aria-label="Expand world B" title="Expand">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4"/></svg>
+              </button>
+            </span>
+          </figcaption>
+          <div class="frame-wrap" id="frame-b">
+            <div class="panel-loading"><span class="loading-mark" aria-hidden="true"></span><span>Preparing world B</span></div>
+          </div>
+        </figure>
+      </div>
+
+      <div class="vote-bar" id="vote-bar">
+        <div class="vote-copy">
+          <span class="vote-label">Your call</span>
+          <span class="vote-note">Both worlds are silent until you click</span>
+        </div>
+        <div class="vote-actions">
+          <button type="button" class="vote-btn vote-a" data-vote="a" disabled>
+            <span class="vote-side">A</span>
+            <span class="vote-text">feels better <kbd>1</kbd></span>
+          </button>
+          <button type="button" class="vote-btn vote-tie" data-vote="tie" disabled>
+            <span class="vote-text">Too close <kbd>2</kbd></span>
+          </button>
+          <button type="button" class="vote-btn vote-b" data-vote="b" disabled>
+            <span class="vote-side">B</span>
+            <span class="vote-text">feels better <kbd>3</kbd></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="arena-foot">
+        <p class="fine" id="vote-status" role="status" aria-live="polite">Look for a moment. Then choose.</p>
+        <button type="button" class="text-btn problem-btn" id="problem-btn">Something broke?</button>
+      </div>
+    </section>
+
+    <section class="finished" id="finished" hidden aria-labelledby="finished-title">
+      <p class="kicker">The gate closes</p>
+      <h2 id="finished-title">Thank you.</h2>
+      <p>Your comparisons have been recorded.</p>
+      <button class="primary-btn" type="button" id="again-btn">Judge another pair</button>
+    </section>
+
+    <section class="results-page ranking-section" id="ranking" hidden aria-labelledby="ranking-title">
+      <div class="results-head">
+        <div>
+          <p class="kicker">Current ranking</p>
+          <h1 id="ranking-title">Thank you.</h1>
+          <p class="lede" id="ranking-lede">Your comparisons are in. Here is how the models stand right now.</p>
+        </div>
+      </div>
+
+      <div class="status-line" id="ranking-status">
+        <span class="spinner" aria-hidden="true"></span>
+        <span id="ranking-status-text">Reading the current ranking…</span>
+      </div>
+
+      <div id="ranking-content" hidden>
+        <div class="stats-grid" id="ranking-stats"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Model</th>
+                <th>Family</th>
+                <th>Rating</th>
+                <th>Matches</th>
+                <th>Win rate</th>
+              </tr>
+            </thead>
+            <tbody id="ranking-body"></tbody>
+          </table>
+        </div>
+        <p class="section-note" id="ranking-note"></p>
+      </div>
+
+      <div class="ranking-actions">
+        <button class="primary-btn" type="button" id="judge-more-btn">
+          Judge 5 more
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+        </button>
+        <button class="ghost-btn" type="button" id="new-session-btn">Start a new session</button>
+        <button class="ghost-btn" type="button" id="ranking-retry" hidden>Try again</button>
+      </div>
+
+      <p class="fine" id="ranking-fine">Model names are revealed on this stop screen. Your votes are already recorded.</p>
+    </section>
+  </main>
+
+  <footer class="site-foot">
+    <p>Zen Arena <span aria-hidden="true">·</span> a blind study in atmosphere <span aria-hidden="true">·</span> <span id="footer-count">80</span> submissions</p>
+    <p><a href="/results.html">Organizer results</a></p>
+  </footer>
+
+  <div class="error-banner" id="error-banner" hidden role="alert">
+    <span id="error-text">The vote could not be saved.</span>
+    <button type="button" class="text-btn" id="retry-btn">Try again</button>
+  </div>
+
+  <dialog class="sheet" id="about-dialog" aria-labelledby="about-title">
+    <button class="sheet-close" type="button" data-close aria-label="Close">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <p class="kicker">How it works</p>
+    <h2 id="about-title">A fair look at a small world.</h2>
+    <div class="sheet-body">
+      <p><strong>Two sanctuaries, one choice.</strong> Each matchup is drawn at random. Compare them for as long as you like, then pick the one that feels more alive. “Too close” is a real answer.</p>
+      <p><strong>Five at a time.</strong> A round is five comparisons. After each round you can choose five more or stop. Stopping reveals the current model ranking and thanks you.</p>
+      <p><strong>Viewing.</strong> These are full-viewport WebGL scenes. Maximize your browser window — or use full-screen — before comparing. On a phone, tap A or B to switch worlds; a large screen gives the intended view.</p>
+      <p><strong>Blind while you vote.</strong> Model names, filenames, and previous scores are hidden while you compare. The left and right sides are shuffled for every matchup. There is no leaderboard during a round.</p>
+      <p><strong>What is recorded.</strong> Your choice, how long you looked, and a random anonymous ID stored in this browser. No account, no email, no personal details.</p>
+      <p><strong>How the ranking works.</strong> Votes are fitted with a Bradley–Terry model — the pairwise method behind chess and preference ratings — with confidence intervals from bootstrapping. The stop screen shows a provisional top 12; the organizer page has the full table. Models are compared as families too, so a single lucky variant does not decide the result.</p>
+      <p class="sheet-tip">Tip: click inside a world to move the camera and enable its sound. If a world fails to load, use <em>Something broke?</em> — your report still counts.</p>
+    </div>
+  </dialog>
+
+  <dialog class="sheet sheet-small" id="problem-dialog" aria-labelledby="problem-title">
+    <button class="sheet-close" type="button" data-close aria-label="Close">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <p class="kicker">A note on the pair</p>
+    <h2 id="problem-title">What went wrong?</h2>
+    <p class="sheet-lede">The world that worked gets the vote. If both failed, the matchup is skipped.</p>
+    <div class="problem-grid">
+      <button type="button" class="problem-choice" data-broken="a">A didn’t load <span>or is unusable</span></button>
+      <button type="button" class="problem-choice" data-broken="b">B didn’t load <span>or is unusable</span></button>
+      <button type="button" class="problem-choice" data-broken="both">Both failed <span>skip this pair</span></button>
+    </div>
+    <button type="button" class="text-btn problem-cancel" data-close>Never mind — take me back</button>
+  </dialog>
+
+  <dialog class="sheet sheet-small" id="checkpoint-dialog" aria-labelledby="checkpoint-title" aria-describedby="checkpoint-desc">
+    <p class="kicker">Round complete</p>
+    <h2 id="checkpoint-title">Five worlds judged.</h2>
+    <p class="sheet-lede" id="checkpoint-desc">Keep going for another five comparisons, or stop here and see the current ranking.</p>
+    <p class="fine" id="checkpoint-progress">Round 1 · 5 comparisons total.</p>
+    <div class="checkpoint-actions">
+      <button class="primary-btn" type="button" id="more-btn">Judge 5 more</button>
+      <button class="ghost-btn" type="button" id="finish-btn">Finish &amp; see ranking</button>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="/js/arena.js"></script>
+</body>
+</html>

@@ -1,0 +1,4060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <meta
+    name="description"
+    content="Interactive Minecraft-style Japanese voxel Zen sanctuary built with Three.js."
+  />
+  <title>Voxel Zen Sanctuary</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --glass-bg: rgba(8, 18, 29, 0.52);
+      --glass-border: rgba(255, 255, 255, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body,
+    #stage {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    body {
+      background: #09111d;
+      color: white;
+      font-family:
+        Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+    }
+
+    #stage {
+      position: fixed;
+      inset: 0;
+    }
+
+    #stage canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      outline: none;
+      touch-action: none;
+    }
+
+    .glass {
+      background:
+        linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.1),
+          rgba(255, 255, 255, 0.025)
+        ),
+        var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      box-shadow:
+        0 18px 50px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(18px) saturate(135%);
+      -webkit-backdrop-filter: blur(18px) saturate(135%);
+    }
+
+    .mode-btn,
+    .preset-btn,
+    .icon-btn {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.055);
+      color: rgba(255, 255, 255, 0.78);
+      transition:
+        color 180ms ease,
+        background 180ms ease,
+        border-color 180ms ease,
+        transform 180ms ease,
+        box-shadow 180ms ease;
+    }
+
+    .mode-btn:hover,
+    .preset-btn:hover,
+    .icon-btn:hover {
+      color: white;
+      border-color: rgba(255, 255, 255, 0.24);
+      background: rgba(255, 255, 255, 0.12);
+      transform: translateY(-1px);
+    }
+
+    .mode-btn.active,
+    .preset-btn.active {
+      color: #fff8dc;
+      border-color: rgba(255, 211, 132, 0.55);
+      background:
+        linear-gradient(
+          135deg,
+          rgba(255, 188, 92, 0.28),
+          rgba(255, 116, 82, 0.13)
+        );
+      box-shadow:
+        0 8px 24px rgba(255, 151, 74, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    }
+
+    .icon-btn.audio-active {
+      color: #fff0c8;
+      border-color: rgba(255, 211, 132, 0.48);
+      background: rgba(255, 176, 80, 0.2);
+    }
+
+    .hide-scrollbar {
+      scrollbar-width: none;
+    }
+
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    #loading {
+      transition:
+        opacity 700ms ease,
+        visibility 700ms ease;
+    }
+
+    #loading.loaded {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .pixel-loader {
+      width: 12px;
+      height: 12px;
+      background: #ffd27d;
+      box-shadow:
+        16px 0 #f28b62,
+        32px 0 #9fd8ff,
+        0 16px #9fd8ff,
+        16px 16px #ffd27d,
+        32px 16px #f28b62;
+      animation: pixelPulse 1.15s steps(2, end) infinite;
+    }
+
+    @keyframes pixelPulse {
+      0%,
+      100% {
+        opacity: 0.5;
+        transform: translateY(0);
+      }
+      50% {
+        opacity: 1;
+        transform: translateY(-4px);
+      }
+    }
+
+    .status-dot {
+      box-shadow: 0 0 14px rgba(134, 239, 172, 0.9);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .mode-btn,
+      .preset-btn,
+      .icon-btn,
+      #loading {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main id="stage" aria-label="Interactive voxel Zen sanctuary"></main>
+
+  <div
+    id="loading"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950"
+  >
+    <div class="flex flex-col items-center gap-8 text-center">
+      <div class="pixel-loader -translate-x-4" aria-hidden="true"></div>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.38em] text-amber-200">
+          Shaping the sanctuary
+        </p>
+        <p class="mt-2 text-sm text-white/50">
+          Raising mountains, pagoda roofs, and bamboo…
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div
+    id="hud"
+    class="pointer-events-none fixed inset-0 z-20 select-none"
+  >
+    <div
+      class="absolute inset-x-0 top-0 flex flex-col justify-between gap-3 p-3 sm:flex-row sm:items-start sm:p-5"
+    >
+      <section
+        class="glass pointer-events-auto max-w-md rounded-2xl px-4 py-3 sm:px-5 sm:py-4"
+      >
+        <div class="flex items-start gap-3">
+          <div
+            class="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-amber-200/25 bg-amber-200/10 text-xl"
+            aria-hidden="true"
+          >
+            ⛩
+          </div>
+          <div class="min-w-0">
+            <div
+              class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-semibold uppercase tracking-[0.26em] text-amber-200/80"
+            >
+              <span>Voxel Sanctuary</span>
+              <span
+                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2 py-1 normal-case tracking-normal text-white/60"
+              >
+                <span class="status-dot h-1.5 w-1.5 rounded-full bg-green-300"></span>
+                Live world
+              </span>
+            </div>
+            <h1 class="mt-1 text-lg font-semibold tracking-tight sm:text-xl">
+              静寂の聖域
+              <span class="font-normal text-white/50">Zen Sanctuary</span>
+            </h1>
+            <p class="mt-1 hidden text-xs leading-relaxed text-white/55 sm:block">
+              A procedural micro-voxel landscape with guardians, pastoral life,
+              mountain weather, and changing celestial light.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section
+        class="glass pointer-events-auto self-end rounded-2xl p-2 sm:self-auto"
+        aria-label="Time of day"
+      >
+        <div class="mb-1.5 flex items-center justify-between px-2">
+          <span
+            class="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45"
+          >
+            Celestial light
+          </span>
+          <span
+            id="modeLabel"
+            class="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-amber-100/80"
+            aria-live="polite"
+          >
+            Morning Sun
+          </span>
+        </div>
+        <div class="grid grid-cols-3 gap-1">
+          <button
+            class="mode-btn active rounded-xl px-3 py-2 text-xs font-medium"
+            data-mode="morning"
+            type="button"
+            aria-label="Switch to morning sunlight"
+          >
+            <span class="mr-1">☀</span> Morning
+          </button>
+          <button
+            class="mode-btn rounded-xl px-3 py-2 text-xs font-medium"
+            data-mode="sunset"
+            type="button"
+            aria-label="Switch to sunset"
+          >
+            <span class="mr-1">◒</span> Sunset
+          </button>
+          <button
+            class="mode-btn rounded-xl px-3 py-2 text-xs font-medium"
+            data-mode="night"
+            type="button"
+            aria-label="Switch to night"
+          >
+            <span class="mr-1">☾</span> Night
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <div
+      class="absolute bottom-24 left-3 flex gap-2 sm:bottom-5 sm:left-5"
+    >
+      <button
+        id="audioButton"
+        class="icon-btn glass pointer-events-auto flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-medium"
+        type="button"
+        aria-pressed="false"
+        aria-label="Enable ambient wind and chimes"
+      >
+        <span id="audioIcon" class="text-base" aria-hidden="true">♬</span>
+        <span id="audioLabel">Sound off</span>
+      </button>
+
+      <button
+        id="fullscreenButton"
+        class="icon-btn glass pointer-events-auto grid h-10 w-10 place-items-center rounded-xl text-base"
+        type="button"
+        aria-label="Toggle fullscreen"
+        title="Fullscreen"
+      >
+        ⛶
+      </button>
+    </div>
+
+    <section
+      class="glass pointer-events-auto absolute bottom-3 left-1/2 w-[calc(100%-1.5rem)] max-w-3xl -translate-x-1/2 rounded-2xl p-2 sm:bottom-5"
+      aria-label="Camera presets"
+    >
+      <div
+        class="hide-scrollbar flex items-center gap-1.5 overflow-x-auto whitespace-nowrap"
+      >
+        <span
+          class="hidden shrink-0 px-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35 md:block"
+        >
+          Camera
+        </span>
+        <button
+          class="preset-btn active shrink-0 rounded-xl px-3 py-2 text-xs font-medium"
+          data-preset="pagoda"
+          type="button"
+        >
+          Pagoda Front
+        </button>
+        <button
+          class="preset-btn shrink-0 rounded-xl px-3 py-2 text-xs font-medium"
+          data-preset="samurai"
+          type="button"
+        >
+          Samurai Closeup
+        </button>
+        <button
+          class="preset-btn shrink-0 rounded-xl px-3 py-2 text-xs font-medium"
+          data-preset="meadow"
+          type="button"
+        >
+          Pastoral Meadow
+        </button>
+        <button
+          class="preset-btn shrink-0 rounded-xl px-3 py-2 text-xs font-medium"
+          data-preset="mountain"
+          type="button"
+        >
+          Mountain Vista
+        </button>
+        <button
+          class="preset-btn shrink-0 rounded-xl px-3 py-2 text-xs font-medium"
+          data-preset="bird"
+          type="button"
+        >
+          Bird's Eye
+        </button>
+      </div>
+    </section>
+
+    <aside
+      class="glass pointer-events-none absolute bottom-5 right-5 hidden rounded-xl px-3 py-2 text-[11px] leading-relaxed text-white/45 lg:block"
+    >
+      <span class="text-white/70">Drag</span> orbit ·
+      <span class="text-white/70">Wheel</span> zoom ·
+      <span class="text-white/70">1–5</span> views ·
+      <span class="text-white/70">M</span> time
+    </aside>
+  </div>
+
+  <noscript>
+    <div class="fixed inset-0 z-50 grid place-items-center bg-slate-950 p-8 text-center">
+      JavaScript is required to explore the voxel sanctuary.
+    </div>
+  </noscript>
+
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer, scene, camera, and controls
+    // -------------------------------------------------------------------------
+
+    const stage = document.getElementById("stage");
+    const isSmallScreen = window.matchMedia("(max-width: 700px)").matches;
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio, isSmallScreen ? 1.45 : 1.8)
+    );
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.02;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.domElement.tabIndex = 0;
+    renderer.domElement.setAttribute(
+      "aria-label",
+      "Three-dimensional voxel sanctuary"
+    );
+    stage.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const skyColor = new THREE.Color(0x8fcdf4);
+    scene.background = skyColor;
+    scene.fog = new THREE.Fog(0xb9d8d6, 56, 190);
+
+    const camera = new THREE.PerspectiveCamera(
+      isSmallScreen ? 58 : 50,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      280
+    );
+    camera.position.set(18, 15, 26);
+
+    let cameraTween = null;
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 9, -15);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.055;
+    controls.enablePan = true;
+    controls.screenSpacePanning = false;
+    controls.minDistance = 3.5;
+    controls.maxDistance = 155;
+    controls.minPolarAngle = 0.05;
+    controls.maxPolarAngle = Math.PI * 0.495;
+    controls.zoomToCursor = true;
+    controls.addEventListener("start", () => {
+      cameraTween = null;
+    });
+
+    const world = new THREE.Group();
+    world.name = "Voxel Sanctuary";
+    scene.add(world);
+
+    // -------------------------------------------------------------------------
+    // Deterministic random helpers
+    // -------------------------------------------------------------------------
+
+    let worldSeed = 0xdecafbad;
+
+    function rand() {
+      worldSeed ^= worldSeed << 13;
+      worldSeed ^= worldSeed >>> 17;
+      worldSeed ^= worldSeed << 5;
+      return (worldSeed >>> 0) / 4294967296;
+    }
+
+    function hashString(value) {
+      let hash = 2166136261;
+      for (let i = 0; i < value.length; i++) {
+        hash ^= value.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+      }
+      return hash >>> 0;
+    }
+
+    function noise2(x, z) {
+      const value = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
+      return value - Math.floor(value);
+    }
+
+    // -------------------------------------------------------------------------
+    // Procedural 16×16 pixel textures
+    // -------------------------------------------------------------------------
+
+    function makePixelTexture(name, palette, painter) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 16;
+      canvas.height = 16;
+
+      const context = canvas.getContext("2d");
+      context.imageSmoothingEnabled = false;
+
+      let state = hashString(name) || 1;
+      const localRandom = () => {
+        state ^= state << 13;
+        state ^= state >>> 17;
+        state ^= state << 5;
+        return (state >>> 0) / 4294967296;
+      };
+
+      for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 16; x++) {
+          context.fillStyle =
+            palette[Math.floor(localRandom() * palette.length)];
+          context.fillRect(x, y, 1, 1);
+        }
+      }
+
+      if (painter) {
+        painter(context, localRandom);
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.name = name;
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.magFilter = THREE.NearestFilter;
+      texture.minFilter = THREE.NearestFilter;
+      texture.generateMipmaps = false;
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.needsUpdate = true;
+      return texture;
+    }
+
+    function makePointTexture(name, color) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 16;
+      canvas.height = 16;
+      const context = canvas.getContext("2d");
+      context.clearRect(0, 0, 16, 16);
+      context.fillStyle = color;
+      context.fillRect(7, 3, 2, 10);
+      context.fillRect(3, 7, 10, 2);
+      context.fillRect(5, 5, 6, 6);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.name = name;
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.magFilter = THREE.NearestFilter;
+      texture.minFilter = THREE.NearestFilter;
+      texture.generateMipmaps = false;
+      return texture;
+    }
+
+    const textures = {
+      grass: makePixelTexture(
+        "grass",
+        ["#4d8b3e", "#579944", "#3f7a34", "#69a64d"],
+        (ctx, r) => {
+          ctx.fillStyle = "#2e652d";
+          for (let i = 0; i < 22; i++) {
+            const x = Math.floor(r() * 16);
+            const y = Math.floor(r() * 16);
+            ctx.fillRect(x, y, 1, r() > 0.5 ? 2 : 1);
+          }
+        }
+      ),
+
+      dirt: makePixelTexture(
+        "dirt",
+        ["#76523b", "#845d42", "#684631", "#956949"],
+        (ctx, r) => {
+          ctx.fillStyle = "#4f3529";
+          for (let i = 0; i < 18; i++) {
+            ctx.fillRect(
+              Math.floor(r() * 16),
+              Math.floor(r() * 16),
+              r() > 0.7 ? 2 : 1,
+              1
+            );
+          }
+        }
+      ),
+
+      stone: makePixelTexture(
+        "stone",
+        ["#7d8384", "#8e9492", "#6d7375", "#9da19d"],
+        (ctx) => {
+          ctx.fillStyle = "#5d6264";
+          ctx.fillRect(1, 5, 6, 1);
+          ctx.fillRect(7, 5, 1, 4);
+          ctx.fillRect(8, 11, 7, 1);
+          ctx.fillRect(4, 12, 1, 3);
+        }
+      ),
+
+      darkStone: makePixelTexture(
+        "dark-stone",
+        ["#454b51", "#535960", "#3b4147", "#61666a"]
+      ),
+
+      snow: makePixelTexture(
+        "snow",
+        ["#f5fbff", "#e9f2f7", "#dce9f0", "#ffffff"],
+        (ctx, r) => {
+          ctx.fillStyle = "#c8dbe7";
+          for (let i = 0; i < 10; i++) {
+            ctx.fillRect(
+              Math.floor(r() * 16),
+              Math.floor(r() * 16),
+              1,
+              1
+            );
+          }
+        }
+      ),
+
+      path: makePixelTexture(
+        "path-stone",
+        ["#9b9a8e", "#aba99c", "#85867e", "#b7b3a4"]
+      ),
+
+      sand: makePixelTexture(
+        "sand",
+        ["#bda777", "#ccb785", "#a99568", "#d7c58f"]
+      ),
+
+      darkWood: makePixelTexture(
+        "dark-wood",
+        ["#2d201d", "#3a2822", "#241a18", "#483028"],
+        (ctx) => {
+          ctx.fillStyle = "#1b1413";
+          for (let x = 2; x < 16; x += 5) {
+            ctx.fillRect(x, 0, 1, 16);
+          }
+          ctx.fillStyle = "#5a3a2e";
+          ctx.fillRect(0, 4, 16, 1);
+          ctx.fillRect(0, 12, 16, 1);
+        }
+      ),
+
+      wood: makePixelTexture(
+        "wood",
+        ["#725039", "#845b3f", "#68452f", "#946747"],
+        (ctx) => {
+          ctx.fillStyle = "#4d3427";
+          ctx.fillRect(3, 0, 1, 16);
+          ctx.fillRect(10, 0, 1, 16);
+        }
+      ),
+
+      redWood: makePixelTexture(
+        "vermillion-wood",
+        ["#ad2f28", "#c73a2e", "#98261f", "#d14938"],
+        (ctx) => {
+          ctx.fillStyle = "#7f201e";
+          ctx.fillRect(4, 0, 1, 16);
+          ctx.fillRect(12, 0, 1, 16);
+          ctx.fillRect(0, 8, 16, 1);
+        }
+      ),
+
+      roof: makePixelTexture(
+        "pagoda-roof",
+        ["#17222b", "#1d2b35", "#111a21", "#263641"],
+        (ctx) => {
+          ctx.fillStyle = "#0d151b";
+          for (let y = 3; y < 16; y += 4) {
+            ctx.fillRect(0, y, 16, 1);
+          }
+          ctx.fillStyle = "#314651";
+          for (let x = 2; x < 16; x += 4) {
+            ctx.fillRect(x, 0, 1, 16);
+          }
+        }
+      ),
+
+      shoji: makePixelTexture(
+        "shoji-paper",
+        ["#f2d9aa", "#f6e2bd", "#efd09c", "#ffe8bf"],
+        (ctx) => {
+          ctx.fillStyle = "#5e3c2b";
+          for (let x = 0; x < 16; x += 5) {
+            ctx.fillRect(x, 0, 1, 16);
+          }
+          for (let y = 0; y < 16; y += 5) {
+            ctx.fillRect(0, y, 16, 1);
+          }
+        }
+      ),
+
+      gold: makePixelTexture(
+        "gold",
+        ["#e3ad36", "#ffd766", "#c98720", "#f5c64f"],
+        (ctx) => {
+          ctx.fillStyle = "#fff1a6";
+          ctx.fillRect(3, 2, 2, 12);
+          ctx.fillRect(10, 4, 1, 7);
+        }
+      ),
+
+      water: makePixelTexture(
+        "voxel-water",
+        ["#2c7c98", "#368da5", "#246c89", "#459bb0"],
+        (ctx) => {
+          ctx.fillStyle = "#74bfd0";
+          ctx.fillRect(0, 3, 8, 1);
+          ctx.fillRect(8, 8, 8, 1);
+          ctx.fillRect(2, 13, 10, 1);
+        }
+      ),
+
+      bamboo: makePixelTexture(
+        "bamboo",
+        ["#3f8a3c", "#4d9c43", "#2f7634", "#61aa4b"],
+        (ctx) => {
+          ctx.fillStyle = "#245e2b";
+          ctx.fillRect(0, 5, 16, 1);
+          ctx.fillRect(0, 11, 16, 1);
+        }
+      ),
+
+      leaves: makePixelTexture(
+        "leaves",
+        ["#2f6e36", "#3e8241", "#285d31", "#4c9449"]
+      ),
+
+      sakura: makePixelTexture(
+        "sakura",
+        ["#e78cac", "#f3a8c2", "#d9789d", "#ffc1d6"],
+        (ctx, r) => {
+          ctx.fillStyle = "#ffd9e5";
+          for (let i = 0; i < 14; i++) {
+            ctx.fillRect(
+              Math.floor(r() * 16),
+              Math.floor(r() * 16),
+              1,
+              1
+            );
+          }
+        }
+      ),
+
+      wool: makePixelTexture(
+        "wool",
+        ["#e8e5da", "#f5f2e9", "#d7d6cf", "#ffffff"]
+      ),
+
+      skin: makePixelTexture(
+        "skin",
+        ["#d69a72", "#e6ab80", "#c98765", "#efb68a"]
+      ),
+
+      armorRed: makePixelTexture(
+        "samurai-red",
+        ["#6e1e23", "#8a282b", "#54171d", "#9d3434"]
+      ),
+
+      armorBlue: makePixelTexture(
+        "samurai-blue",
+        ["#20384d", "#294a63", "#182c3f", "#365a70"]
+      ),
+
+      black: makePixelTexture(
+        "lacquer-black",
+        ["#12171b", "#1c2328", "#0a0e11", "#262e34"]
+      ),
+
+      leather: makePixelTexture(
+        "leather",
+        ["#4f3124", "#64402d", "#3c271f", "#77503a"]
+      ),
+
+      flower: makePixelTexture(
+        "flowers",
+        ["#ffd45f", "#f6b94d", "#fff1a0", "#e89d3e"]
+      ),
+
+      celestial: makePixelTexture(
+        "celestial-voxel",
+        ["#ffffff", "#fff8dc", "#fff1b5", "#ffffff"]
+      )
+    };
+
+    const starTexture = makePointTexture("pixel-stars", "#ffffff");
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+
+    function standardMaterial(texture, options = {}) {
+      return new THREE.MeshStandardMaterial({
+        map: texture,
+        roughness: 0.9,
+        metalness: 0,
+        ...options
+      });
+    }
+
+    const mats = {
+      grass: standardMaterial(textures.grass),
+      dirt: standardMaterial(textures.dirt),
+      stone: standardMaterial(textures.stone),
+      stoneDark: standardMaterial(textures.darkStone),
+      snow: standardMaterial(textures.snow, { roughness: 0.96 }),
+      path: standardMaterial(textures.path),
+      sand: standardMaterial(textures.sand),
+      darkWood: standardMaterial(textures.darkWood),
+      wood: standardMaterial(textures.wood),
+      redWood: standardMaterial(textures.redWood),
+      roof: standardMaterial(textures.roof, { roughness: 0.78 }),
+      gold: standardMaterial(textures.gold, {
+        metalness: 0.48,
+        roughness: 0.42
+      }),
+      bamboo: standardMaterial(textures.bamboo),
+      bambooDark: standardMaterial(textures.bamboo, { color: 0x6d8d48 }),
+      leaf: standardMaterial(textures.leaves),
+      sakura: standardMaterial(textures.sakura),
+      sakuraLight: standardMaterial(textures.sakura, { color: 0xffcce0 }),
+      petal: standardMaterial(textures.sakura, {
+        emissive: 0x4b1728,
+        emissiveIntensity: 0.08
+      }),
+      lily: standardMaterial(textures.grass, { color: 0x69a641 }),
+      wool: standardMaterial(textures.wool),
+      woolCream: standardMaterial(textures.wool, { color: 0xd8bd91 }),
+      animalFace: standardMaterial(textures.darkStone, { color: 0x6f675c }),
+      skin: standardMaterial(textures.skin),
+      armorRed: standardMaterial(textures.armorRed),
+      armorBlue: standardMaterial(textures.armorBlue),
+      black: standardMaterial(textures.black),
+      leather: standardMaterial(textures.leather),
+      flowerYellow: standardMaterial(textures.flower),
+      flowerBlue: standardMaterial(textures.flower, { color: 0x90b9ff })
+    };
+
+    mats.shoji = new THREE.MeshStandardMaterial({
+      map: textures.shoji,
+      emissiveMap: textures.shoji,
+      emissive: new THREE.Color(0xff9e4f),
+      emissiveIntensity: 0.32,
+      roughness: 0.84
+    });
+
+    mats.lantern = new THREE.MeshStandardMaterial({
+      map: textures.shoji,
+      emissiveMap: textures.shoji,
+      emissive: new THREE.Color(0xff8b3d),
+      emissiveIntensity: 0.5,
+      roughness: 0.78
+    });
+
+    mats.water = new THREE.MeshPhysicalMaterial({
+      map: textures.water,
+      color: 0xa4dced,
+      transparent: true,
+      opacity: 0.76,
+      roughness: 0.28,
+      metalness: 0,
+      clearcoat: 0.18,
+      depthWrite: false
+    });
+
+    mats.cloud = new THREE.MeshStandardMaterial({
+      map: textures.snow,
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.92,
+      roughness: 1,
+      depthWrite: false
+    });
+
+    // -------------------------------------------------------------------------
+    // Reusable voxel geometry helpers
+    // -------------------------------------------------------------------------
+
+    const geometryCache = new Map();
+
+    function getBoxGeometry(sx, sy, sz) {
+      const key = `${sx}|${sy}|${sz}`;
+      if (!geometryCache.has(key)) {
+        geometryCache.set(key, new THREE.BoxGeometry(sx, sy, sz));
+      }
+      return geometryCache.get(key);
+    }
+
+    function block(
+      parent,
+      x,
+      y,
+      z,
+      sx,
+      sy,
+      sz,
+      material,
+      options = {}
+    ) {
+      const mesh = new THREE.Mesh(getBoxGeometry(sx, sy, sz), material);
+      mesh.position.set(x, y, z);
+      mesh.rotation.set(
+        options.rx ?? 0,
+        options.ry ?? 0,
+        options.rz ?? 0
+      );
+      mesh.castShadow = options.cast ?? true;
+      mesh.receiveShadow = options.receive ?? true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function beamBetween(
+      parent,
+      start,
+      end,
+      width,
+      material,
+      options = {}
+    ) {
+      const startVector = new THREE.Vector3(...start);
+      const endVector = new THREE.Vector3(...end);
+      const direction = endVector.clone().sub(startVector);
+      const length = direction.length();
+
+      const mesh = new THREE.Mesh(
+        getBoxGeometry(width, length, width),
+        material
+      );
+
+      mesh.position.copy(startVector).add(endVector).multiplyScalar(0.5);
+      mesh.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        direction.normalize()
+      );
+      mesh.castShadow = options.cast ?? true;
+      mesh.receiveShadow = options.receive ?? true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    const instanceDummy = new THREE.Object3D();
+
+    function instancedBlocks(
+      parent,
+      size,
+      positions,
+      material,
+      options = {}
+    ) {
+      if (!positions.length) return null;
+
+      const mesh = new THREE.InstancedMesh(
+        getBoxGeometry(size[0], size[1], size[2]),
+        material,
+        positions.length
+      );
+
+      positions.forEach((position, index) => {
+        const source = Array.isArray(position)
+          ? {
+              x: position[0],
+              y: position[1],
+              z: position[2]
+            }
+          : position;
+
+        instanceDummy.position.set(source.x, source.y, source.z);
+        instanceDummy.rotation.set(
+          source.rx ?? 0,
+          source.ry ?? 0,
+          source.rz ?? 0
+        );
+        instanceDummy.scale.set(
+          source.sx ?? 1,
+          source.sy ?? 1,
+          source.sz ?? 1
+        );
+        instanceDummy.updateMatrix();
+        mesh.setMatrixAt(index, instanceDummy.matrix);
+      });
+
+      mesh.instanceMatrix.setUsage(
+        options.dynamic
+          ? THREE.DynamicDrawUsage
+          : THREE.StaticDrawUsage
+      );
+      mesh.castShadow = options.cast ?? false;
+      mesh.receiveShadow = options.receive ?? true;
+      mesh.renderOrder = options.renderOrder ?? 0;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    // -------------------------------------------------------------------------
+    // Dynamic lighting
+    // -------------------------------------------------------------------------
+
+    const hemisphereLight = new THREE.HemisphereLight(
+      0xd9edff,
+      0x4c5c36,
+      1.25
+    );
+    scene.add(hemisphereLight);
+
+    const ambientLight = new THREE.AmbientLight(0x8ca7b8, 0.28);
+    scene.add(ambientLight);
+
+    const celestialLight = new THREE.DirectionalLight(0xfff1c6, 2.3);
+    celestialLight.position.set(-58, 64, -72);
+    celestialLight.castShadow = true;
+    celestialLight.shadow.mapSize.set(
+      isSmallScreen ? 1024 : 2048,
+      isSmallScreen ? 1024 : 2048
+    );
+    celestialLight.shadow.camera.left = -68;
+    celestialLight.shadow.camera.right = 68;
+    celestialLight.shadow.camera.top = 68;
+    celestialLight.shadow.camera.bottom = -68;
+    celestialLight.shadow.camera.near = 1;
+    celestialLight.shadow.camera.far = 190;
+    celestialLight.shadow.bias = -0.00035;
+    celestialLight.shadow.normalBias = 0.035;
+    celestialLight.shadow.camera.updateProjectionMatrix();
+    celestialLight.target.position.set(0, 5, -12);
+    scene.add(celestialLight);
+    scene.add(celestialLight.target);
+
+    const celestialMaterial = new THREE.MeshBasicMaterial({
+      map: textures.celestial,
+      color: 0xffe899,
+      fog: false
+    });
+
+    const celestialVoxel = new THREE.Mesh(
+      getBoxGeometry(7, 7, 1.5),
+      celestialMaterial
+    );
+    celestialVoxel.position.set(-58, 64, -72);
+    celestialVoxel.frustumCulled = false;
+    scene.add(celestialVoxel);
+
+    const starGeometry = new THREE.BufferGeometry();
+    const starPositions = [];
+
+    for (let i = 0; i < 520; i++) {
+      starPositions.push(
+        (rand() - 0.5) * 310,
+        34 + rand() * 92,
+        (rand() - 0.5) * 280
+      );
+    }
+
+    starGeometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(starPositions, 3)
+    );
+
+    const starMaterial = new THREE.PointsMaterial({
+      map: starTexture,
+      color: 0xe9f4ff,
+      size: 0.72,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0,
+      alphaTest: 0.12,
+      depthWrite: false,
+      fog: false
+    });
+
+    const stars = new THREE.Points(starGeometry, starMaterial);
+    scene.add(stars);
+
+    const lanternLights = [];
+
+    // -------------------------------------------------------------------------
+    // Expansive 4×4 terrain and pond basin
+    // -------------------------------------------------------------------------
+
+    block(
+      world,
+      0,
+      -4,
+      0,
+      200,
+      4,
+      200,
+      mats.dirt,
+      { cast: false, receive: true }
+    );
+
+    const grassBlocks = [];
+    const raisedDirtBlocks = [];
+    const pondBedBlocks = [];
+
+    function pondMetric(x, z, multiplier = 1) {
+      return (
+        Math.pow(x / (17 * multiplier), 2) +
+        Math.pow((z - 12) / (7.5 * multiplier), 2)
+      );
+    }
+
+    for (let x = -96; x <= 96; x += 4) {
+      for (let z = -96; z <= 96; z += 4) {
+        if (pondMetric(x, z) < 1.08) {
+          pondBedBlocks.push([x, -1, z]);
+          continue;
+        }
+
+        const radius = Math.hypot(x, z);
+        const raised =
+          radius > 62 && noise2(x * 0.17, z * 0.17) > 0.76 ? 2 : 0;
+
+        grassBlocks.push([x, raised - 1, z]);
+
+        if (raised > 0) {
+          raisedDirtBlocks.push([x, -1, z]);
+        }
+      }
+    }
+
+    instancedBlocks(
+      world,
+      [4, 2, 4],
+      grassBlocks,
+      mats.grass,
+      { cast: false, receive: true }
+    );
+
+    instancedBlocks(
+      world,
+      [4, 2, 4],
+      raisedDirtBlocks,
+      mats.dirt,
+      { cast: false, receive: true }
+    );
+
+    instancedBlocks(
+      world,
+      [4, 1.8, 4],
+      pondBedBlocks,
+      mats.dirt,
+      { cast: false, receive: true }
+    );
+
+    // -------------------------------------------------------------------------
+    // Snow-capped 4×4 and 2×2 mountain range
+    // -------------------------------------------------------------------------
+
+    const mountainStone4 = [];
+    const mountainDark4 = [];
+    const mountainSnow4 = [];
+    const mountainStone2 = [];
+    const mountainSnow2 = [];
+
+    function addMountain(cx, cz, peakHeight, radius) {
+      const snowLine = Math.max(18, peakHeight * 0.53);
+
+      for (let lx = -radius; lx <= radius; lx += 4) {
+        for (let lz = -radius; lz <= radius; lz += 4) {
+          const normalizedDistance = Math.sqrt(
+            Math.pow(lx / radius, 2) +
+              Math.pow(lz / (radius * 0.78), 2)
+          );
+
+          if (normalizedDistance >= 1) continue;
+
+          const wx = cx + lx;
+          const wz = cz + lz;
+          const jagged =
+            (noise2(wx * 0.12, wz * 0.12) - 0.5) *
+            7 *
+            (1 - normalizedDistance);
+
+          const columnHeight = Math.max(
+            0,
+            peakHeight *
+              (1 - Math.pow(normalizedDistance, 1.28)) +
+              jagged
+          );
+
+          const levels = Math.floor(columnHeight / 4);
+
+          for (let level = 0; level < levels; level++) {
+            const y = 2 + level * 4;
+            const blockTop = y + 2;
+            const target = [wx, y, wz];
+
+            if (blockTop > snowLine) {
+              mountainSnow4.push(target);
+            } else if (noise2(wx + level * 7, wz - level * 9) > 0.73) {
+              mountainDark4.push(target);
+            } else {
+              mountainStone4.push(target);
+            }
+          }
+
+          if (
+            levels > 2 &&
+            noise2(wx * 0.7 + 14, wz * 0.7 - 9) > 0.48
+          ) {
+            const detailX =
+              wx + (noise2(wx + 8, wz - 4) - 0.5) * 1.8;
+            const detailZ =
+              wz + (noise2(wx - 3, wz + 11) - 0.5) * 1.8;
+            const detailY = levels * 4 + 1;
+            const target = [detailX, detailY, detailZ];
+
+            if (detailY + 1 > snowLine) {
+              mountainSnow2.push(target);
+            } else {
+              mountainStone2.push(target);
+            }
+          }
+        }
+      }
+    }
+
+    [
+      [-76, -42, 31, 23],
+      [-56, -64, 36, 25],
+      [-29, -74, 44, 28],
+      [5, -79, 52, 31],
+      [39, -74, 45, 28],
+      [67, -59, 38, 25],
+      [81, -38, 31, 22]
+    ].forEach((mountain) => addMountain(...mountain));
+
+    instancedBlocks(
+      world,
+      [4, 4, 4],
+      mountainStone4,
+      mats.stone,
+      { cast: false, receive: true }
+    );
+    instancedBlocks(
+      world,
+      [4, 4, 4],
+      mountainDark4,
+      mats.stoneDark,
+      { cast: false, receive: true }
+    );
+    instancedBlocks(
+      world,
+      [4, 4, 4],
+      mountainSnow4,
+      mats.snow,
+      { cast: false, receive: true }
+    );
+    instancedBlocks(
+      world,
+      [2, 2, 2],
+      mountainStone2,
+      mats.stoneDark,
+      { cast: false, receive: true }
+    );
+    instancedBlocks(
+      world,
+      [2, 2, 2],
+      mountainSnow2,
+      mats.snow,
+      { cast: false, receive: true }
+    );
+
+    // -------------------------------------------------------------------------
+    // Pond, shore, lily pads, and curved Taiko-bashi bridge
+    // -------------------------------------------------------------------------
+
+    const waterBlocks = [];
+
+    for (let x = -16; x <= 16; x += 2) {
+      for (let z = 4; z <= 20; z += 2) {
+        if (pondMetric(x, z) < 0.94) {
+          waterBlocks.push([x, -0.02, z]);
+        }
+      }
+    }
+
+    const waterMesh = instancedBlocks(
+      world,
+      [2, 0.16, 2],
+      waterBlocks,
+      mats.water,
+      {
+        cast: false,
+        receive: true,
+        renderOrder: 2
+      }
+    );
+
+    if (waterMesh) {
+      waterMesh.frustumCulled = false;
+    }
+
+    for (let i = 0; i < 34; i++) {
+      const angle = (i / 34) * Math.PI * 2;
+      const x = Math.cos(angle) * (17.1 + rand() * 1.2);
+      const z =
+        12 + Math.sin(angle) * (7.7 + rand() * 0.65);
+
+      block(
+        world,
+        x,
+        0.03,
+        z,
+        1.4 + rand() * 0.7,
+        0.25,
+        1.2 + rand() * 0.65,
+        rand() > 0.55 ? mats.sand : mats.path,
+        {
+          ry: rand() * Math.PI,
+          cast: false
+        }
+      );
+    }
+
+    const lilyLocations = [
+      [-10.5, 9.2],
+      [-7.3, 15.8],
+      [8.8, 8.4],
+      [11.3, 14.4],
+      [-12.4, 13.1],
+      [6.8, 17.1],
+      [13.2, 11.1]
+    ];
+
+    lilyLocations.forEach(([x, z], index) => {
+      block(
+        world,
+        x,
+        0.13,
+        z,
+        1.05,
+        0.1,
+        0.82,
+        mats.lily,
+        {
+          ry: rand() * Math.PI,
+          cast: false
+        }
+      );
+
+      if (index % 2 === 0) {
+        block(
+          world,
+          x + 0.14,
+          0.27,
+          z,
+          0.22,
+          0.22,
+          0.22,
+          mats.sakuraLight,
+          { cast: false }
+        );
+      }
+    });
+
+    function createBridge() {
+      const bridge = new THREE.Group();
+      bridge.name = "Taiko-bashi Bridge";
+      world.add(bridge);
+
+      const points = [];
+
+      for (let i = -7; i <= 7; i++) {
+        const normalized = i / 7;
+        const z = 12 + i;
+        const y = 0.42 + 2.62 * (1 - normalized * normalized);
+        points.push({ z, y });
+
+        block(
+          bridge,
+          0,
+          y,
+          z,
+          3.4,
+          0.34,
+          1.08,
+          mats.darkWood
+        );
+
+        block(
+          bridge,
+          -1.82,
+          y + 0.02,
+          z,
+          0.26,
+          0.62,
+          1.05,
+          mats.redWood
+        );
+
+        block(
+          bridge,
+          1.82,
+          y + 0.02,
+          z,
+          0.26,
+          0.62,
+          1.05,
+          mats.redWood
+        );
+      }
+
+      [-1.98, 1.98].forEach((sideX) => {
+        for (let i = 0; i < points.length; i++) {
+          const point = points[i];
+
+          if (i % 2 === 0) {
+            block(
+              bridge,
+              sideX,
+              point.y + 0.65,
+              point.z,
+              0.22,
+              1.35,
+              0.22,
+              mats.redWood
+            );
+          }
+
+          if (i < points.length - 1) {
+            const next = points[i + 1];
+
+            beamBetween(
+              bridge,
+              [sideX, point.y + 1.3, point.z],
+              [sideX, next.y + 1.3, next.z],
+              0.2,
+              mats.redWood
+            );
+
+            beamBetween(
+              bridge,
+              [sideX, point.y + 0.22, point.z],
+              [sideX, next.y + 0.22, next.z],
+              0.28,
+              mats.redWood
+            );
+          }
+        }
+      });
+
+      for (const endpoint of [points[0], points[points.length - 1]]) {
+        block(
+          bridge,
+          0,
+          endpoint.y - 0.28,
+          endpoint.z,
+          4.5,
+          0.45,
+          1.2,
+          mats.redWood
+        );
+      }
+
+      return bridge;
+    }
+
+    createBridge();
+
+    // -------------------------------------------------------------------------
+    // Stone stepping pathways
+    // -------------------------------------------------------------------------
+
+    function steppingLine(start, end, count, jitter = 0.25) {
+      for (let i = 0; i < count; i++) {
+        const t = count === 1 ? 0 : i / (count - 1);
+        const x =
+          THREE.MathUtils.lerp(start[0], end[0], t) +
+          (rand() - 0.5) * jitter;
+        const z =
+          THREE.MathUtils.lerp(start[1], end[1], t) +
+          (rand() - 0.5) * jitter;
+
+        block(
+          world,
+          x,
+          0.13,
+          z,
+          1.45 + rand() * 0.48,
+          0.25,
+          1.05 + rand() * 0.4,
+          mats.path,
+          {
+            ry: (rand() - 0.5) * 0.35,
+            cast: false
+          }
+        );
+      }
+    }
+
+    steppingLine([0, 41], [0, 22], 9, 0.5);
+    steppingLine([0, 3.8], [0, -8.5], 7, 0.42);
+    steppingLine([5, -1], [21.5, 10.5], 10, 0.75);
+
+    // -------------------------------------------------------------------------
+    // Pagoda lantern helpers
+    // -------------------------------------------------------------------------
+
+    function createHangingLantern(
+      parent,
+      x,
+      y,
+      z,
+      scale = 1,
+      addLight = true
+    ) {
+      block(
+        parent,
+        x,
+        y + 0.54 * scale,
+        z,
+        0.12 * scale,
+        0.68 * scale,
+        0.12 * scale,
+        mats.black
+      );
+
+      block(
+        parent,
+        x,
+        y + 0.16 * scale,
+        z,
+        0.68 * scale,
+        0.13 * scale,
+        0.68 * scale,
+        mats.redWood
+      );
+
+      block(
+        parent,
+        x,
+        y - 0.18 * scale,
+        z,
+        0.58 * scale,
+        0.68 * scale,
+        0.58 * scale,
+        mats.lantern
+      );
+
+      block(
+        parent,
+        x,
+        y - 0.55 * scale,
+        z,
+        0.68 * scale,
+        0.13 * scale,
+        0.68 * scale,
+        mats.redWood
+      );
+
+      if (addLight) {
+        const light = new THREE.PointLight(
+          0xffaa55,
+          0,
+          13 * scale,
+          2
+        );
+        light.position.set(x, y - 0.17 * scale, z);
+        light.userData.phase = rand() * Math.PI * 2;
+        parent.add(light);
+        lanternLights.push(light);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Five-tier pagoda temple
+    // -------------------------------------------------------------------------
+
+    function addShojiWalls(group, baseY, width, depth, height, tier) {
+      const wallHeight = height - 0.82;
+      const wallY = baseY + height * 0.5;
+
+      block(
+        group,
+        0,
+        wallY,
+        depth * 0.5 - 0.08,
+        width - 1.25,
+        wallHeight,
+        0.18,
+        mats.shoji
+      );
+
+      block(
+        group,
+        0,
+        wallY,
+        -depth * 0.5 + 0.08,
+        width - 1.25,
+        wallHeight,
+        0.18,
+        mats.shoji
+      );
+
+      block(
+        group,
+        width * 0.5 - 0.08,
+        wallY,
+        0,
+        0.18,
+        wallHeight,
+        depth - 1.25,
+        mats.shoji
+      );
+
+      block(
+        group,
+        -width * 0.5 + 0.08,
+        wallY,
+        0,
+        0.18,
+        wallHeight,
+        depth - 1.25,
+        mats.shoji
+      );
+
+      for (
+        let x = -width * 0.5 + 1.3;
+        x <= width * 0.5 - 1.2;
+        x += 2
+      ) {
+        block(
+          group,
+          x,
+          wallY,
+          depth * 0.5 + 0.045,
+          0.16,
+          wallHeight,
+          0.15,
+          mats.darkWood
+        );
+
+        block(
+          group,
+          x,
+          wallY,
+          -depth * 0.5 - 0.045,
+          0.16,
+          wallHeight,
+          0.15,
+          mats.darkWood
+        );
+      }
+
+      for (
+        let z = -depth * 0.5 + 1.3;
+        z <= depth * 0.5 - 1.2;
+        z += 2
+      ) {
+        block(
+          group,
+          width * 0.5 + 0.045,
+          wallY,
+          z,
+          0.15,
+          wallHeight,
+          0.16,
+          mats.darkWood
+        );
+
+        block(
+          group,
+          -width * 0.5 - 0.045,
+          wallY,
+          z,
+          0.15,
+          wallHeight,
+          0.16,
+          mats.darkWood
+        );
+      }
+
+      [-0.22, 0.22].forEach((offset) => {
+        block(
+          group,
+          0,
+          wallY + offset * wallHeight,
+          depth * 0.5 + 0.055,
+          width - 1.2,
+          0.13,
+          0.15,
+          mats.darkWood
+        );
+
+        block(
+          group,
+          0,
+          wallY + offset * wallHeight,
+          -depth * 0.5 - 0.055,
+          width - 1.2,
+          0.13,
+          0.15,
+          mats.darkWood
+        );
+      });
+
+      if (tier === 0) {
+        block(
+          group,
+          0,
+          baseY + 1.9,
+          depth * 0.5 + 0.16,
+          2.25,
+          3.35,
+          0.25,
+          mats.darkWood
+        );
+
+        block(
+          group,
+          -0.28,
+          baseY + 1.8,
+          depth * 0.5 + 0.3,
+          0.12,
+          0.12,
+          0.12,
+          mats.gold
+        );
+
+        block(
+          group,
+          0.28,
+          baseY + 1.8,
+          depth * 0.5 + 0.3,
+          0.12,
+          0.12,
+          0.12,
+          mats.gold
+        );
+      }
+    }
+
+    function addPagodaRoof(group, width, depth, y) {
+      const roofWidth = width + 4;
+      const roofDepth = depth + 4;
+
+      block(
+        group,
+        0,
+        y,
+        0,
+        roofWidth,
+        0.34,
+        roofDepth,
+        mats.roof
+      );
+
+      block(
+        group,
+        0,
+        y + 0.34,
+        0,
+        roofWidth - 1.2,
+        0.4,
+        roofDepth - 1.2,
+        mats.roof
+      );
+
+      block(
+        group,
+        0,
+        y + 0.69,
+        0,
+        roofWidth - 2.5,
+        0.42,
+        roofDepth - 2.5,
+        mats.roof
+      );
+
+      block(
+        group,
+        0,
+        y - 0.23,
+        roofDepth * 0.5,
+        roofWidth,
+        0.28,
+        0.34,
+        mats.darkWood
+      );
+
+      block(
+        group,
+        0,
+        y - 0.23,
+        -roofDepth * 0.5,
+        roofWidth,
+        0.28,
+        0.34,
+        mats.darkWood
+      );
+
+      block(
+        group,
+        roofWidth * 0.5,
+        y - 0.23,
+        0,
+        0.34,
+        0.28,
+        roofDepth,
+        mats.darkWood
+      );
+
+      block(
+        group,
+        -roofWidth * 0.5,
+        y - 0.23,
+        0,
+        0.34,
+        0.28,
+        roofDepth,
+        mats.darkWood
+      );
+
+      for (const sx of [-1, 1]) {
+        for (const sz of [-1, 1]) {
+          block(
+            group,
+            sx * (roofWidth * 0.5 - 0.65),
+            y + 0.53,
+            sz * (roofDepth * 0.5 - 0.65),
+            1.55,
+            0.38,
+            1.55,
+            mats.roof
+          );
+
+          beamBetween(
+            group,
+            [
+              sx * (roofWidth * 0.5 - 2.1),
+              y + 0.39,
+              sz * (roofDepth * 0.5 - 2.1)
+            ],
+            [
+              sx * (roofWidth * 0.5 - 0.3),
+              y + 0.89,
+              sz * (roofDepth * 0.5 - 0.3)
+            ],
+            0.25,
+            mats.darkWood
+          );
+        }
+      }
+
+      return { roofWidth, roofDepth };
+    }
+
+    function createPagoda(x, z) {
+      const pagoda = new THREE.Group();
+      pagoda.name = "Five-tier Pagoda";
+      pagoda.position.set(x, 0, z);
+      world.add(pagoda);
+
+      block(
+        pagoda,
+        0,
+        0.5,
+        0,
+        15.2,
+        1,
+        12.7,
+        mats.stone
+      );
+
+      block(
+        pagoda,
+        0,
+        0.27,
+        6.75,
+        7,
+        0.54,
+        2.1,
+        mats.path
+      );
+
+      block(
+        pagoda,
+        0,
+        0.57,
+        5.9,
+        5.2,
+        0.55,
+        1.45,
+        mats.path
+      );
+
+      const tiers = [
+        { width: 13, depth: 10.5, height: 4.3 },
+        { width: 10.8, depth: 8.8, height: 3.8 },
+        { width: 8.8, depth: 7.2, height: 3.4 },
+        { width: 7, depth: 5.8, height: 3 },
+        { width: 5.4, depth: 4.5, height: 2.7 }
+      ];
+
+      let baseY = 1;
+      let finalRoofY = 0;
+
+      tiers.forEach((tier, index) => {
+        block(
+          pagoda,
+          0,
+          baseY + 0.18,
+          0,
+          tier.width + 1.3,
+          0.36,
+          tier.depth + 1.3,
+          mats.darkWood
+        );
+
+        for (const sx of [-1, 1]) {
+          for (const sz of [-1, 1]) {
+            block(
+              pagoda,
+              sx * (tier.width * 0.5 - 0.38),
+              baseY + tier.height * 0.5,
+              sz * (tier.depth * 0.5 - 0.38),
+              0.72,
+              tier.height,
+              0.72,
+              mats.darkWood
+            );
+          }
+        }
+
+        addShojiWalls(
+          pagoda,
+          baseY,
+          tier.width,
+          tier.depth,
+          tier.height,
+          index
+        );
+
+        block(
+          pagoda,
+          0,
+          baseY + tier.height - 0.28,
+          tier.depth * 0.5,
+          tier.width,
+          0.54,
+          0.62,
+          mats.darkWood
+        );
+
+        block(
+          pagoda,
+          0,
+          baseY + tier.height - 0.28,
+          -tier.depth * 0.5,
+          tier.width,
+          0.54,
+          0.62,
+          mats.darkWood
+        );
+
+        finalRoofY = baseY + tier.height;
+        const roof = addPagodaRoof(
+          pagoda,
+          tier.width,
+          tier.depth,
+          finalRoofY
+        );
+
+        if (index < 2) {
+          const lanternY = finalRoofY - 0.72;
+          const lanternX = tier.width * 0.5 + 0.85;
+          const lanternZ = tier.depth * 0.5 + 0.72;
+
+          createHangingLantern(
+            pagoda,
+            -lanternX,
+            lanternY,
+            lanternZ,
+            index === 0 ? 1 : 0.82,
+            true
+          );
+
+          createHangingLantern(
+            pagoda,
+            lanternX,
+            lanternY,
+            lanternZ,
+            index === 0 ? 1 : 0.82,
+            true
+          );
+        }
+
+        if (index === 0) {
+          for (let xPos = -5; xPos <= 5; xPos += 2.5) {
+            block(
+              pagoda,
+              xPos,
+              baseY + 0.92,
+              roof.roofDepth * 0.5 - 0.45,
+              0.18,
+              1,
+              0.18,
+              mats.darkWood
+            );
+          }
+        }
+
+        baseY = finalRoofY + 1.05;
+      });
+
+      const spireBase = finalRoofY + 1;
+
+      block(
+        pagoda,
+        0,
+        spireBase + 2.6,
+        0,
+        0.34,
+        5.2,
+        0.34,
+        mats.gold
+      );
+
+      for (let i = 0; i < 6; i++) {
+        const y = spireBase + 0.65 + i * 0.62;
+        const width = 1.65 - i * 0.14;
+
+        block(
+          pagoda,
+          0,
+          y,
+          0,
+          width,
+          0.17,
+          0.28,
+          mats.gold
+        );
+        block(
+          pagoda,
+          0,
+          y,
+          0,
+          0.28,
+          0.17,
+          width,
+          mats.gold
+        );
+      }
+
+      block(
+        pagoda,
+        0,
+        spireBase + 5.45,
+        0,
+        0.62,
+        0.62,
+        0.62,
+        mats.gold,
+        { ry: Math.PI / 4 }
+      );
+
+      return pagoda;
+    }
+
+    createPagoda(0, -16);
+
+    // -------------------------------------------------------------------------
+    // Vermillion Torii gate
+    // -------------------------------------------------------------------------
+
+    function createTorii() {
+      const torii = new THREE.Group();
+      torii.name = "Vermillion Torii";
+      torii.position.set(0, 0, 31);
+      world.add(torii);
+
+      for (const x of [-5, 5]) {
+        block(torii, x, 0.28, 0, 1.45, 0.55, 1.45, mats.black);
+        block(torii, x, 4.45, 0, 1.05, 8.4, 1.05, mats.redWood);
+        block(torii, x, 7.25, 0, 1.35, 0.42, 1.25, mats.redWood);
+      }
+
+      block(torii, 0, 7.2, 0, 11.8, 0.68, 0.82, mats.redWood);
+      block(torii, 0, 8.65, 0, 14.3, 0.95, 1.15, mats.redWood);
+      block(torii, 0, 9.22, 0, 15.2, 0.35, 1.42, mats.roof);
+
+      block(
+        torii,
+        -7.25,
+        9.38,
+        0,
+        2.2,
+        0.45,
+        1.45,
+        mats.redWood,
+        { rz: -0.12 }
+      );
+
+      block(
+        torii,
+        7.25,
+        9.38,
+        0,
+        2.2,
+        0.45,
+        1.45,
+        mats.redWood,
+        { rz: 0.12 }
+      );
+
+      block(torii, 0, 7.86, 0, 0.65, 1.25, 0.7, mats.redWood);
+      block(torii, 0, 7.82, 0.48, 1.15, 1.35, 0.18, mats.black);
+      block(torii, 0, 7.82, 0.6, 0.38, 0.75, 0.08, mats.gold);
+
+      return torii;
+    }
+
+    createTorii();
+
+    // -------------------------------------------------------------------------
+    // Kasuga-dōrō stone lanterns
+    // -------------------------------------------------------------------------
+
+    function createStoneLantern(x, z, scale = 1) {
+      const lantern = new THREE.Group();
+      lantern.position.set(x, 0, z);
+      world.add(lantern);
+
+      block(
+        lantern,
+        0,
+        0.16 * scale,
+        0,
+        1.55 * scale,
+        0.32 * scale,
+        1.55 * scale,
+        mats.stone
+      );
+
+      block(
+        lantern,
+        0,
+        0.45 * scale,
+        0,
+        1.1 * scale,
+        0.28 * scale,
+        1.1 * scale,
+        mats.stone
+      );
+
+      block(
+        lantern,
+        0,
+        1.28 * scale,
+        0,
+        0.48 * scale,
+        1.55 * scale,
+        0.48 * scale,
+        mats.stone
+      );
+
+      block(
+        lantern,
+        0,
+        2.12 * scale,
+        0,
+        1.18 * scale,
+        0.24 * scale,
+        1.18 * scale,
+        mats.stone
+      );
+
+      block(
+        lantern,
+        0,
+        2.58 * scale,
+        0,
+        0.82 * scale,
+        0.78 * scale,
+        0.82 * scale,
+        mats.lantern
+      );
+
+      for (const sx of [-1, 1]) {
+        block(
+          lantern,
+          sx * 0.48 * scale,
+          2.58 * scale,
+          0,
+          0.16 * scale,
+          0.88 * scale,
+          0.92 * scale,
+          mats.stone
+        );
+      }
+
+      block(
+        lantern,
+        0,
+        3.06 * scale,
+        0,
+        1.6 * scale,
+        0.28 * scale,
+        1.6 * scale,
+        mats.stone
+      );
+
+      block(
+        lantern,
+        0,
+        3.3 * scale,
+        0,
+        0.92 * scale,
+        0.25 * scale,
+        0.92 * scale,
+        mats.stone
+      );
+
+      const light = new THREE.PointLight(
+        0xffa757,
+        0,
+        12 * scale,
+        2
+      );
+      light.position.set(0, 2.57 * scale, 0);
+      light.userData.phase = rand() * Math.PI * 2;
+      lantern.add(light);
+      lanternLights.push(light);
+    }
+
+    createStoneLantern(-6.4, -6.7, 0.95);
+    createStoneLantern(6.4, -6.7, 0.95);
+    createStoneLantern(-4.2, 23.1, 0.88);
+    createStoneLantern(4.2, 23.1, 0.88);
+
+    // -------------------------------------------------------------------------
+    // Sakura trees and falling micro-voxel petals
+    // -------------------------------------------------------------------------
+
+    const petalOrigins = [];
+
+    function createSakura(x, z, scale = 1) {
+      const tree = new THREE.Group();
+      tree.position.set(x, 0, z);
+      tree.scale.setScalar(scale);
+      world.add(tree);
+
+      block(tree, 0, 2.15, 0, 0.88, 4.3, 0.88, mats.wood);
+
+      beamBetween(
+        tree,
+        [0, 3.1, 0],
+        [-2, 5.65, 0.5],
+        0.48,
+        mats.wood
+      );
+
+      beamBetween(
+        tree,
+        [0.1, 3.45, 0],
+        [2.25, 6.05, -0.4],
+        0.43,
+        mats.wood
+      );
+
+      beamBetween(
+        tree,
+        [0, 4, 0],
+        [0.45, 7.1, 0.6],
+        0.4,
+        mats.wood
+      );
+
+      for (let i = 0; i < 24; i++) {
+        const angle = rand() * Math.PI * 2;
+        const radius = Math.sqrt(rand()) * 3.1;
+        const cx = Math.cos(angle) * radius;
+        const cz = Math.sin(angle) * radius;
+        const cy =
+          6.5 +
+          (rand() - 0.5) * 2.8 -
+          radius * 0.12;
+
+        block(
+          tree,
+          cx,
+          cy,
+          cz,
+          1.25 + rand() * 0.9,
+          1.1 + rand() * 0.8,
+          1.25 + rand() * 0.9,
+          rand() > 0.38 ? mats.sakura : mats.sakuraLight,
+          {
+            cast: false,
+            receive: true
+          }
+        );
+      }
+
+      petalOrigins.push({
+        x,
+        z,
+        y: 7.8 * scale,
+        radius: 3.8 * scale
+      });
+
+      return tree;
+    }
+
+    createSakura(-15.5, -3.2, 1.06);
+    createSakura(15.7, -2.1, 1.02);
+    createSakura(-18.5, 27, 0.94);
+    createSakura(18.4, 28.6, 0.9);
+    createSakura(-12.5, 36.2, 0.78);
+
+    const petalCount = 170;
+    const petalGeometry = getBoxGeometry(0.16, 0.06, 0.13);
+    const petalMesh = new THREE.InstancedMesh(
+      petalGeometry,
+      mats.petal,
+      petalCount
+    );
+    petalMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    petalMesh.castShadow = false;
+    petalMesh.receiveShadow = false;
+    petalMesh.frustumCulled = false;
+    world.add(petalMesh);
+
+    const petalData = [];
+    const petalDummy = new THREE.Object3D();
+
+    function resetPetal(petal, initial = false) {
+      const origin =
+        petalOrigins[
+          Math.floor(rand() * petalOrigins.length)
+        ];
+
+      petal.origin = origin;
+      petal.x =
+        origin.x + (rand() - 0.5) * origin.radius * 2;
+      petal.z =
+        origin.z + (rand() - 0.5) * origin.radius * 2;
+      petal.y = initial
+        ? 0.3 + rand() * origin.y
+        : origin.y + rand() * 2;
+      petal.speed = 0.35 + rand() * 0.6;
+      petal.drift = 0.2 + rand() * 0.38;
+      petal.phase = rand() * Math.PI * 2;
+      petal.spin = rand() * Math.PI * 2;
+    }
+
+    for (let i = 0; i < petalCount; i++) {
+      const petal = {};
+      resetPetal(petal, true);
+      petalData.push(petal);
+    }
+
+    // -------------------------------------------------------------------------
+    // Bamboo grove
+    // -------------------------------------------------------------------------
+
+    const bambooGroups = [];
+
+    function createBamboo(x, z, height) {
+      const bamboo = new THREE.Group();
+      bamboo.position.set(x, 0, z);
+      bamboo.userData.phase = rand() * Math.PI * 2;
+      world.add(bamboo);
+      bambooGroups.push(bamboo);
+
+      const segmentHeight = 1.45;
+      const segments = Math.floor(height / segmentHeight);
+
+      for (let i = 0; i < segments; i++) {
+        const y = segmentHeight * 0.5 + i * segmentHeight;
+
+        block(
+          bamboo,
+          0,
+          y,
+          0,
+          0.38,
+          segmentHeight - 0.06,
+          0.38,
+          i % 2 === 0 ? mats.bamboo : mats.bambooDark,
+          { cast: false }
+        );
+
+        block(
+          bamboo,
+          0,
+          y + segmentHeight * 0.48,
+          0,
+          0.5,
+          0.12,
+          0.5,
+          mats.bambooDark,
+          { cast: false }
+        );
+      }
+
+      for (let i = 0; i < 6; i++) {
+        const leafY = height * (0.58 + rand() * 0.38);
+        const angle = rand() * Math.PI * 2;
+        const radius = 0.3 + rand() * 0.45;
+
+        block(
+          bamboo,
+          Math.cos(angle) * radius,
+          leafY,
+          Math.sin(angle) * radius,
+          0.14,
+          0.09,
+          1.15,
+          mats.leaf,
+          {
+            rx: (rand() - 0.5) * 0.65,
+            ry: angle,
+            rz: (rand() - 0.5) * 0.35,
+            cast: false
+          }
+        );
+      }
+    }
+
+    for (let i = 0; i < 22; i++) {
+      createBamboo(
+        -35 + rand() * 14,
+        -5 + rand() * 34,
+        8 + rand() * 6
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // Bushes and meadow flowers
+    // -------------------------------------------------------------------------
+
+    let bushCount = 0;
+
+    for (let attempt = 0; attempt < 90 && bushCount < 38; attempt++) {
+      const x = -70 + rand() * 140;
+      const z = -44 + rand() * 88;
+
+      const centralPath =
+        Math.abs(x) < 9 && z > -12 && z < 43;
+      const nearPond = pondMetric(x, z, 1.3) < 1;
+      const nearPagoda =
+        Math.abs(x) < 17 && z > -29 && z < -5;
+
+      if (centralPath || nearPond || nearPagoda) continue;
+
+      const bush = new THREE.Group();
+      bush.position.set(x, 0, z);
+      world.add(bush);
+
+      for (let i = 0; i < 3; i++) {
+        block(
+          bush,
+          (rand() - 0.5) * 1.25,
+          0.55 + rand() * 0.35,
+          (rand() - 0.5) * 1.25,
+          0.9 + rand() * 0.75,
+          0.8 + rand() * 0.7,
+          0.9 + rand() * 0.75,
+          mats.leaf,
+          { cast: false }
+        );
+      }
+
+      bushCount++;
+    }
+
+    const flowerStems = [];
+    const yellowFlowers = [];
+    const blueFlowers = [];
+
+    for (let i = 0; i < 105; i++) {
+      const x = 17 + rand() * 23;
+      const z = 1 + rand() * 25;
+
+      if (pondMetric(x, z, 1.08) < 1) continue;
+
+      flowerStems.push([x, 0.18, z]);
+      const flower = [x, 0.42, z];
+
+      if (rand() > 0.48) {
+        yellowFlowers.push(flower);
+      } else {
+        blueFlowers.push(flower);
+      }
+    }
+
+    instancedBlocks(
+      world,
+      [0.08, 0.36, 0.08],
+      flowerStems,
+      mats.bamboo,
+      { cast: false }
+    );
+
+    instancedBlocks(
+      world,
+      [0.22, 0.18, 0.22],
+      yellowFlowers,
+      mats.flowerYellow,
+      { cast: false }
+    );
+
+    instancedBlocks(
+      world,
+      [0.22, 0.18, 0.22],
+      blueFlowers,
+      mats.flowerBlue,
+      { cast: false }
+    );
+
+    // -------------------------------------------------------------------------
+    // Detailed micro-voxel Samurai guardians
+    // -------------------------------------------------------------------------
+
+    const samuraiGuardians = [];
+
+    function createSamurai(x, z, armorMaterial, phase) {
+      const root = new THREE.Group();
+      root.position.set(x, 0, z);
+      world.add(root);
+
+      const lower = new THREE.Group();
+      const upper = new THREE.Group();
+      root.add(lower);
+      root.add(upper);
+
+      // Boots and legs
+      for (const side of [-1, 1]) {
+        block(
+          lower,
+          side * 0.34,
+          0.23,
+          0.08,
+          0.42,
+          0.46,
+          0.68,
+          mats.black
+        );
+
+        block(
+          lower,
+          side * 0.34,
+          0.83,
+          0,
+          0.5,
+          0.88,
+          0.5,
+          armorMaterial
+        );
+
+        block(
+          lower,
+          side * 0.34,
+          1.12,
+          0.28,
+          0.56,
+          0.18,
+          0.16,
+          mats.gold
+        );
+      }
+
+      // Kusazuri skirt plates
+      for (let i = -1; i <= 1; i++) {
+        block(
+          upper,
+          i * 0.44,
+          1.25,
+          0,
+          0.39,
+          0.72,
+          0.7,
+          armorMaterial
+        );
+      }
+
+      // Torso and layered dō armor
+      block(
+        upper,
+        0,
+        1.73,
+        0,
+        1.04,
+        1.2,
+        0.62,
+        mats.black
+      );
+
+      block(
+        upper,
+        0,
+        1.86,
+        0.05,
+        1.3,
+        0.92,
+        0.74,
+        armorMaterial
+      );
+
+      for (const y of [1.5, 1.74, 1.98, 2.2]) {
+        block(
+          upper,
+          0,
+          y,
+          0.43,
+          1.34,
+          0.12,
+          0.12,
+          y === 2.2 ? mats.gold : mats.black
+        );
+      }
+
+      // Sode shoulder guards
+      for (const side of [-1, 1]) {
+        block(
+          upper,
+          side * 0.84,
+          1.94,
+          0,
+          0.43,
+          0.92,
+          0.78,
+          armorMaterial
+        );
+
+        for (const y of [1.64, 1.88, 2.12]) {
+          block(
+            upper,
+            side * 0.84,
+            y,
+            0.43,
+            0.46,
+            0.1,
+            0.12,
+            mats.gold
+          );
+        }
+
+        block(
+          upper,
+          side * 0.68,
+          1.21,
+          0,
+          0.34,
+          0.78,
+          0.38,
+          mats.black
+        );
+
+        block(
+          upper,
+          side * 0.68,
+          0.84,
+          0.08,
+          0.34,
+          0.3,
+          0.34,
+          mats.skin
+        );
+      }
+
+      // Head and face
+      block(upper, 0, 2.7, 0, 0.8, 0.76, 0.7, mats.skin);
+      block(upper, 0, 2.48, -0.35, 0.75, 0.32, 0.16, mats.black);
+
+      for (const eyeX of [-0.18, 0.18]) {
+        block(
+          upper,
+          eyeX,
+          2.76,
+          0.37,
+          0.11,
+          0.1,
+          0.06,
+          mats.black
+        );
+      }
+
+      block(
+        upper,
+        0,
+        2.54,
+        0.38,
+        0.28,
+        0.11,
+        0.06,
+        mats.armorRed
+      );
+
+      // Kabuto helmet and neck guard
+      block(
+        upper,
+        0,
+        3.12,
+        0,
+        1.02,
+        0.36,
+        0.9,
+        mats.black
+      );
+
+      block(
+        upper,
+        0,
+        3.35,
+        -0.02,
+        0.7,
+        0.26,
+        0.7,
+        armorMaterial
+      );
+
+      block(
+        upper,
+        -0.51,
+        2.83,
+        -0.05,
+        0.22,
+        0.7,
+        0.76,
+        mats.black
+      );
+
+      block(
+        upper,
+        0.51,
+        2.83,
+        -0.05,
+        0.22,
+        0.7,
+        0.76,
+        mats.black
+      );
+
+      block(
+        upper,
+        0,
+        2.75,
+        -0.45,
+        0.82,
+        0.64,
+        0.18,
+        mats.black
+      );
+
+      // Golden crescent crest built from micro-voxels
+      block(
+        upper,
+        0,
+        3.48,
+        0.47,
+        0.18,
+        0.38,
+        0.16,
+        mats.gold
+      );
+
+      for (const side of [-1, 1]) {
+        for (let i = 0; i < 6; i++) {
+          block(
+            upper,
+            side * (0.12 + i * 0.145),
+            3.5 + i * i * 0.025,
+            0.49,
+            0.14,
+            0.14,
+            0.13,
+            mats.gold
+          );
+        }
+      }
+
+      // Sheathed katana and hilt
+      block(
+        upper,
+        0.9,
+        1.2,
+        -0.12,
+        0.18,
+        1.8,
+        0.18,
+        mats.black,
+        { rz: -0.26 }
+      );
+
+      block(
+        upper,
+        0.65,
+        2.03,
+        -0.12,
+        0.23,
+        0.55,
+        0.23,
+        mats.leather,
+        { rz: -0.26 }
+      );
+
+      block(
+        upper,
+        0.72,
+        1.82,
+        -0.12,
+        0.46,
+        0.1,
+        0.38,
+        mats.gold,
+        { rz: -0.26 }
+      );
+
+      samuraiGuardians.push({
+        root,
+        upper,
+        phase
+      });
+
+      return root;
+    }
+
+    createSamurai(-4.25, -5.55, mats.armorRed, 0.2);
+    createSamurai(4.25, -5.55, mats.armorBlue, 2.1);
+
+    // -------------------------------------------------------------------------
+    // Roaming sheep and alpacas
+    // -------------------------------------------------------------------------
+
+    const animals = [];
+
+    function registerAnimal(
+      root,
+      headPivot,
+      legs,
+      grazingAngle,
+      speed
+    ) {
+      const angle = rand() * Math.PI * 2;
+      root.rotation.y = angle;
+
+      animals.push({
+        root,
+        headPivot,
+        legs,
+        angle,
+        targetAngle: angle,
+        grazing: false,
+        grazingAngle,
+        speed,
+        phase: rand() * Math.PI * 2,
+        nextDecision: 1 + rand() * 4,
+        homeX: 28,
+        homeZ: 13,
+        radius: 13
+      });
+    }
+
+    function createSheep(x, z, scale = 1) {
+      const root = new THREE.Group();
+      root.position.set(x, 0, z);
+      root.scale.setScalar(scale);
+      world.add(root);
+
+      block(root, 0, 1.14, 0, 1.75, 1.12, 1.05, mats.wool);
+
+      const fluffOffsets = [
+        [-0.72, 1.52, -0.35],
+        [0.72, 1.52, -0.35],
+        [-0.72, 1.48, 0.35],
+        [0.72, 1.48, 0.35],
+        [-0.45, 1.72, 0],
+        [0.45, 1.72, 0]
+      ];
+
+      fluffOffsets.forEach(([fx, fy, fz]) => {
+        block(
+          root,
+          fx,
+          fy,
+          fz,
+          0.52,
+          0.5,
+          0.5,
+          mats.wool
+        );
+      });
+
+      const legs = [];
+      for (const lx of [-0.58, 0.58]) {
+        for (const lz of [-0.34, 0.34]) {
+          const leg = block(
+            root,
+            lx,
+            0.45,
+            lz,
+            0.25,
+            0.85,
+            0.25,
+            mats.animalFace
+          );
+          leg.userData.baseY = leg.position.y;
+          legs.push(leg);
+        }
+      }
+
+      const headPivot = new THREE.Group();
+      headPivot.position.set(0, 1.35, 0.64);
+      root.add(headPivot);
+
+      block(
+        headPivot,
+        0,
+        0,
+        0.35,
+        0.68,
+        0.68,
+        0.62,
+        mats.animalFace
+      );
+
+      block(
+        headPivot,
+        0,
+        -0.05,
+        0.7,
+        0.44,
+        0.35,
+        0.28,
+        mats.leather
+      );
+
+      for (const eyeX of [-0.2, 0.2]) {
+        block(
+          headPivot,
+          eyeX,
+          0.12,
+          0.67,
+          0.09,
+          0.09,
+          0.06,
+          mats.black
+        );
+      }
+
+      for (const earX of [-0.42, 0.42]) {
+        block(
+          headPivot,
+          earX,
+          0.18,
+          0.26,
+          0.28,
+          0.16,
+          0.18,
+          mats.animalFace,
+          { rz: earX < 0 ? -0.3 : 0.3 }
+        );
+      }
+
+      registerAnimal(root, headPivot, legs, 1.05, 0.5);
+    }
+
+    function createAlpaca(x, z, scale = 1) {
+      const root = new THREE.Group();
+      root.position.set(x, 0, z);
+      root.scale.setScalar(scale);
+      world.add(root);
+
+      block(
+        root,
+        0,
+        1.16,
+        0,
+        1.65,
+        1.05,
+        0.95,
+        mats.woolCream
+      );
+
+      const legs = [];
+      for (const lx of [-0.55, 0.55]) {
+        for (const lz of [-0.3, 0.3]) {
+          const leg = block(
+            root,
+            lx,
+            0.48,
+            lz,
+            0.23,
+            0.95,
+            0.23,
+            mats.leather
+          );
+          leg.userData.baseY = leg.position.y;
+          legs.push(leg);
+        }
+      }
+
+      const headPivot = new THREE.Group();
+      headPivot.position.set(0, 1.3, 0.43);
+      root.add(headPivot);
+
+      block(
+        headPivot,
+        0,
+        0.85,
+        0,
+        0.52,
+        1.75,
+        0.52,
+        mats.woolCream
+      );
+
+      block(
+        headPivot,
+        0,
+        1.72,
+        0.22,
+        0.72,
+        0.65,
+        0.68,
+        mats.woolCream
+      );
+
+      block(
+        headPivot,
+        0,
+        1.62,
+        0.58,
+        0.48,
+        0.34,
+        0.32,
+        mats.leather
+      );
+
+      for (const eyeX of [-0.2, 0.2]) {
+        block(
+          headPivot,
+          eyeX,
+          1.82,
+          0.56,
+          0.09,
+          0.09,
+          0.06,
+          mats.black
+        );
+      }
+
+      for (const earX of [-0.23, 0.23]) {
+        block(
+          headPivot,
+          earX,
+          2.22,
+          0.14,
+          0.18,
+          0.58,
+          0.18,
+          mats.woolCream,
+          { rz: earX < 0 ? -0.17 : 0.17 }
+        );
+      }
+
+      registerAnimal(root, headPivot, legs, 0.72, 0.42);
+    }
+
+    createSheep(22, 7.5, 0.94);
+    createSheep(27, 17.2, 1);
+    createSheep(34, 8.7, 0.9);
+    createSheep(31.5, 21.3, 0.96);
+
+    createAlpaca(24.5, 13.8, 0.92);
+    createAlpaca(36.5, 15.8, 0.88);
+    createAlpaca(29.5, 5.2, 0.84);
+
+    // -------------------------------------------------------------------------
+    // Flying voxel birds
+    // -------------------------------------------------------------------------
+
+    const birds = [];
+
+    function createBird(index) {
+      const root = new THREE.Group();
+      world.add(root);
+
+      const bodyMaterial =
+        index % 3 === 0 ? mats.wool : mats.stoneDark;
+
+      block(
+        root,
+        0,
+        0,
+        0,
+        0.36,
+        0.28,
+        0.72,
+        bodyMaterial,
+        { cast: false }
+      );
+
+      block(
+        root,
+        0,
+        0.06,
+        0.42,
+        0.28,
+        0.25,
+        0.28,
+        bodyMaterial,
+        { cast: false }
+      );
+
+      block(
+        root,
+        0,
+        0.02,
+        0.62,
+        0.17,
+        0.12,
+        0.23,
+        mats.gold,
+        { cast: false }
+      );
+
+      const leftWing = new THREE.Group();
+      const rightWing = new THREE.Group();
+      leftWing.position.x = -0.1;
+      rightWing.position.x = 0.1;
+      root.add(leftWing, rightWing);
+
+      block(
+        leftWing,
+        -0.36,
+        0,
+        0,
+        0.78,
+        0.1,
+        0.3,
+        bodyMaterial,
+        { cast: false }
+      );
+
+      block(
+        rightWing,
+        0.36,
+        0,
+        0,
+        0.78,
+        0.1,
+        0.3,
+        bodyMaterial,
+        { cast: false }
+      );
+
+      const angle = rand() * Math.PI * 2;
+      const radius = 34 + rand() * 36;
+
+      birds.push({
+        root,
+        leftWing,
+        rightWing,
+        angle,
+        radius,
+        altitude: 23 + rand() * 16,
+        speed: 0.05 + rand() * 0.04,
+        phase: rand() * Math.PI * 2
+      });
+    }
+
+    for (let i = 0; i < 16; i++) {
+      createBird(i);
+    }
+
+    // -------------------------------------------------------------------------
+    // Drifting block clouds
+    // -------------------------------------------------------------------------
+
+    const clouds = [];
+
+    function createCloud(x, y, z, scale, speed) {
+      const cloud = new THREE.Group();
+      cloud.position.set(x, y, z);
+      cloud.scale.setScalar(scale);
+      world.add(cloud);
+
+      const pieces = 7 + Math.floor(rand() * 5);
+
+      for (let i = 0; i < pieces; i++) {
+        block(
+          cloud,
+          (rand() - 0.5) * 8,
+          (rand() - 0.5) * 2.6,
+          (rand() - 0.5) * 4,
+          2.5 + rand() * 3.4,
+          1.4 + rand() * 1.5,
+          2.1 + rand() * 2.6,
+          mats.cloud,
+          {
+            cast: false,
+            receive: false
+          }
+        );
+      }
+
+      clouds.push({
+        group: cloud,
+        speed
+      });
+    }
+
+    createCloud(-90, 38, -38, 1.05, 0.72);
+    createCloud(-48, 45, -71, 1.3, 0.46);
+    createCloud(-14, 34, 20, 0.88, 0.64);
+    createCloud(18, 43, -48, 1.18, 0.52);
+    createCloud(55, 36, -12, 0.92, 0.68);
+    createCloud(88, 48, -76, 1.35, 0.43);
+    createCloud(31, 31, 45, 0.72, 0.83);
+
+    // -------------------------------------------------------------------------
+    // Time-of-day system
+    // -------------------------------------------------------------------------
+
+    const timeModes = {
+      morning: {
+        label: "Morning Sun",
+        sky: new THREE.Color(0x8fcdf4),
+        fog: new THREE.Color(0xb9d8d6),
+        hemiSky: new THREE.Color(0xd9edff),
+        hemiGround: new THREE.Color(0x4c5c36),
+        sunColor: new THREE.Color(0xfff1c6),
+        celestialColor: new THREE.Color(0xffe899),
+        celestialPosition: new THREE.Vector3(-58, 64, -72),
+        sunIntensity: 2.3,
+        hemiIntensity: 1.25,
+        ambientIntensity: 0.28,
+        lanternIntensity: 2.5,
+        shojiIntensity: 0.32,
+        lanternEmissive: 0.48,
+        stars: 0,
+        clouds: 0.92,
+        fogNear: 56,
+        fogFar: 190,
+        exposure: 1.02,
+        celestialScale: 1
+      },
+
+      sunset: {
+        label: "Sunset",
+        sky: new THREE.Color(0xd97964),
+        fog: new THREE.Color(0xc98270),
+        hemiSky: new THREE.Color(0xffad7a),
+        hemiGround: new THREE.Color(0x513934),
+        sunColor: new THREE.Color(0xff9362),
+        celestialColor: new THREE.Color(0xff8b49),
+        celestialPosition: new THREE.Vector3(-74, 25, -66),
+        sunIntensity: 1.6,
+        hemiIntensity: 0.78,
+        ambientIntensity: 0.23,
+        lanternIntensity: 17,
+        shojiIntensity: 1.15,
+        lanternEmissive: 1.55,
+        stars: 0.08,
+        clouds: 0.76,
+        fogNear: 49,
+        fogFar: 171,
+        exposure: 1.05,
+        celestialScale: 0.95
+      },
+
+      night: {
+        label: "Night",
+        sky: new THREE.Color(0x06101f),
+        fog: new THREE.Color(0x111a2e),
+        hemiSky: new THREE.Color(0x5c78a3),
+        hemiGround: new THREE.Color(0x14211c),
+        sunColor: new THREE.Color(0xaacbff),
+        celestialColor: new THREE.Color(0xd9e9ff),
+        celestialPosition: new THREE.Vector3(58, 66, -78),
+        sunIntensity: 0.44,
+        hemiIntensity: 0.34,
+        ambientIntensity: 0.12,
+        lanternIntensity: 42,
+        shojiIntensity: 2.45,
+        lanternEmissive: 3.2,
+        stars: 0.92,
+        clouds: 0.5,
+        fogNear: 43,
+        fogFar: 154,
+        exposure: 1.14,
+        celestialScale: 0.78
+      }
+    };
+
+    let activeMode = "morning";
+    let currentLanternIntensity =
+      timeModes.morning.lanternIntensity;
+
+    function setTimeMode(modeName, immediate = false) {
+      if (!timeModes[modeName]) return;
+      activeMode = modeName;
+      const mode = timeModes[modeName];
+
+      document.getElementById("modeLabel").textContent = mode.label;
+
+      document.querySelectorAll(".mode-btn").forEach((button) => {
+        button.classList.toggle(
+          "active",
+          button.dataset.mode === modeName
+        );
+      });
+
+      if (!immediate) return;
+
+      skyColor.copy(mode.sky);
+      scene.fog.color.copy(mode.fog);
+      scene.fog.near = mode.fogNear;
+      scene.fog.far = mode.fogFar;
+
+      hemisphereLight.color.copy(mode.hemiSky);
+      hemisphereLight.groundColor.copy(mode.hemiGround);
+      hemisphereLight.intensity = mode.hemiIntensity;
+
+      ambientLight.intensity = mode.ambientIntensity;
+      celestialLight.color.copy(mode.sunColor);
+      celestialLight.intensity = mode.sunIntensity;
+      celestialLight.position.copy(mode.celestialPosition);
+
+      celestialMaterial.color.copy(mode.celestialColor);
+      celestialVoxel.position.copy(mode.celestialPosition);
+      celestialVoxel.scale.setScalar(mode.celestialScale);
+
+      mats.shoji.emissiveIntensity = mode.shojiIntensity;
+      mats.lantern.emissiveIntensity = mode.lanternEmissive;
+      mats.cloud.opacity = mode.clouds;
+      starMaterial.opacity = mode.stars;
+      renderer.toneMappingExposure = mode.exposure;
+
+      currentLanternIntensity = mode.lanternIntensity;
+      lanternLights.forEach((light) => {
+        light.intensity = currentLanternIntensity;
+      });
+    }
+
+    function updateLighting(delta, elapsed) {
+      const mode = timeModes[activeMode];
+      const blend = 1 - Math.exp(-delta * 2.15);
+
+      skyColor.lerp(mode.sky, blend);
+      scene.fog.color.lerp(mode.fog, blend);
+      scene.fog.near = THREE.MathUtils.lerp(
+        scene.fog.near,
+        mode.fogNear,
+        blend
+      );
+      scene.fog.far = THREE.MathUtils.lerp(
+        scene.fog.far,
+        mode.fogFar,
+        blend
+      );
+
+      hemisphereLight.color.lerp(mode.hemiSky, blend);
+      hemisphereLight.groundColor.lerp(
+        mode.hemiGround,
+        blend
+      );
+      hemisphereLight.intensity = THREE.MathUtils.lerp(
+        hemisphereLight.intensity,
+        mode.hemiIntensity,
+        blend
+      );
+
+      ambientLight.intensity = THREE.MathUtils.lerp(
+        ambientLight.intensity,
+        mode.ambientIntensity,
+        blend
+      );
+
+      celestialLight.color.lerp(mode.sunColor, blend);
+      celestialLight.intensity = THREE.MathUtils.lerp(
+        celestialLight.intensity,
+        mode.sunIntensity,
+        blend
+      );
+      celestialLight.position.lerp(
+        mode.celestialPosition,
+        blend
+      );
+
+      celestialMaterial.color.lerp(
+        mode.celestialColor,
+        blend
+      );
+      celestialVoxel.position.lerp(
+        mode.celestialPosition,
+        blend
+      );
+
+      const celestialScale = THREE.MathUtils.lerp(
+        celestialVoxel.scale.x,
+        mode.celestialScale,
+        blend
+      );
+      celestialVoxel.scale.setScalar(celestialScale);
+
+      mats.shoji.emissiveIntensity = THREE.MathUtils.lerp(
+        mats.shoji.emissiveIntensity,
+        mode.shojiIntensity,
+        blend
+      );
+
+      mats.lantern.emissiveIntensity = THREE.MathUtils.lerp(
+        mats.lantern.emissiveIntensity,
+        mode.lanternEmissive,
+        blend
+      );
+
+      mats.cloud.opacity = THREE.MathUtils.lerp(
+        mats.cloud.opacity,
+        mode.clouds,
+        blend
+      );
+
+      starMaterial.opacity = THREE.MathUtils.lerp(
+        starMaterial.opacity,
+        mode.stars,
+        blend
+      );
+
+      renderer.toneMappingExposure = THREE.MathUtils.lerp(
+        renderer.toneMappingExposure,
+        mode.exposure,
+        blend
+      );
+
+      currentLanternIntensity = THREE.MathUtils.lerp(
+        currentLanternIntensity,
+        mode.lanternIntensity,
+        blend
+      );
+
+      lanternLights.forEach((light, index) => {
+        const flicker =
+          0.95 +
+          Math.sin(
+            elapsed * (2.1 + (index % 3) * 0.31) +
+              light.userData.phase
+          ) *
+            0.045;
+
+        light.intensity =
+          currentLanternIntensity * flicker;
+      });
+    }
+
+    document.querySelectorAll(".mode-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        setTimeMode(button.dataset.mode);
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // Smooth camera presets
+    // -------------------------------------------------------------------------
+
+    const cameraPresets = {
+      pagoda: {
+        position: new THREE.Vector3(18, 15, 26),
+        target: new THREE.Vector3(0, 9, -15)
+      },
+      samurai: {
+        position: new THREE.Vector3(7.8, 4.6, 1.5),
+        target: new THREE.Vector3(4.15, 2, -5.55)
+      },
+      meadow: {
+        position: new THREE.Vector3(43, 10, 27),
+        target: new THREE.Vector3(28, 2.2, 13)
+      },
+      mountain: {
+        position: new THREE.Vector3(-43, 29, 38),
+        target: new THREE.Vector3(2, 19, -61)
+      },
+      bird: {
+        position: new THREE.Vector3(0, 82, 26),
+        target: new THREE.Vector3(0, 0, -8)
+      }
+    };
+
+    function setCameraPreset(name, immediate = false) {
+      const preset = cameraPresets[name];
+      if (!preset) return;
+
+      document.querySelectorAll(".preset-btn").forEach((button) => {
+        button.classList.toggle(
+          "active",
+          button.dataset.preset === name
+        );
+      });
+
+      if (immediate) {
+        camera.position.copy(preset.position);
+        controls.target.copy(preset.target);
+        controls.update();
+        cameraTween = null;
+        return;
+      }
+
+      cameraTween = {
+        elapsed: 0,
+        duration: 1.65,
+        fromPosition: camera.position.clone(),
+        toPosition: preset.position.clone(),
+        fromTarget: controls.target.clone(),
+        toTarget: preset.target.clone()
+      };
+    }
+
+    function updateCameraTween(delta) {
+      if (!cameraTween) return;
+
+      cameraTween.elapsed += delta;
+      const linear = Math.min(
+        cameraTween.elapsed / cameraTween.duration,
+        1
+      );
+      const eased =
+        linear < 0.5
+          ? 4 * linear * linear * linear
+          : 1 - Math.pow(-2 * linear + 2, 3) / 2;
+
+      camera.position.lerpVectors(
+        cameraTween.fromPosition,
+        cameraTween.toPosition,
+        eased
+      );
+
+      controls.target.lerpVectors(
+        cameraTween.fromTarget,
+        cameraTween.toTarget,
+        eased
+      );
+
+      if (linear >= 1) {
+        cameraTween = null;
+      }
+    }
+
+    document.querySelectorAll(".preset-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        setCameraPreset(button.dataset.preset);
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // Native Web Audio wind and gentle procedural chimes
+    // -------------------------------------------------------------------------
+
+    const audioButton = document.getElementById("audioButton");
+    const audioIcon = document.getElementById("audioIcon");
+    const audioLabel = document.getElementById("audioLabel");
+
+    let audioEnabled = false;
+    let audioContext = null;
+    let audioMaster = null;
+    let windSource = null;
+    let chimeTimer = null;
+
+    function buildAudioGraph() {
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioContextClass) {
+        throw new Error("Web Audio is not supported.");
+      }
+
+      audioContext = new AudioContextClass();
+      audioMaster = audioContext.createGain();
+      audioMaster.gain.value = 0;
+      audioMaster.connect(audioContext.destination);
+
+      const sampleRate = audioContext.sampleRate;
+      const duration = 4;
+      const buffer = audioContext.createBuffer(
+        1,
+        sampleRate * duration,
+        sampleRate
+      );
+
+      const channel = buffer.getChannelData(0);
+      let smoothed = 0;
+
+      for (let i = 0; i < channel.length; i++) {
+        const white = Math.random() * 2 - 1;
+        smoothed = smoothed * 0.985 + white * 0.015;
+        channel[i] =
+          smoothed * 2.4 +
+          white * 0.065;
+      }
+
+      windSource = audioContext.createBufferSource();
+      windSource.buffer = buffer;
+      windSource.loop = true;
+
+      const windFilter = audioContext.createBiquadFilter();
+      windFilter.type = "lowpass";
+      windFilter.frequency.value = 780;
+      windFilter.Q.value = 0.6;
+
+      const windGain = audioContext.createGain();
+      windGain.gain.value = 0.38;
+
+      const lfo = audioContext.createOscillator();
+      const lfoGain = audioContext.createGain();
+      lfo.type = "sine";
+      lfo.frequency.value = 0.09;
+      lfoGain.gain.value = 0.1;
+      lfo.connect(lfoGain);
+      lfoGain.connect(windGain.gain);
+
+      windSource.connect(windFilter);
+      windFilter.connect(windGain);
+      windGain.connect(audioMaster);
+
+      windSource.start();
+      lfo.start();
+    }
+
+    function playWindChime() {
+      if (
+        !audioEnabled ||
+        !audioContext ||
+        audioContext.state !== "running"
+      ) {
+        return;
+      }
+
+      const pentatonic = [
+        392,
+        440,
+        523.25,
+        587.33,
+        659.25,
+        783.99
+      ];
+
+      const start = audioContext.currentTime + 0.02;
+      const notes = 2 + Math.floor(Math.random() * 3);
+
+      for (let i = 0; i < notes; i++) {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        const frequency =
+          pentatonic[
+            Math.floor(Math.random() * pentatonic.length)
+          ] *
+          (Math.random() > 0.82 ? 2 : 1);
+
+        oscillator.type = i % 2 === 0 ? "sine" : "triangle";
+        oscillator.frequency.value = frequency;
+        oscillator.detune.value =
+          (Math.random() - 0.5) * 8;
+
+        const noteStart = start + i * 0.16;
+        const duration = 3.3 + Math.random() * 2.4;
+
+        gain.gain.setValueAtTime(0.0001, noteStart);
+        gain.gain.exponentialRampToValueAtTime(
+          0.028 + Math.random() * 0.018,
+          noteStart + 0.035
+        );
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          noteStart + duration
+        );
+
+        oscillator.connect(gain);
+
+        if (audioContext.createStereoPanner) {
+          const panner = audioContext.createStereoPanner();
+          panner.pan.value = Math.random() * 1.4 - 0.7;
+          gain.connect(panner);
+          panner.connect(audioMaster);
+        } else {
+          gain.connect(audioMaster);
+        }
+
+        oscillator.start(noteStart);
+        oscillator.stop(noteStart + duration + 0.2);
+      }
+    }
+
+    function scheduleChime() {
+      clearTimeout(chimeTimer);
+      if (!audioEnabled) return;
+
+      chimeTimer = window.setTimeout(() => {
+        playWindChime();
+        scheduleChime();
+      }, 4200 + Math.random() * 7200);
+    }
+
+    function updateAudioButton() {
+      audioButton.classList.toggle("audio-active", audioEnabled);
+      audioButton.setAttribute(
+        "aria-pressed",
+        String(audioEnabled)
+      );
+      audioIcon.textContent = audioEnabled ? "♫" : "♬";
+      audioLabel.textContent = audioEnabled
+        ? "Sound on"
+        : "Sound off";
+    }
+
+    async function toggleAudio() {
+      try {
+        if (!audioContext) {
+          buildAudioGraph();
+        }
+
+        if (!audioEnabled) {
+          if (audioContext.state === "suspended") {
+            await audioContext.resume();
+          }
+
+          audioEnabled = true;
+          const now = audioContext.currentTime;
+          audioMaster.gain.cancelScheduledValues(now);
+          audioMaster.gain.setValueAtTime(
+            Math.max(audioMaster.gain.value, 0.0001),
+            now
+          );
+          audioMaster.gain.exponentialRampToValueAtTime(
+            0.075,
+            now + 1.2
+          );
+          scheduleChime();
+        } else {
+          audioEnabled = false;
+          clearTimeout(chimeTimer);
+
+          const now = audioContext.currentTime;
+          audioMaster.gain.cancelScheduledValues(now);
+          audioMaster.gain.setValueAtTime(
+            Math.max(audioMaster.gain.value, 0.0001),
+            now
+          );
+          audioMaster.gain.exponentialRampToValueAtTime(
+            0.0001,
+            now + 0.7
+          );
+
+          window.setTimeout(() => {
+            if (!audioEnabled && audioContext) {
+              audioContext.suspend();
+            }
+          }, 850);
+        }
+
+        updateAudioButton();
+      } catch (error) {
+        console.error(error);
+        audioLabel.textContent = "Audio unavailable";
+      }
+    }
+
+    audioButton.addEventListener("click", toggleAudio);
+
+    // -------------------------------------------------------------------------
+    // Fullscreen and keyboard controls
+    // -------------------------------------------------------------------------
+
+    document
+      .getElementById("fullscreenButton")
+      .addEventListener("click", async () => {
+        try {
+          if (!document.fullscreenElement) {
+            await document.documentElement.requestFullscreen();
+          } else {
+            await document.exitFullscreen();
+          }
+        } catch (error) {
+          console.warn("Fullscreen unavailable:", error);
+        }
+      });
+
+    const presetKeys = [
+      "pagoda",
+      "samurai",
+      "meadow",
+      "mountain",
+      "bird"
+    ];
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key >= "1" && event.key <= "5") {
+        setCameraPreset(
+          presetKeys[Number(event.key) - 1]
+        );
+      }
+
+      if (event.key.toLowerCase() === "m") {
+        const modes = ["morning", "sunset", "night"];
+        const nextIndex =
+          (modes.indexOf(activeMode) + 1) % modes.length;
+        setTimeMode(modes[nextIndex]);
+      }
+
+      if (event.key.toLowerCase() === "f") {
+        document
+          .getElementById("fullscreenButton")
+          .click();
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // Animation helpers
+    // -------------------------------------------------------------------------
+
+    function updatePetals(delta, elapsed) {
+      petalData.forEach((petal, index) => {
+        petal.y -= petal.speed * delta;
+        petal.x +=
+          Math.sin(elapsed * 0.85 + petal.phase) *
+          petal.drift *
+          delta;
+        petal.z +=
+          Math.cos(elapsed * 0.62 + petal.phase) *
+          petal.drift *
+          0.5 *
+          delta;
+        petal.spin += delta * 1.8;
+
+        if (petal.y < 0.1) {
+          resetPetal(petal, false);
+        }
+
+        petalDummy.position.set(
+          petal.x,
+          petal.y,
+          petal.z
+        );
+        petalDummy.rotation.set(
+          petal.spin * 0.6,
+          petal.spin,
+          petal.spin * 0.35
+        );
+        petalDummy.updateMatrix();
+        petalMesh.setMatrixAt(index, petalDummy.matrix);
+      });
+
+      petalMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    function updateAnimals(delta, elapsed) {
+      animals.forEach((animal) => {
+        if (elapsed > animal.nextDecision) {
+          animal.grazing = rand() < 0.34;
+          animal.targetAngle +=
+            (rand() - 0.5) * 1.9;
+          animal.nextDecision =
+            elapsed + 2.4 + rand() * 5.2;
+        }
+
+        const homeDeltaX =
+          animal.homeX - animal.root.position.x;
+        const homeDeltaZ =
+          animal.homeZ - animal.root.position.z;
+        const distanceFromHome = Math.hypot(
+          homeDeltaX,
+          homeDeltaZ
+        );
+
+        if (distanceFromHome > animal.radius) {
+          animal.grazing = false;
+          animal.targetAngle = Math.atan2(
+            homeDeltaX,
+            homeDeltaZ
+          );
+        }
+
+        const angleDifference = Math.atan2(
+          Math.sin(animal.targetAngle - animal.angle),
+          Math.cos(animal.targetAngle - animal.angle)
+        );
+
+        animal.angle +=
+          angleDifference *
+          Math.min(1, delta * 0.72);
+
+        animal.root.rotation.y = animal.angle;
+
+        const movementSpeed = animal.grazing
+          ? 0
+          : animal.speed;
+
+        animal.root.position.x +=
+          Math.sin(animal.angle) *
+          movementSpeed *
+          delta;
+        animal.root.position.z +=
+          Math.cos(animal.angle) *
+          movementSpeed *
+          delta;
+
+        const gait =
+          elapsed * 5.2 + animal.phase;
+        animal.root.position.y =
+          movementSpeed > 0
+            ? Math.abs(Math.sin(gait)) * 0.045
+            : Math.sin(elapsed * 1.7 + animal.phase) *
+              0.012;
+
+        const targetGraze = animal.grazing
+          ? animal.grazingAngle
+          : 0;
+
+        animal.headPivot.rotation.x =
+          THREE.MathUtils.lerp(
+            animal.headPivot.rotation.x,
+            targetGraze,
+            1 - Math.exp(-delta * 2.7)
+          );
+
+        animal.legs.forEach((leg, index) => {
+          leg.position.y =
+            leg.userData.baseY +
+            (movementSpeed > 0
+              ? Math.sin(gait + index * Math.PI) * 0.045
+              : 0);
+        });
+      });
+    }
+
+    function updateBirds(delta, elapsed) {
+      birds.forEach((bird) => {
+        bird.angle += bird.speed * delta;
+
+        const x = Math.cos(bird.angle) * bird.radius;
+        const z =
+          -12 +
+          Math.sin(bird.angle) *
+            bird.radius *
+            0.68;
+
+        bird.root.position.set(
+          x,
+          bird.altitude +
+            Math.sin(elapsed * 0.8 + bird.phase) * 1.1,
+          z
+        );
+
+        const dx =
+          -Math.sin(bird.angle) * bird.radius;
+        const dz =
+          Math.cos(bird.angle) *
+          bird.radius *
+          0.68;
+
+        bird.root.rotation.y = Math.atan2(dx, dz);
+
+        const flap =
+          Math.sin(elapsed * 8.2 + bird.phase) * 0.78;
+
+        bird.leftWing.rotation.z = 0.12 + flap;
+        bird.rightWing.rotation.z = -0.12 - flap;
+      });
+    }
+
+    function updateClouds(delta) {
+      clouds.forEach((cloud) => {
+        cloud.group.position.x += cloud.speed * delta;
+
+        if (cloud.group.position.x > 118) {
+          cloud.group.position.x = -118;
+        }
+      });
+    }
+
+    function updateBamboo(elapsed) {
+      bambooGroups.forEach((bamboo) => {
+        bamboo.rotation.z =
+          Math.sin(
+            elapsed * 0.58 +
+              bamboo.userData.phase
+          ) * 0.0065;
+        bamboo.rotation.x =
+          Math.cos(
+            elapsed * 0.44 +
+              bamboo.userData.phase
+          ) * 0.003;
+      });
+    }
+
+    function updateSamurai(elapsed) {
+      samuraiGuardians.forEach((samurai) => {
+        const breath =
+          Math.sin(elapsed * 1.55 + samurai.phase);
+
+        samurai.upper.position.y = breath * 0.024;
+        samurai.upper.scale.y = 1 + breath * 0.009;
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // Main render loop
+    // -------------------------------------------------------------------------
+
+    const clock = new THREE.Clock();
+    let elapsed = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = Math.min(clock.getDelta(), 0.05);
+      elapsed += delta;
+
+      updateCameraTween(delta);
+      updateLighting(delta, elapsed);
+      updateSamurai(elapsed);
+      updateAnimals(delta, elapsed);
+      updateBirds(delta, elapsed);
+      updateClouds(delta);
+      updateBamboo(elapsed);
+      updatePetals(delta, elapsed);
+
+      textures.water.offset.x =
+        (textures.water.offset.x + delta * 0.012) % 1;
+      textures.water.offset.y =
+        (textures.water.offset.y + delta * 0.005) % 1;
+
+      celestialVoxel.quaternion.copy(camera.quaternion);
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // -------------------------------------------------------------------------
+    // Resize and startup
+    // -------------------------------------------------------------------------
+
+    function handleResize() {
+      camera.aspect =
+        window.innerWidth / window.innerHeight;
+      camera.fov =
+        window.innerWidth < 700 ? 58 : 50;
+      camera.updateProjectionMatrix();
+
+      renderer.setPixelRatio(
+        Math.min(
+          window.devicePixelRatio,
+          window.innerWidth < 700 ? 1.45 : 1.8
+        )
+      );
+      renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+      );
+    }
+
+    window.addEventListener("resize", handleResize);
+
+    setCameraPreset("pagoda", true);
+    setTimeMode("morning", true);
+    updateAudioButton();
+    animate();
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document
+          .getElementById("loading")
+          .classList.add("loaded");
+      });
+    });
+  </script>
+</body>
+</html>

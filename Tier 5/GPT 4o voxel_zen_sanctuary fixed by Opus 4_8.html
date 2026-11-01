@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voxel Zen Sanctuary</title>
+
+  <!-- Import map: tells the browser what the names "three" and
+       "three/addons/" point to. This is what OrbitControls needs. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.155.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      display: block;
+    }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    #ui button {
+      margin: 5px;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    #ui button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <button id="morning">Morning</button>
+    <button id="sunset">Sunset</button>
+    <button id="night">Night</button>
+  </div>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // Scene, Camera, Renderer
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.body.appendChild(renderer.domElement);
+
+    // Orbit Controls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 1, 0);
+    controls.update();
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(10, 10, 10);
+    scene.add(directionalLight);
+
+    // Ground
+    const groundGeometry = new THREE.PlaneGeometry(100, 100);
+    const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22 });
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
+
+    // Pagoda
+    function createPagoda() {
+      const pagodaGroup = new THREE.Group();
+      const levels = 5;
+      for (let i = 0; i < levels; i++) {
+        const levelGeometry = new THREE.BoxGeometry(6 - i, 0.5, 6 - i);
+        const levelMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+        const level = new THREE.Mesh(levelGeometry, levelMaterial);
+        level.position.y = i * 0.6;
+        pagodaGroup.add(level);
+      }
+      const spireGeometry = new THREE.ConeGeometry(0.5, 1, 4);
+      const spireMaterial = new THREE.MeshStandardMaterial({ color: 0xFFD700 });
+      const spire = new THREE.Mesh(spireGeometry, spireMaterial);
+      spire.position.y = levels * 0.6 + 0.5;
+      pagodaGroup.add(spire);
+      return pagodaGroup;
+    }
+    const pagoda = createPagoda();
+    pagoda.position.set(0, 0.5, 0);
+    scene.add(pagoda);
+
+    // Torii Gate
+    function createToriiGate() {
+      const toriiGroup = new THREE.Group();
+      const beamGeometry = new THREE.BoxGeometry(0.2, 0.2, 3);
+      const beamMaterial = new THREE.MeshStandardMaterial({ color: 0xFF0000 });
+      const topBeam = new THREE.Mesh(beamGeometry, beamMaterial);
+      topBeam.position.y = 2;
+      toriiGroup.add(topBeam);
+
+      const legGeometry = new THREE.BoxGeometry(0.2, 2, 0.2);
+      const leg1 = new THREE.Mesh(legGeometry, beamMaterial);
+      leg1.position.set(-1, 1, 0);
+      const leg2 = leg1.clone();
+      leg2.position.set(1, 1, 0);
+      toriiGroup.add(leg1, leg2);
+
+      return toriiGroup;
+    }
+    const toriiGate = createToriiGate();
+    toriiGate.position.set(-5, 0, 0);
+    scene.add(toriiGate);
+
+    // Animation
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+
+    // UI Controls
+    document.getElementById('morning').addEventListener('click', () => {
+      directionalLight.color.set(0xffffff);
+      ambientLight.intensity = 0.5;
+    });
+    document.getElementById('sunset').addEventListener('click', () => {
+      directionalLight.color.set(0xff4500);
+      ambientLight.intensity = 0.3;
+    });
+    document.getElementById('night').addEventListener('click', () => {
+      directionalLight.color.set(0x0000ff);
+      ambientLight.intensity = 0.1;
+    });
+
+    // Camera Position
+    camera.position.set(10, 10, 10);
+    controls.update();
+
+    animate();
+  </script>
+</body>
+</html>

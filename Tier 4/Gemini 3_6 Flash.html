@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zen Sanctuary - Voxel Mountain Haven</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
+
+    <!-- Three.js ES Modules Import Map -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow: hidden;
+            background-color: #0b0f19;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .font-cinzel {
+            font-family: 'Cinzel', serif;
+        }
+        /* Custom scrollbars for controls if needed */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+        .btn-glass {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-glass:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.35);
+            transform: translateY(-2px);
+        }
+        .btn-glass.active {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.6), rgba(217, 119, 6, 0.6));
+            border-color: rgba(252, 165, 165, 0.5);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+        }
+        /* Canvas container */
+        #webgl-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body class="text-slate-100 antialiased h-screen w-screen overflow-hidden">
+
+    <!-- WebGL Canvas Container -->
+    <div id="webgl-container"></div>
+
+    <!-- UI Overlay Controls -->
+    <div class="relative z-10 pointer-events-none h-full w-full flex flex-col justify-between p-4 sm:p-6">
+        
+        <!-- Header Panel -->
+        <header class="flex justify-between items-start pointer-events-auto">
+            <div class="glass-panel p-4 sm:p-5 rounded-2xl max-w-sm sm:max-w-md transition-all">
+                <div class="flex items-center gap-3 mb-1">
+                    <span class="text-2xl text-red-500">⛩️</span>
+                    <h1 class="font-cinzel text-xl sm:text-2xl font-bold tracking-wider text-amber-100">Zen Sanctuary</h1>
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    Voxel Japanese Mountain Retreat. Features dynamic lighting, procedural pixel textures, micro-voxel samurai guardians, roaming wildlife, and ambient zen chimes.
+                </p>
+            </div>
+
+            <!-- Audio & Stats Toggle -->
+            <div class="flex flex-col gap-2 items-end">
+                <button id="audio-btn" class="btn-glass p-3 rounded-xl flex items-center gap-2 text-sm font-semibold pointer-events-auto">
+                    <i id="audio-icon" class="fas fa-volume-mute text-red-400 text-lg"></i>
+                    <span id="audio-text" class="hidden sm:inline">Sound Off</span>
+                </button>
+                <div class="glass-panel px-3 py-1.5 rounded-lg text-xs font-mono text-amber-200/80">
+                    <span id="fps-counter">60</span> FPS
+                </div>
+            </div>
+        </header>
+
+        <!-- Bottom Controls Bar -->
+        <footer class="flex flex-col lg:flex-row gap-4 items-center justify-between pointer-events-auto">
+            
+            <!-- Dynamic Time of Day Switcher -->
+            <div class="glass-panel p-2 rounded-2xl flex items-center gap-1.5 w-full sm:w-auto justify-center">
+                <span class="text-xs font-semibold px-3 text-slate-400 uppercase tracking-wider hidden sm:inline">Time</span>
+                <button id="time-morning" class="btn-glass active px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2">
+                    <i class="fas fa-sun text-amber-300"></i> Morning
+                </button>
+                <button id="time-sunset" class="btn-glass px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2">
+                    <i class="fas fa-cloud-sun text-orange-400"></i> Sunset
+                </button>
+                <button id="time-night" class="btn-glass px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2">
+                    <i class="fas fa-moon text-indigo-300"></i> Night
+                </button>
+            </div>
+
+            <!-- Camera Presets Bar -->
+            <div class="glass-panel p-2 rounded-2xl flex items-center gap-1.5 overflow-x-auto max-w-full">
+                <span class="text-xs font-semibold px-2 text-slate-400 uppercase tracking-wider hidden sm:inline whitespace-nowrap">Views</span>
+                <button id="cam-pagoda" class="btn-glass px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap">
+                    🏯 Pagoda Front
+                </button>
+                <button id="cam-samurai" class="btn-glass px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap">
+                    ⚔️ Samurai Guard
+                </button>
+                <button id="cam-meadow" class="btn-glass px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap">
+                    🦙 Pastoral Meadow
+                </button>
+                <button id="cam-vista" class="btn-glass px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap">
+                    ⛰️ Mountain Vista
+                </button>
+                <button id="cam-birds" class="btn-glass px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap">
+                    🦅 Bird's Eye
+                </button>
+            </div>
+
+        </footer>
+    </div>
+
+    <!-- Main Logic Script -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        
+        // Scene setup
+        const container = document.getElementById('webgl-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb);
+        scene.fog = new THREE.FogExp2(0x87ceeb, 0.007);
+
+        // Camera
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 800);
+        camera.position.set(45, 22, 60);
+
+        // Renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
+        container.appendChild(renderer.domElement);
+
+        // Orbit Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.02; // Prevents clipping below terrain
+        controls.minDistance = 5;
+        controls.maxDistance = 220;
+        controls.target.set(0, 8, 0);
+
+
+        /**
+         * Helper function to generate 16x16 pixelated HTML5 Canvas Textures
+         */
+        function createPixelTexture(baseHex, noiseIntensity = 15, pattern = 'none') {
+            const canvas = document.createElement('canvas');
+            canvas.width = 16;
+            canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+
+            const baseColor = new THREE.Color(baseHex);
+
+            for (let x = 0; x < 16; x++) {
+                for (let y = 0; y < 16; y++) {
+                    // Create pixel noise variation
+                    const noise = (Math.random() - 0.5) * (noiseIntensity / 100);
+                    const r = Math.min(1, Math.max(0, baseColor.r + noise));
+                    const g = Math.min(1, Math.max(0, baseColor.g + noise));
+                    const b = Math.min(1, Math.max(0, baseColor.b + noise));
+                    ctx.fillStyle = `rgb(${Math.floor(r*255)}, ${Math.floor(g*255)}, ${Math.floor(b*255)})`;
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+
+            // Apply special overlay patterns
+            if (pattern === 'shoji') {
+                ctx.fillStyle = '#3a2212';
+                // Grid frame for Shoji screens
+                ctx.fillRect(0, 0, 16, 1);
+                ctx.fillRect(0, 15, 16, 1);
+                ctx.fillRect(0, 0, 1, 16);
+                ctx.fillRect(15, 0, 1, 16);
+                ctx.fillRect(7, 0, 2, 16);
+                ctx.fillRect(0, 7, 16, 2);
+            } else if (pattern === 'wood') {
+                ctx.fillStyle = 'rgba(20, 10, 5, 0.15)';
+                for (let i = 0; i < 16; i += 4) {
+                    ctx.fillRect(0, i, 16, 1);
+                }
+            } else if (pattern === 'roof') {
+                ctx.fillStyle = '#1c2430';
+                for (let x = 0; x < 16; x += 4) {
+                    ctx.fillRect(x, 0, 2, 16);
+                }
+            } else if (pattern === 'grass_top') {
+                // Add tiny flower specs on top of grass
+                for (let k = 0; k < 3; k++) {
+                    const fx = Math.floor(Math.random() * 14) + 1;
+                    const fy = Math.floor(Math.random() * 14) + 1;
+                    ctx.fillStyle = Math.random() > 0.5 ? '#fbcfe8' : '#fef08a';
+                    ctx.fillRect(fx, fy, 1, 1);
+                }
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.magFilter = THREE.NearestFilter;
+            texture.minFilter = THREE.NearestFilter;
+            texture.colorSpace = THREE.SRGBColorSpace;
+            return texture;
+        }
+
+        // Texture Materials Palette
+        const materials = {
+            grass: new THREE.MeshStandardMaterial({ map: createPixelTexture(0x4ade80, 20, 'grass_top'), roughness: 0.8 }),
+            dirt: new THREE.MeshStandardMaterial({ map: createPixelTexture(0x78350f, 25), roughness: 0.9 }),
+            stone: new THREE.MeshStandardMaterial({ map: createPixelTexture(0x64748b, 20), roughness: 0.7 }),
+            snow: new THREE.MeshStandardMaterial({ map: createPixelTexture(0xf8fafc, 10), roughness: 0.3 }),
+            darkWood: new THREE.MeshStandardMaterial({ map: createPixelTexture(0x381e11, 15, 'wood'), roughness: 0.6 }),
+            redWood: new THREE.MeshStandardMaterial({ map: createPixelTexture(0xd97706, 15, 'wood'), roughness: 0.5 }),
+            shoji: new THREE.MeshStandardMaterial({ 
+                map: createPixelTexture(0xfffbeb, 10, 'shoji'), 
+                emissive: 0xfde047, 
+                emissiveIntensity: 0.35, 
+                roughness: 0.4 
+            }),
+            roof: new THREE.MeshStandardMaterial({ map: createPixelTexture(0x1e293b, 15, 'roof'), roughness: 0.4 }),
+            gold: new THREE.MeshStandardMaterial({ map: createPixelTexture(0xfacc15, 10), metalness: 0.8, roughness: 0.2 }),
+            water: new THREE.MeshStandardMaterial({ 
+                map: createPixelTexture(0x0284c7, 15), 
+                transparent: true, 
+                opacity: 0.82, 
+                roughness: 0.1 
+            }),
+            bamboo: new THREE.MeshStandardMaterial({ map: createPixelTexture(0x16a34a, 15), roughness: 0.5 }),
+            sakura: new THREE.MeshStandardMaterial({ map: createPixelTexture(0xf472b6, 25), roughness: 0.6 }),
+            samuraiArmor: new THREE.MeshStandardMaterial({ map: createPixelTexture(0x1e1b4b, 15), metalness: 0.3, roughness: 0.4 }),
+            samuraiRed: new THREE.MeshStandardMaterial({ map: createPixelTexture(0xb91c1c, 15), roughness: 0.4 }),
+            wool: new THREE.MeshStandardMaterial({ map: createPixelTexture(0xf1f5f9, 15), roughness: 0.9 }),
+            skin: new THREE.MeshStandardMaterial({ map: createPixelTexture(0xfed7aa, 10), roughness: 0.6 })
+        };
+
+
+        class AudioSynthesizer {
+            constructor() {
+                this.ctx = null;
+                this.isMuted = true;
+                this.windNode = null;
+                this.chimeTimer = null;
+                this.pentatonicScale = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50]; // C5, D5, E5, G5, A5, C6
+            }
+
+            init() {
+                if (this.ctx) return;
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioCtx();
+
+                // Gentle Wind Noise Setup
+                const bufferSize = 2 * this.ctx.sampleRate;
+                const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+
+                const whiteNoise = this.ctx.createBufferSource();
+                whiteNoise.buffer = noiseBuffer;
+                whiteNoise.loop = true;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(300, this.ctx.currentTime);
+
+                // LFO for atmospheric wind wave effect
+                const lfo = this.ctx.createOscillator();
+                lfo.frequency.value = 0.15; // Slow ambient sweep
+                const lfoGain = this.ctx.createGain();
+                lfoGain.gain.value = 150;
+                lfo.connect(lfoGain);
+                lfoGain.connect(filter.frequency);
+                lfo.start();
+
+                this.windGain = this.ctx.createGain();
+                this.windGain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+
+                whiteNoise.connect(filter);
+                filter.connect(this.windGain);
+                this.windGain.connect(this.ctx.destination);
+                whiteNoise.start();
+
+                this.scheduleChimes();
+            }
+
+            playChime() {
+                if (this.isMuted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                const freq = this.pentatonicScale[Math.floor(Math.random() * this.pentatonicScale.length)];
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+                // Quick attack, long peaceful decay
+                gain.gain.setValueAtTime(0.001, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.08, this.ctx.currentTime + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 3.5);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 3.6);
+            }
+
+            scheduleChimes() {
+                const nextTime = Math.random() * 3000 + 2000;
+                this.chimeTimer = setTimeout(() => {
+                    this.playChime();
+                    this.scheduleChimes();
+                }, nextTime);
+            }
+
+            toggle() {
+                if (!this.ctx) this.init();
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+                this.isMuted = !this.isMuted;
+                if (this.windGain) {
+                    this.windGain.gain.setValueAtTime(this.isMuted ? 0 : 0.04, this.ctx.currentTime);
+                }
+                return !this.isMuted;
+            }
+        }
+
+        const audioSynth = new AudioSynthesizer();
+
+
+        // Instanced Mesh Terrain Manager
+        const voxelGeometry = new THREE.BoxGeometry(2, 2, 2);
+        
+        // Dynamic grid generation parameters
+        const GRID_SIZE = 70;
+        const HALF_GRID = GRID_SIZE / 2;
+        const VOXEL_SIZE = 2;
+
+        // Matrices mapping for instancing
+        const terrainInstances = {
+            grass: [],
+            stone: [],
+            snow: [],
+            dirt: [],
+            water: []
+        };
+
+        // Elevation generator
+        function getTerrainHeight(x, z) {
+            const distFromCenter = Math.sqrt(x*x + z*z);
+            
+            // Central Sanctuary Flat Basin
+            if (distFromCenter < 18) {
+                if (x > -12 && x < 8 && z > 2 && z < 18) {
+                    return -1; // Lowered pond basin
+                }
+                return 0; // Flat courtyard
+            }
+
+            // Mountainous surroundings using layered sin/cos frequencies
+            const scale1 = 0.08;
+            const scale2 = 0.03;
+            let h = Math.sin(x * scale1) * Math.cos(z * scale1) * 6 +
+                    Math.sin(x * scale2 + z * scale2) * 14;
+
+            // Elevate mountain ring edges dramatically
+            const edgeMultiplier = Math.pow(Math.max(0, distFromCenter - 18) / 10, 1.4);
+            h += edgeMultiplier * 3.5;
+
+            return Math.floor(h);
+        }
+
+        const dummy = new THREE.Object3D();
+
+        for (let x = -HALF_GRID; x < HALF_GRID; x++) {
+            for (let z = -HALF_GRID; z < HALF_GRID; z++) {
+                const height = getTerrainHeight(x, z);
+                const posX = x * VOXEL_SIZE;
+                const posZ = z * VOXEL_SIZE;
+
+                if (height === -1) {
+                    // Water block
+                    dummy.position.set(posX, -0.6, posZ);
+                    dummy.updateMatrix();
+                    terrainInstances.water.push(dummy.matrix.clone());
+
+                    // Dirt under water
+                    dummy.position.set(posX, -2, posZ);
+                    dummy.updateMatrix();
+                    terrainInstances.dirt.push(dummy.matrix.clone());
+                    continue;
+                }
+
+                // Fill downward voxels so terrain isn't hollow
+                const minY = Math.max(-4, height - 3);
+                for (let y = height; y >= minY; y--) {
+                    dummy.position.set(posX, y * VOXEL_SIZE, posZ);
+                    dummy.updateMatrix();
+
+                    if (y === height) {
+                        if (y > 10) {
+                            terrainInstances.snow.push(dummy.matrix.clone());
+                        } else if (y > 5) {
+                            terrainInstances.stone.push(dummy.matrix.clone());
+                        } else {
+                            terrainInstances.grass.push(dummy.matrix.clone());
+                        }
+                    } else if (y > height - 2) {
+                        terrainInstances.dirt.push(dummy.matrix.clone());
+                    } else {
+                        terrainInstances.stone.push(dummy.matrix.clone());
+                    }
+                }
+            }
+        }
+
+        // Build Instanced Meshes for high performance
+        Object.keys(terrainInstances).forEach(key => {
+            const mats = terrainInstances[key];
+            if (mats.length === 0) return;
+            const instMesh = new THREE.InstancedMesh(voxelGeometry, materials[key], mats.length);
+            instMesh.receiveShadow = true;
+            instMesh.castShadow = (key !== 'water');
+            for (let i = 0; i < mats.length; i++) {
+                instMesh.setMatrixAt(i, mats[i]);
+            }
+            instMesh.instanceMatrix.needsUpdate = true;
+            scene.add(instMesh);
+        });
+
+
+        // Voxel Helper Function to easily build architectural landmarks block by block
+        const landmarkGroup = new THREE.Group();
+        scene.add(landmarkGroup);
+
+        function addBlock(x, y, z, mat, scaleX = 1, scaleY = 1, scaleZ = 1) {
+            const mesh = new THREE.Mesh(voxelGeometry, mat);
+            mesh.position.set(x, y, z);
+            mesh.scale.set(scaleX, scaleY, scaleZ);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            landmarkGroup.add(mesh);
+            return mesh;
+        }
+
+        // --- 1. Multi-Tiered Pagoda ---
+        const pagodaX = 0;
+        const pagodaZ = -10;
+
+        function buildPagoda() {
+            // Base Foundation (Stone)
+            for (let x = -7; x <= 7; x++) {
+                for (let z = -7; z <= 7; z++) {
+                    addBlock(pagodaX + x*2, 1, pagodaZ + z*2, materials.stone);
+                }
+            }
+
+            // Function to generate a pagoda tier
+            function buildTier(bottomY, widthBlocks, heightBlocks) {
+                const w = widthBlocks;
+                const h = heightBlocks;
+
+                // Pillars & Shoji Wall core
+                for (let x = -w; x <= w; x++) {
+                    for (let z = -w; z <= w; z++) {
+                        const isCorner = (Math.abs(x) === w && Math.abs(z) === w);
+                        const isOuter = (Math.abs(x) === w || Math.abs(z) === w);
+
+                        for (let y = 0; y < h; y++) {
+                            const curY = bottomY + y * 2;
+                            if (isCorner) {
+                                addBlock(pagodaX + x*2, curY, pagodaZ + z*2, materials.darkWood);
+                            } else if (isOuter) {
+                                addBlock(pagodaX + x*2, curY, pagodaZ + z*2, materials.shoji);
+                            }
+                        }
+                    }
+                }
+
+                // Add internal lantern warmth light for shoji
+                const tierLight = new THREE.PointLight(0xf59e0b, 1.2, 18);
+                tierLight.position.set(pagodaX, bottomY + (h * 1), pagodaZ);
+                scene.add(tierLight);
+
+                // Flared Eave Roof
+                const roofY = bottomY + h * 2;
+                const roofOverlap = w + 2;
+
+                for (let rx = -roofOverlap; rx <= roofOverlap; rx++) {
+                    for (let rz = -roofOverlap; rz <= roofOverlap; rz++) {
+                        const dist = Math.max(Math.abs(rx), Math.abs(rz));
+                        let yOffset = (roofOverlap - dist) * 0.4;
+                        
+                        // Corner flared eave lift
+                        if (Math.abs(rx) === roofOverlap && Math.abs(rz) === roofOverlap) {
+                            yOffset += 0.8;
+                        }
+
+                        addBlock(
+                            pagodaX + rx*2, 
+                            roofY + yOffset, 
+                            pagodaZ + rz*2, 
+                            materials.roof, 
+                            1.05, 0.5, 1.05
+                        );
+                    }
+                }
+            }
+
+            // Tier 1
+            buildTier(3, 5, 3);
+            // Tier 2
+            buildTier(12, 4, 3);
+            // Tier 3
+            buildTier(21, 3, 2.5);
+
+            // Gold Spire (Sorin) on top
+            const spireBaseY = 29;
+            for (let sy = 0; sy < 7; sy++) {
+                const thickness = sy % 2 === 0 ? 0.4 : 0.7;
+                addBlock(pagodaX, spireBaseY + sy * 1.5, pagodaZ, materials.gold, thickness, 0.7, thickness);
+            }
+        }
+        buildPagoda();
+
+        // --- 2. Iconic Red Torii Gate ---
+        function buildToriiGate(x, z) {
+            const gateHeight = 10;
+            const gateWidth = 12;
+
+            // Two main vertical posts
+            for (let y = 0; y < gateHeight; y++) {
+                addBlock(x - gateWidth/2, y*2 + 1, z, materials.redWood, 0.8, 1, 0.8);
+                addBlock(x + gateWidth/2, y*2 + 1, z, materials.redWood, 0.8, 1, 0.8);
+            }
+
+            // Black stone post bases
+            addBlock(x - gateWidth/2, 1, z, materials.stone, 1, 0.6, 1);
+            addBlock(x + gateWidth/2, 1, z, materials.stone, 1, 0.6, 1);
+
+            // Lower crossbar (Nuki)
+            for (let cx = -gateWidth/2 - 1; cx <= gateWidth/2 + 1; cx += 2) {
+                addBlock(x + cx, gateHeight * 1.5, z, materials.redWood, 1, 0.6, 0.7);
+            }
+
+            // Upper curved main lintel (Kasagi)
+            const topY = gateHeight * 2;
+            for (let cx = -gateWidth/2 - 3; cx <= gateWidth/2 + 3; cx += 2) {
+                let curveLift = Math.pow(cx / (gateWidth/2 + 3), 2) * 1.2;
+                addBlock(x + cx, topY + curveLift, z, materials.redWood, 1.1, 0.7, 0.9);
+                // Black top cap
+                addBlock(x + cx, topY + curveLift + 0.8, z, materials.roof, 1.15, 0.2, 0.95);
+            }
+        }
+        buildToriiGate(0, 32);
+
+        // --- 3. Curved Red Bridge (Taiko-bashi) & Lily Pads ---
+        function buildBridge() {
+            const bridgeZStart = 10;
+            const length = 12;
+
+            for (let i = 0; i <= length; i++) {
+                const t = i / length;
+                const bZ = bridgeZStart + i * 1.2;
+                const bY = Math.sin(t * Math.PI) * 4 + 0.5;
+
+                // Deck planks
+                addBlock(-2, bY, bZ, materials.redWood, 0.9, 0.3, 0.7);
+                addBlock(0, bY, bZ, materials.redWood, 0.9, 0.3, 0.7);
+                addBlock(2, bY, bZ, materials.redWood, 0.9, 0.3, 0.7);
+
+                // Railings
+                addBlock(-3, bY + 1.2, bZ, materials.redWood, 0.3, 0.8, 0.3);
+                addBlock(3, bY + 1.2, bZ, materials.redWood, 0.3, 0.8, 0.3);
+            }
+
+            // Lily pads in water pond
+            const padPositions = [
+                [-6, -0.4, 14], [-8, -0.4, 18], [-4, -0.4, 22], [5, -0.4, 16], [7, -0.4, 20]
+            ];
+            padPositions.forEach(([px, py, pz]) => {
+                const pad = addBlock(px, py, pz, materials.bamboo, 1.2, 0.1, 1.2);
+                pad.rotation.y = Math.random() * Math.PI;
+            });
+        }
+        buildBridge();
+
+        // --- 4. Japanese Stone Lanterns (Kasuga-dōrō) ---
+        const lanternLights = [];
+        function buildLantern(x, z) {
+            const groundY = 1;
+            addBlock(x, groundY, z, materials.stone, 0.8, 0.4, 0.8); // Pedestal base
+            addBlock(x, groundY + 1.2, z, materials.stone, 0.4, 1.0, 0.4); // Pillar
+            addBlock(x, groundY + 2.4, z, materials.stone, 0.9, 0.3, 0.9); // Firebox base
+            addBlock(x, groundY + 3.1, z, materials.shoji, 0.6, 0.6, 0.6); // Light box
+            addBlock(x, groundY + 3.9, z, materials.roof, 1.1, 0.3, 1.1);  // Roof cap
+
+            const pLight = new THREE.PointLight(0xf59e0b, 1.5, 12);
+            pLight.position.set(x, groundY + 3.1, z);
+            scene.add(pLight);
+            lanternLights.push(pLight);
+        }
+
+        // Place lanterns along pathways
+        buildLantern(-5, 28);
+        buildLantern(5, 28);
+        buildLantern(-5, 8);
+        buildLantern(5, 8);
+
+        // --- 5. Flora: Bamboo & Sakura Trees ---
+        function buildBamboo(x, z, height) {
+            for (let y = 0; y < height; y++) {
+                addBlock(x, y * 1.5 + 1, z, materials.bamboo, 0.3, 0.7, 0.3);
+            }
+        }
+        // Bamboo grove on left side
+        for (let i = 0; i < 18; i++) {
+            const bx = -18 - Math.random() * 12;
+            const bz = -5 + Math.random() * 25;
+            buildBamboo(bx, bz, 6 + Math.floor(Math.random() * 5));
+        }
+
+        // Sakura Cherry Blossom Trees
+        function buildSakuraTree(x, z) {
+            const trunkH = 5 + Math.floor(Math.random() * 3);
+            // Trunk
+            for (let y = 0; y < trunkH; y++) {
+                addBlock(x, y * 1.5 + 1, z, materials.darkWood, 0.7, 0.8, 0.7);
+            }
+            // Pink Voxel Foliage Canopy
+            const canopyY = trunkH * 1.5 + 1;
+            for (let dx = -3; dx <= 3; dx++) {
+                for (let dy = -2; dy <= 2; dy++) {
+                    for (let dz = -3; dz <= 3; dz++) {
+                        if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) <= 5) {
+                            addBlock(x + dx*1.2, canopyY + dy*1.2, z + dz*1.2, materials.sakura, 0.7, 0.7, 0.7);
+                        }
+                    }
+                }
+            }
+        }
+        buildSakuraTree(16, -2);
+        buildSakuraTree(18, 12);
+        buildSakuraTree(-12, -18);
+
+
+        // Animation mixers/updaters list
+        const animatedEntities = [];
+
+        // --- Micro Voxel Helper (0.25 size blocks) ---
+        const microGeo = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+
+        function createMicroVoxel(group, x, y, z, mat) {
+            const mesh = new THREE.Mesh(microGeo, mat);
+            mesh.position.set(x * 0.25, y * 0.25, z * 0.25);
+            mesh.castShadow = true;
+            group.add(mesh);
+            return mesh;
+        }
+
+        // --- 1. Samurai Guardians ---
+        function createSamurai(posX, posZ, rotY) {
+            const samuraiGroup = new THREE.Group();
+            samuraiGroup.position.set(posX, 0.8, posZ);
+            samuraiGroup.rotation.y = rotY;
+
+            const bodyGroup = new THREE.Group();
+            const headGroup = new THREE.Group();
+
+            // Legs & Boots
+            createMicroVoxel(bodyGroup, -1, 0, 0, materials.samuraiArmor);
+            createMicroVoxel(bodyGroup, 1, 0, 0, materials.samuraiArmor);
+            createMicroVoxel(bodyGroup, -1, 1, 0, materials.samuraiArmor);
+            createMicroVoxel(bodyGroup, 1, 1, 0, materials.samuraiArmor);
+
+            // Torso & Do (Armor Plate)
+            for (let y = 2; y <= 5; y++) {
+                for (let x = -1; x <= 1; x++) {
+                    createMicroVoxel(bodyGroup, x, y, 0, materials.samuraiRed);
+                }
+            }
+
+            // Shoulder Guards (Sode)
+            createMicroVoxel(bodyGroup, -2, 4, 0, materials.gold);
+            createMicroVoxel(bodyGroup, 2, 4, 0, materials.gold);
+
+            // Head & Kabuto Helmet
+            for (let x = -1; x <= 1; x++) {
+                for (let z = -1; z <= 1; z++) {
+                    createMicroVoxel(headGroup, x, 6, z, materials.skin); // Face
+                    createMicroVoxel(headGroup, x, 7, z, materials.samuraiArmor); // Helmet
+                }
+            }
+            // Golden Crescent Crest (Maedate)
+            createMicroVoxel(headGroup, 0, 8, -1, materials.gold);
+            createMicroVoxel(headGroup, -1, 9, -1, materials.gold);
+            createMicroVoxel(headGroup, 1, 9, -1, materials.gold);
+
+            // Sheathed Katana on Hip
+            for (let k = 0; k < 5; k++) {
+                createMicroVoxel(bodyGroup, -2, 3, -1 + k, k === 4 ? materials.gold : materials.darkWood);
+            }
+
+            samuraiGroup.add(bodyGroup);
+            samuraiGroup.add(headGroup);
+            scene.add(samuraiGroup);
+
+            // Idle breathing animation registration
+            animatedEntities.push((time) => {
+                const breath = Math.sin(time * 2.5) * 0.05;
+                headGroup.position.y = breath;
+                bodyGroup.scale.y = 1 + breath * 0.3;
+            });
+        }
+
+        // Place 2 Samurai Guardians by the Torii Gate
+        createSamurai(-3.5, 29, Math.PI * 0.1);
+        createSamurai(3.5, 29, -Math.PI * 0.1);
+
+        // --- 2. Pastoral Animals (Sheep & Alpaca) ---
+        function createSheep(posX, posZ) {
+            const sheepGroup = new THREE.Group();
+            sheepGroup.position.set(posX, 0.6, posZ);
+
+            const headGroup = new THREE.Group();
+
+            // Fluffy Wool Body
+            for (let x = -2; x <= 2; x++) {
+                for (let y = 1; y <= 3; y++) {
+                    for (let z = -2; z <= 2; z++) {
+                        createMicroVoxel(sheepGroup, x, y, z, materials.wool);
+                    }
+                }
+            }
+
+            // 4 Legs
+            const legPos = [[-1.5, 0, -1.5], [1.5, 0, -1.5], [-1.5, 0, 1.5], [1.5, 0, 1.5]];
+            legPos.forEach(([lx, ly, lz]) => {
+                createMicroVoxel(sheepGroup, lx * 0.8, 0, lz * 0.8, materials.darkWood);
+            });
+
+            // Head
+            for (let x = -1; x <= 1; x++) {
+                for (let y = 2; y <= 3; y++) {
+                    createMicroVoxel(headGroup, x, y, -3, materials.skin);
+                }
+            }
+            sheepGroup.add(headGroup);
+            scene.add(sheepGroup);
+
+            // Wandering/Grazing animation
+            const speed = 0.3 + Math.random() * 0.2;
+            const angle = Math.random() * Math.PI * 2;
+
+            animatedEntities.push((time) => {
+                // Bob head for grazing
+                headGroup.rotation.x = Math.sin(time * 2) * 0.2 + 0.1;
+                // Subtle wandering motion
+                sheepGroup.position.x = posX + Math.sin(time * speed) * 2;
+                sheepGroup.position.z = posZ + Math.cos(time * speed) * 2;
+                sheepGroup.rotation.y = Math.atan2(Math.cos(time * speed), Math.sin(time * speed));
+            });
+        }
+
+        function createAlpaca(posX, posZ) {
+            const alpacaGroup = new THREE.Group();
+            alpacaGroup.position.set(posX, 0.6, posZ);
+
+            // Body
+            for (let x = -1; x <= 1; x++) {
+                for (let y = 1; y <= 2.5; y++) {
+                    for (let z = -2; z <= 2; z++) {
+                        createMicroVoxel(alpacaGroup, x, y, z, materials.wool);
+                    }
+                }
+            }
+
+            // Long Neck & Head
+            const neckGroup = new THREE.Group();
+            for (let ny = 3; ny <= 7; ny++) {
+                createMicroVoxel(neckGroup, 0, ny, -1.5, materials.wool);
+            }
+            // Cute Head & Ears
+            createMicroVoxel(neckGroup, 0, 7.5, -2, materials.skin);
+            createMicroVoxel(neckGroup, -0.8, 8.2, -1.5, materials.wool); // Left ear
+            createMicroVoxel(neckGroup, 0.8, 8.2, -1.5, materials.wool);  // Right ear
+
+            alpacaGroup.add(neckGroup);
+            scene.add(alpacaGroup);
+
+            animatedEntities.push((time) => {
+                neckGroup.rotation.x = Math.sin(time * 1.5) * 0.08;
+            });
+        }
+
+        // Spawn animals in meadow
+        createSheep(16, 22);
+        createSheep(20, 26);
+        createAlpaca(22, 18);
+
+
+        // --- 1. Flying Voxel Birds ---
+        const birds = [];
+        function createBird() {
+            const birdGroup = new THREE.Group();
+            const leftWing = new THREE.Group();
+            const rightWing = new THREE.Group();
+
+            // Body
+            createMicroVoxel(birdGroup, 0, 0, 0, materials.darkWood);
+            createMicroVoxel(birdGroup, 0, 0, -1, materials.gold); // Beak
+
+            // Wings
+            createMicroVoxel(leftWing, -1, 0, 0, materials.roof);
+            createMicroVoxel(leftWing, -2, 0.5, 0, materials.roof);
+            createMicroVoxel(rightWing, 1, 0, 0, materials.roof);
+            createMicroVoxel(rightWing, 2, 0.5, 0, materials.roof);
+
+            birdGroup.add(leftWing);
+            birdGroup.add(rightWing);
+            scene.add(birdGroup);
+
+            return {
+                group: birdGroup,
+                leftWing: leftWing,
+                rightWing: rightWing,
+                altitude: 35 + Math.random() * 15,
+                radius: 30 + Math.random() * 20,
+                speed: 0.4 + Math.random() * 0.3,
+                offset: Math.random() * Math.PI * 2
+            };
+        }
+
+        for (let b = 0; b < 6; b++) {
+            birds.push(createBird());
+        }
+
+        animatedEntities.push((time) => {
+            birds.forEach(bird => {
+                const angle = time * bird.speed + bird.offset;
+                bird.group.position.set(
+                    Math.cos(angle) * bird.radius,
+                    bird.altitude + Math.sin(time * 2) * 2,
+                    Math.sin(angle) * bird.radius
+                );
+                bird.group.rotation.y = -angle + Math.PI / 2;
+
+                // Wing flapping animation
+                const flap = Math.sin(time * 12) * 0.6;
+                bird.leftWing.rotation.z = flap;
+                bird.rightWing.rotation.z = -flap;
+            });
+        });
+
+        // --- 2. Sakura Falling Petals Particle System ---
+        const petalCount = 180;
+        const petalGeo = new THREE.BufferGeometry();
+        const petalPositions = new Float32Array(petalCount * 3);
+        const petalVelocities = [];
+
+        for (let p = 0; p < petalCount; p++) {
+            petalPositions[p * 3] = (Math.random() - 0.5) * 80;
+            petalPositions[p * 3 + 1] = Math.random() * 40 + 5;
+            petalPositions[p * 3 + 2] = (Math.random() - 0.5) * 80;
+
+            petalVelocities.push({
+                y: -0.05 - Math.random() * 0.05,
+                x: Math.random() * 0.04 - 0.02,
+                z: Math.random() * 0.04 - 0.02,
+                sway: Math.random() * Math.PI * 2
+            });
+        }
+
+        petalGeo.setAttribute('position', new THREE.BufferAttribute(petalPositions, 3));
+        const petalMat = new THREE.PointsMaterial({
+            color: 0xf472b6,
+            size: 0.4,
+            transparent: true,
+            opacity: 0.85
+        });
+        const petalParticles = new THREE.Points(petalGeo, petalMat);
+        scene.add(petalParticles);
+
+        animatedEntities.push((time) => {
+            const positions = petalParticles.geometry.attributes.position.array;
+            for (let p = 0; p < petalCount; p++) {
+                const v = petalVelocities[p];
+                positions[p * 3] += v.x + Math.sin(time + v.sway) * 0.02;
+                positions[p * 3 + 1] += v.y;
+                positions[p * 3 + 2] += v.z + Math.cos(time + v.sway) * 0.02;
+
+                // Reset particle to top when touching ground
+                if (positions[p * 3 + 1] < 0) {
+                    positions[p * 3 + 1] = 40;
+                    positions[p * 3] = (Math.random() - 0.5) * 80;
+                    positions[p * 3 + 2] = (Math.random() - 0.5) * 80;
+                }
+            }
+            petalParticles.geometry.attributes.position.needsUpdate = true;
+        });
+
+        // --- 3. Drifting Sky Clouds ---
+        const cloudGroup = new THREE.Group();
+        function createCloud(cx, cy, cz) {
+            for (let x = -3; x <= 3; x++) {
+                for (let z = -2; z <= 2; z++) {
+                    for (let y = 0; y <= 1; y++) {
+                        if (Math.abs(x) + Math.abs(z) + y < 5) {
+                            const cMesh = new THREE.Mesh(voxelGeometry, materials.snow);
+                            cMesh.position.set(cx + x*2, cy + y*2, cz + z*2);
+                            cMesh.scale.set(1.2, 0.8, 1.2);
+                            cloudGroup.add(cMesh);
+                        }
+                    }
+                }
+            }
+        }
+        createCloud(-30, 50, -20);
+        createCloud(20, 55, 30);
+        createCloud(0, 48, 40);
+        scene.add(cloudGroup);
+
+        animatedEntities.push(() => {
+            cloudGroup.position.x += 0.015;
+            if (cloudGroup.position.x > 60) cloudGroup.position.x = -60;
+        });
+
+
+        // Sun / Moon Mesh (Square sky voxel)
+        const celestialGeo = new THREE.BoxGeometry(6, 6, 6);
+        const sunMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+        const celestialMesh = new THREE.Mesh(celestialGeo, sunMat);
+        scene.add(celestialMesh);
+
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xfff7ed, 1.5);
+        dirLight.position.set(40, 60, 40);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 10;
+        dirLight.shadow.camera.far = 200;
+        const d = 60;
+        dirLight.shadow.camera.left = -d;
+        dirLight.shadow.camera.right = d;
+        dirLight.shadow.camera.top = d;
+        dirLight.shadow.camera.bottom = -d;
+        scene.add(dirLight);
+
+        // Time Configurations
+        const timeConfigs = {
+            morning: {
+                skyColor: 0x87ceeb,
+                fogColor: 0x87ceeb,
+                ambientColor: 0xffffff,
+                ambientIntensity: 0.75,
+                dirColor: 0xfff7ed,
+                dirIntensity: 1.5,
+                sunPos: new THREE.Vector3(50, 60, 40),
+                lanternIntensity: 0.2
+            },
+            sunset: {
+                skyColor: 0xf97316,
+                fogColor: 0xfdba74,
+                ambientColor: 0xfed7aa,
+                ambientIntensity: 0.5,
+                dirColor: 0xea580c,
+                dirIntensity: 1.8,
+                sunPos: new THREE.Vector3(70, 15, -30),
+                lanternIntensity: 1.2
+            },
+            night: {
+                skyColor: 0x090d16,
+                fogColor: 0x090d16,
+                ambientColor: 0x1e1b4b,
+                ambientIntensity: 0.25,
+                dirColor: 0x818cf8,
+                dirIntensity: 0.4,
+                sunPos: new THREE.Vector3(-40, 50, -40),
+                lanternIntensity: 2.8
+            }
+        };
+
+        function setTimeOfDay(mode) {
+            const config = timeConfigs[mode];
+            
+            // Smoothly lerp background & fog colors
+            scene.background.setHex(config.skyColor);
+            scene.fog.color.setHex(config.fogColor);
+
+            ambientLight.color.setHex(config.ambientColor);
+            ambientLight.intensity = config.ambientIntensity;
+
+            dirLight.color.setHex(config.dirColor);
+            dirLight.intensity = config.dirIntensity;
+            dirLight.position.copy(config.sunPos);
+
+            celestialMesh.position.copy(config.sunPos);
+            sunMat.color.setHex(mode === 'night' ? 0xe2e8f0 : 0xfef08a);
+
+            // Toggle lanterns glow intensity
+            lanternLights.forEach(light => {
+                light.intensity = config.lanternIntensity;
+            });
+        }
+
+
+        // Camera Preset Positions
+        const cameraPresets = {
+            pagoda: { pos: new THREE.Vector3(0, 14, 28), target: new THREE.Vector3(0, 12, -10) },
+            samurai: { pos: new THREE.Vector3(0, 4, 38), target: new THREE.Vector3(0, 3, 28) },
+            meadow: { pos: new THREE.Vector3(32, 8, 30), target: new THREE.Vector3(18, 2, 20) },
+            vista: { pos: new THREE.Vector3(65, 45, 65), target: new THREE.Vector3(0, 5, 0) },
+            birds: { pos: new THREE.Vector3(0, 95, 10), target: new THREE.Vector3(0, 0, 0) }
+        };
+
+        let targetCamPos = null;
+        let targetLookAt = null;
+
+        function transitionCamera(presetKey) {
+            const preset = cameraPresets[presetKey];
+            if (!preset) return;
+            targetCamPos = preset.pos.clone();
+            targetLookAt = preset.target.clone();
+        }
+
+        // --- UI Listeners ---
+        // Audio Toggle
+        const audioBtn = document.getElementById('audio-btn');
+        const audioIcon = document.getElementById('audio-icon');
+        const audioText = document.getElementById('audio-text');
+
+        audioBtn.addEventListener('click', () => {
+            const active = audioSynth.toggle();
+            if (active) {
+                audioIcon.className = 'fas fa-volume-up text-emerald-400 text-lg';
+                audioText.textContent = 'Sound On';
+            } else {
+                audioIcon.className = 'fas fa-volume-mute text-red-400 text-lg';
+                audioText.textContent = 'Sound Off';
+            }
+        });
+
+        // Time Mode Buttons
+        const timeBtns = {
+            morning: document.getElementById('time-morning'),
+            sunset: document.getElementById('time-sunset'),
+            night: document.getElementById('time-night')
+        };
+
+        Object.keys(timeBtns).forEach(key => {
+            timeBtns[key].addEventListener('click', () => {
+                Object.values(timeBtns).forEach(b => b.classList.remove('active'));
+                timeBtns[key].classList.add('active');
+                setTimeOfDay(key);
+            });
+        });
+
+        // Camera Preset Buttons
+        const camBtns = {
+            pagoda: document.getElementById('cam-pagoda'),
+            samurai: document.getElementById('cam-samurai'),
+            meadow: document.getElementById('cam-meadow'),
+            vista: document.getElementById('cam-vista'),
+            birds: document.getElementById('cam-birds')
+        };
+
+        Object.keys(camBtns).forEach(key => {
+            camBtns[key].addEventListener('click', () => {
+                transitionCamera(key);
+            });
+        });
+
+        // Window Resize Handling
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- Render Loop & FPS Monitor ---
+        const fpsCounter = document.getElementById('fps-counter');
+        let frameCount = 0;
+        let lastTime = performance.now();
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const elapsedTime = clock.getElapsedTime();
+
+            // Run registered entity animations
+            animatedEntities.forEach(fn => fn(elapsedTime));
+
+            // Smooth Camera Interpolation
+            if (targetCamPos && targetLookAt) {
+                camera.position.lerp(targetCamPos, 0.05);
+                controls.target.lerp(targetLookAt, 0.05);
+                if (camera.position.distanceTo(targetCamPos) < 0.2) {
+                    targetCamPos = null;
+                    targetLookAt = null;
+                }
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+
+            // FPS Counter calculation
+            frameCount++;
+            const now = performance.now();
+            if (now - lastTime >= 1000) {
+                fpsCounter.textContent = Math.round((frameCount * 1000) / (now - lastTime));
+                frameCount = 0;
+                lastTime = now;
+            }
+        }
+
+        // Initialize default morning view
+        setTimeOfDay('morning');
+        animate();
+
+    </script>
+</body>
+</html>

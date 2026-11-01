@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f5ed">
+  <meta name="description" content="A living voxel Japanese sanctuary. Explore a mountain pagoda, meet its quiet inhabitants, and take a moment to breathe.">
+  <title>Zen Sanctuary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;450;500;550;600;650;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+  <style>
+    :root { --ink: #293c32; --muted: #7b8579; --paper: #f5f5ed; --green: #3f5b42; --line: rgba(75,94,66,.14); }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+    body { font-family: 'DM Sans', sans-serif; color: var(--ink); background: var(--paper); }
+    button, input { font: inherit; }
+    button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid #608866; outline-offset: 5px; }
+    button { border: 0; }
+    .icon { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .topbar { height: 88px; padding: 0 42px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); position: relative; z-index: 5; background: var(--paper); }
+    .brand { display: flex; align-items: center; gap: 13px; text-decoration: none; color: var(--ink); }
+    .brand-mark { width: 37px; height: 40px; }
+    .wordmark { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 600; letter-spacing: -.8px; line-height: 1; }
+    .brand-sub { font-size: 8px; letter-spacing: 2.2px; margin-top: 6px; color: #7a8374; }
+    .nav { display: flex; gap: 38px; height: 100%; align-items: center; }
+    .nav button { height: 100%; padding: 0 1px; background: none; font-size: 10px; letter-spacing: 1.8px; font-weight: 600; color: #7f887b; position: relative; }
+    .nav button.active { color: var(--ink); }
+    .nav button.active:after { content: ''; position: absolute; bottom: 21px; height: 2px; width: 21px; background: #68835c; left: calc(50% - 10px); }
+    .header-right { display: flex; align-items: center; gap: 23px; }
+    .slow-label { font-size: 10px; color: #818979; display: flex; align-items: center; gap: 8px; }
+    .live-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #7b9972; box-shadow: 0 0 0 4px rgba(123,153,114,.08); }
+    .round-button { display: grid; place-items: center; width: 35px; height: 35px; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: #697561; }
+    .world { position: relative; height: calc(100dvh - 88px); min-height: 420px; overflow: hidden; background: #d9e6dc; }
+    #scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; outline: none; touch-action: none; }
+    .scene-wash { position: absolute; inset: 0; background: linear-gradient(90deg,rgba(245,245,237,.96) 0%,rgba(245,245,237,.82) 17%,rgba(245,245,237,.22) 35%,transparent 49%),linear-gradient(0deg,rgba(244,245,233,.78),transparent 23%); pointer-events: none; transition: opacity 1.5s; }
+    .world[data-time="night"] .scene-wash { opacity: .77; }
+    .sidebar { position: absolute; left: 42px; top: 43px; width: 282px; pointer-events: none; }
+    .sidebar > * { pointer-events: auto; }
+    .eyebrow { display: flex; align-items: center; gap: 9px; font-size: 9px; letter-spacing: 2.1px; font-weight: 600; color: #76836c; }
+    .eyebrow:before { content: ''; width: 21px; height: 1px; background: #8c9b7d; }
+    .sidebar h1 { font-family: 'Cormorant Garamond', serif; font-weight: 500; letter-spacing: -1.7px; font-size: clamp(43px,4vw,58px); line-height: .99; margin: 21px 0 19px; }
+    .sidebar h1 em { font-weight: 400; }
+    .intro { font-size: 12px; line-height: 1.95; color: #798375; max-width: 241px; margin: 0; }
+    .glass { background: rgba(250,251,244,.72); border: 1px solid rgba(255,255,255,.8); box-shadow: 0 7px 30px rgba(46,66,44,.035); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+    .time-card { margin-top: 29px; padding: 19px; border-radius: 13px; }
+    .card-heading { display: flex; justify-content: space-between; align-items: center; font-size: 9px; letter-spacing: 1.5px; font-weight: 600; color: #727e6c; }
+    .time-indicator { display: flex; align-items: center; gap: 5px; font-size: 9px; letter-spacing: .1px; font-weight: 400; color: #8a9385; }
+    .time-options { display: flex; gap: 4px; padding: 5px; background: rgba(217,224,205,.33); border-radius: 9px; margin-top: 14px; }
+    .time-option { color: #7c8675; background: transparent; flex: 1; border-radius: 6px; padding: 10px 1px 8px; display: flex; flex-direction: column; gap: 7px; align-items: center; font-size: 9px; transition: background .2s, color .2s; }
+    .time-option .icon { width: 19px; height: 19px; }
+    .time-option[aria-pressed="true"] { background: #fffef7; color: #49603e; box-shadow: 0 2px 5px #374d2810; }
+    .time-description { margin: 12px 0 0; color: #8a9381; font-size: 9px; line-height: 1.65; }
+    .inhabitants { margin-top: 23px; padding: 0 5px; }
+    .inhabitant-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(104,123,84,.1); font-size: 10px; }
+    .inhabitant-name { display: flex; align-items: center; gap: 10px; color: #69775f; }
+    .inhabitant-name .icon { width: 16px; height: 16px; color: #879479; }
+    .inhabitant-value { color: #939d88; font-size: 9px; }
+    .quiet-note { margin-top: 19px; display: flex; gap: 9px; color: #8b967e; font-size: 9px; align-items: center; }
+    .quiet-note .icon { width: 13px; height: 13px; }
+    .scene-label { position: absolute; right: 38px; top: 29px; display: flex; align-items: center; gap: 9px; font-size: 9px; letter-spacing: 1.5px; color: #617457; }
+    .scene-label .live-dot { width: 4px; height: 4px; }
+    .scene-tools { position: absolute; right: 32px; top: 50%; display: flex; flex-direction: column; padding: 6px; gap: 3px; border-radius: 11px; }
+    .scene-tools button { width: 33px; height: 33px; display: grid; place-items: center; background: none; border-radius: 7px; color: #6f7e64; }
+    .scene-tools button:hover { background: rgba(231,235,221,.8); }
+    .scene-tools .icon { width: 17px; height: 17px; }
+    .view-dock { position: absolute; bottom: 58px; left: 50%; transform: translateX(-50%); border-radius: 15px; padding: 8px; display: flex; gap: 4px; }
+    .view-button { min-width: 105px; padding: 10px 12px; background: none; border-radius: 9px; color: #819074; display: flex; align-items: center; flex-direction: column; gap: 7px; transition: background .25s; }
+    .view-button .icon { width: 21px; height: 21px; }
+    .view-button span { font-size: 9px; white-space: nowrap; }
+    .view-button[aria-pressed="true"] { background: #475f3f; color: #f9f9ed; box-shadow: 0 3px 10px #33452915; }
+    .view-button:hover:not([aria-pressed="true"]) { background: rgba(217,226,205,.55); color: #536949; }
+    .dock-label { position: absolute; top: -23px; left: 50%; transform: translateX(-50%); font-size: 8px; letter-spacing: 1.8px; color: #6e7c60; white-space: nowrap; }
+    .footer-hint { position: absolute; bottom: 21px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; font-size: 9px; color: #7c8870; white-space: nowrap; }
+    .footer-hint .icon { width: 12px; height: 12px; }
+    .hint-dot { margin: 0 6px; opacity: .45; }
+    .coordinates { position: absolute; bottom: 22px; left: 42px; color: #88957a; font-size: 8px; letter-spacing: 1.4px; }
+    .audio-card { position: absolute; right: 32px; bottom: 59px; border-radius: 12px; padding: 14px 15px; width: 184px; }
+    .audio-top { display: flex; align-items: center; gap: 10px; }
+    #audio-toggle { width: 32px; height: 32px; display: grid; place-items: center; background: #e4e9d9; color: #6d815b; border-radius: 50%; flex-shrink: 0; }
+    #audio-toggle[aria-pressed="true"] { background: #4a6341; color: #f7f8ee; }
+    #audio-toggle:disabled { opacity: .5; cursor: progress; }
+    #audio-toggle .icon { width: 15px; height: 15px; }
+    .audio-title { font-size: 10px; font-weight: 500; color: #566b4b; }
+    #audio-status { margin-top: 4px; font-size: 8px; color: #919c84; }
+    .volume-row { display: flex; align-items: center; gap: 9px; margin: 12px 0 0 3px; }
+    .volume-row .icon { width: 12px; height: 12px; color: #97a38a; }
+    input[type="range"] { appearance: none; height: 3px; border-radius: 3px; width: 120px; background: #d7decb; cursor: pointer; }
+    input[type="range"]::-webkit-slider-thumb { appearance: none; width: 8px; height: 8px; border-radius: 50%; background: #718460; }
+    input[type="range"]::-moz-range-thumb { width: 8px; height: 8px; border: 0; border-radius: 50%; background: #718460; }
+    .sound-caption { position: absolute; bottom: 23px; right: 34px; font-size: 8px; color: #88957a; display: flex; align-items: center; gap: 5px; }
+    .sound-caption .icon { width: 11px; height: 11px; }
+    .loader { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 10; background: #f3f5ea; transition: opacity .8s; }
+    .loader.hidden { opacity: 0; pointer-events: none; }
+    .loading-inner { text-align: center; max-width: 330px; padding: 25px; }
+    .loading-inner .brand-mark { color: #647957; margin: 0 auto 20px; animation: breathe 2s ease-in-out infinite; }
+    .loading-title { font-family: 'Cormorant Garamond', serif; font-size: 29px; margin: 0 0 9px; }
+    #loading-message { font-size: 11px; line-height: 1.8; color: #879278; }
+    #retry { display: none; background: #4a6341; color: white; border-radius: 8px; padding: 9px 17px; margin: 18px auto 0; font-size: 11px; }
+    @keyframes breathe { 50% { opacity: .45; transform: translateY(-4px); } }
+    dialog { border: 1px solid #fff; background: #f7f8f0f5; color: var(--ink); border-radius: 22px; width: min(490px,calc(100vw - 32px)); padding: 35px; box-shadow: 0 25px 100px #20332930; backdrop-filter: blur(20px); }
+    dialog::backdrop { background: #29392e45; backdrop-filter: blur(5px); }
+    dialog h2 { font-family: 'Cormorant Garamond',serif; font-size: 37px; line-height: 1.1; font-weight: 500; margin: 22px 0 17px; }
+    dialog p { font-size: 12px; line-height: 1.95; color: #74816b; }
+    .modal-close { float: right; }
+    .modal-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; border-top: 1px solid var(--line); padding-top: 18px; margin-top: 24px; }
+    .modal-detail strong { font-size: 10px; color: #4c6345; display: block; margin-bottom: 6px; }
+    .modal-detail span { font-size: 10px; line-height: 1.7; color: #8b957f; }
+    #toast { position: absolute; top: 68px; right: 30px; padding: 12px 17px; border-radius: 9px; max-width: 300px; font-size: 11px; background: #fcf9ed; color: #765c40; z-index: 12; display: none; box-shadow: 0 4px 20px #263a2210; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (min-width: 1600px) { .sidebar { left: 60px; top: 60px; width: 295px; } .intro { font-size: 13px; } .time-card { margin-top: 38px; } }
+    @media (max-width: 1100px) { .topbar { padding: 0 28px; height: 76px; } .world { height: calc(100dvh - 76px); } .sidebar { left: 28px; top: 32px; width: 239px; } .sidebar h1 { font-size: 49px; } .intro { font-size: 11px; } .time-card { padding: 15px; margin-top: 21px; } .view-button { min-width: 87px; padding: 10px 8px; } .audio-card { width: 155px; right: 22px; } input[type="range"] { width: 94px; } .coordinates { left: 28px; } .slow-label { display: none; } }
+    @media (max-width: 800px) { .inhabitants, .quiet-note, .coordinates, .sound-caption { display: none; } .sidebar { width: 216px; } .view-dock { left: 40%; } .view-button { min-width: 73px; padding: 10px 7px; } .view-button span { font-size: 8px; } .nav { gap: 22px; } .scene-label { right: 22px; } }
+    @media (max-width: 600px) {
+      .topbar { height: 69px; padding: 0 20px; } .wordmark { font-size: 27px; } .brand-mark { width: 29px; } .brand { gap: 9px; } .brand-sub { font-size: 7px; letter-spacing: 1.8px; } .nav { display: none; }
+      .world { height: calc(100dvh - 69px); min-height: 440px; } .sidebar { top: 25px; left: 22px; width: calc(100% - 44px); } .eyebrow { font-size: 8px; }
+      .sidebar h1 { font-size: 38px; line-height: 1.03; margin: 13px 0 9px; letter-spacing: -1px; max-width: calc(100% - 100px); } .intro { font-size: 10px; line-height: 1.7; max-width: calc(100% - 100px); }
+      .scene-wash { background: linear-gradient(180deg,#f5f5edf5 0%,#f5f5ed99 23%,transparent 45%),linear-gradient(0deg,#f4f5e8dd,transparent 30%); }
+      .time-card { position: absolute; top: 0; right: 0; width: 92px; padding: 9px; margin-top: 0; border-radius: 10px; } .time-card .card-heading { font-size: 7px; letter-spacing: 1px; } .time-indicator, .time-description { display: none; } .time-options { flex-direction: column; gap: 2px; padding: 3px; margin-top: 8px; } .time-option { flex-direction: row; padding: 8px 5px; gap: 7px; font-size: 8px; } .time-option .icon { width: 13px; height: 13px; }
+      .scene-label { top: auto; bottom: 184px; right: 21px; font-size: 7px; letter-spacing: 1px; } .scene-tools { top: auto; bottom: 214px; right: 17px; padding: 4px; }
+      .view-dock { bottom: 50px; left: 15px; right: 15px; transform: none; padding: 6px; border-radius: 12px; gap: 2px; justify-content: space-between; } .view-button { min-width: 0; flex: 1; padding: 10px 4px; gap: 6px; } .view-button span { font-size: 8px; } .view-button .icon { width: 19px; height: 19px; } .dock-label { top: -20px; font-size: 7px; }
+      .audio-card { bottom: 150px; left: 20px; right: auto; padding: 10px 12px; width: 162px; } .audio-top { gap: 8px; } .audio-title { font-size: 9px; } .volume-row { margin-top: 9px; } input[type="range"] { width: 112px; } #audio-toggle { width: 27px; height: 27px; } .footer-hint { font-size: 8px; bottom: 23px; } .header-right { gap: 9px; } .round-button { width: 31px; height: 31px; } #toast { right: 15px; top: 195px; max-width: 250px; }
+    }
+    @media (max-height: 730px) and (min-width: 601px) { .sidebar { top: 25px; } .sidebar h1 { font-size: 45px; margin: 16px 0 13px; } .intro { font-size: 11px; } .time-card { margin-top: 18px; padding: 14px; } .inhabitants { margin-top: 16px; } .inhabitant-row { padding: 9px 0; } .quiet-note { display: none; } }
+    @media (max-height: 520px) and (min-width: 601px) {
+      .topbar { height: 60px; } .world { height: calc(100dvh - 60px); min-height: 0; } .sidebar { top: 20px; width: 235px; } .sidebar h1 { font-size: 32px; line-height: .95; margin: 12px 0; }
+      .intro, .inhabitants, .quiet-note, .time-description, .coordinates, .sound-caption { display: none; } .time-card { padding: 10px; margin-top: 16px; } .time-options { margin-top: 8px; }
+      .time-option { flex-direction: row; justify-content: center; padding: 8px 3px; font-size: 8px; gap: 4px; } .time-option .icon { width: 13px; height: 13px; }
+      .view-dock { bottom: 40px; } .view-button { padding: 8px; } .audio-card { bottom: 40px; } .footer-hint { bottom: 12px; }
+      .scene-tools { top: 35px; right: 18px; } .scene-tools button { width: 28px; height: 26px; } .scene-tools .icon { width: 14px; height: 14px; } .scene-label { top: 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *:before, *:after { animation: none !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body class="antialiased">
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <defs>
+      <symbol id="i-brand" viewBox="0 0 40 44"><path d="M7 36V19M33 36V19M4 20h32M9 28h22M6 13c5 1 9-3 14-8 5 5 9 9 14 8M10 14v6M30 14v6M15 28v8M25 28v8M3 37h34" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M17 12h6M20 3v4" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></symbol>
+      <symbol id="i-sunset" viewBox="0 0 24 24"><path d="M3 16h18M5 20h14M7 16v-2a5 5 0 0 1 10 0v2M12 3v3M4 8l2 2m12 0 2-2M12 9V5m-2 2 2-2 2 2"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M19 15A8 8 0 0 1 9 5a8 8 0 1 0 10 10Z"/><path d="M17 3v4m-2-2h4m1 4v2m-1-1h2"/></symbol>
+      <symbol id="i-temple" viewBox="0 0 24 24"><path d="M12 2v3M4 9h16l-4-4H8L4 9ZM3 16h18l-4-4H7l-4 4ZM6 9v3m12-3v3M6 16v5m12-5v5M3 21h18m-11 0v-5h4v5"/></symbol>
+      <symbol id="i-helmet" viewBox="0 0 24 24"><path d="M5 13a7 7 0 0 1 14 0M4 13h16M5 13l-2 6 5 2v-5m11-3 2 6-5 2v-5M9 15v3l3 3 3-3v-3M8 3l4 5 4-5M12 8v5"/></symbol>
+      <symbol id="i-meadow" viewBox="0 0 24 24"><path d="M2 20h20M4 20v-5m16 5v-7M7 20l2-7m7 7-1-6M2 15l2 2 2-2m12-2 2 2 2-2M12 13V5m0 4c-5 0-6-4-6-4 4-1 6 1 6 4Zm0-1c5 0 6-4 6-4-4-1-6 1-6 4Z"/></symbol>
+      <symbol id="i-mountain" viewBox="0 0 24 24"><path d="m2 20 8-15 8 15H2Zm13-6 3-7 5 13h-5M7 11l3 2 3-2"/></symbol>
+      <symbol id="i-bird" viewBox="0 0 24 24"><path d="M2 7c5 0 8 3 10 7 2-4 5-7 10-7M8 19l4-5 4 5"/></symbol>
+      <symbol id="i-sheep" viewBox="0 0 24 24"><path d="M6 16a4 4 0 0 1-3-6 4 4 0 0 1 5-5 4 4 0 0 1 7 1 4 4 0 0 1 5 4M6 16h8M6 16v4m8-4v4M17 9h4v6l-2 2-2-2V9Zm-2 1h2m4 0h2"/></symbol>
+      <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M5 19c-4-9 3-14 15-14 0 12-5 17-12 13M4 21 16 9"/></symbol>
+      <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4V9Zm12-1a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+      <symbol id="i-muted" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4V9Zm13 0 5 6m0-6-5 6"/></symbol>
+      <symbol id="i-wind" viewBox="0 0 24 24"><path d="M3 8h12a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h7a3 3 0 1 1-3 3"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+      <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 11a8 8 0 1 1 2 7M4 5v6h6"/></symbol>
+      <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5m6 0h5v5M4 15v5h5m6 0h5v-5"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.1"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+      <symbol id="i-mouse" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="6"/><path d="M12 6v4"/></symbol>
+      <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20 4 12a5 5 0 0 1 8-6 5 5 0 0 1 8 6l-8 8Z"/></symbol>
+    </defs>
+  </svg>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Komorebi home">
+      <svg class="brand-mark"><use href="#i-brand"/></svg>
+      <div><div class="wordmark">komorebi</div><div class="brand-sub">A PLACE TO SIMPLY BE</div></div>
+    </a>
+    <nav class="nav" aria-label="Main navigation">
+      <button class="active" id="nav-sanctuary">THE SANCTUARY</button>
+      <button id="nav-about">ABOUT THE WORLD</button>
+    </nav>
+    <div class="header-right">
+      <span class="slow-label"><span class="live-dot"></span> No hurry. You're here.</span>
+      <button class="round-button" id="help-button" aria-label="About this world"><svg class="icon"><use href="#i-info"/></svg></button>
+    </div>
+  </header>
+  <main class="world" id="world" data-time="morning">
+    <canvas id="scene" tabindex="0" aria-label="Interactive 3D voxel Japanese sanctuary. Drag to orbit, scroll to zoom, or use the camera view buttons." data-state="loading"></canvas>
+    <div class="scene-wash"></div>
+    <aside class="sidebar">
+      <div class="eyebrow">YOUR MOMENT OF ZEN</div>
+      <h1>A little closer<br>to <em>stillness.</em></h1>
+      <p class="intro">Somewhere between the mountains,<br>a quieter world is waiting. Stay a while.</p>
+      <section class="time-card glass" aria-label="Time of day">
+        <div class="card-heading">THE LIGHT <span class="time-indicator" id="time-clock">08:24 AM</span></div>
+        <div class="time-options">
+          <button class="time-option" data-time="morning" aria-pressed="true" aria-label="Morning Sun"><svg class="icon"><use href="#i-sun"/></svg><span>Morning</span></button>
+          <button class="time-option" data-time="sunset" aria-pressed="false" aria-label="Sunset"><svg class="icon"><use href="#i-sunset"/></svg><span>Sunset</span></button>
+          <button class="time-option" data-time="night" aria-pressed="false" aria-label="Night"><svg class="icon"><use href="#i-moon"/></svg><span>Night</span></button>
+        </div>
+        <p class="time-description" id="time-description">Soft sunlight. A fresh beginning.</p>
+      </section>
+      <section class="inhabitants" aria-label="Sanctuary inhabitants">
+        <div class="card-heading">LIFE, AT ITS OWN PACE</div>
+        <div class="inhabitant-row"><span class="inhabitant-name"><svg class="icon"><use href="#i-helmet"/></svg>Samurai guardians</span><span class="inhabitant-value">2 keeping watch</span></div>
+        <div class="inhabitant-row"><span class="inhabitant-name"><svg class="icon"><use href="#i-sheep"/></svg>Meadow wanderers</span><span class="inhabitant-value">8 at home</span></div>
+        <div class="inhabitant-row"><span class="inhabitant-name"><svg class="icon"><use href="#i-bird"/></svg>Birds on the breeze</span><span class="inhabitant-value">12 in flight</span></div>
+      </section>
+      <div class="quiet-note"><svg class="icon"><use href="#i-leaf"/></svg>A small world. A little room to breathe.</div>
+    </aside>
+    <div class="scene-label"><span class="live-dot"></span><span id="view-label">THE SANCTUARY · LIVE</span></div>
+    <div class="scene-tools glass" role="group" aria-label="Scene controls">
+      <button id="zoom-in" aria-label="Zoom in" title="Zoom in"><svg class="icon"><use href="#i-plus"/></svg></button>
+      <button id="zoom-out" aria-label="Zoom out" title="Zoom out"><svg class="icon"><use href="#i-minus"/></svg></button>
+      <button id="reset-view" aria-label="Reset camera" title="Return to sanctuary"><svg class="icon"><use href="#i-reset"/></svg></button>
+      <button id="fullscreen" aria-label="Enter fullscreen" title="Fullscreen"><svg class="icon"><use href="#i-expand"/></svg></button>
+    </div>
+    <section class="view-dock glass" aria-label="Camera presets">
+      <div class="dock-label">A CHANGE OF PERSPECTIVE</div>
+      <button class="view-button" data-view="pagoda" aria-pressed="true" aria-label="Pagoda Front"><svg class="icon"><use href="#i-temple"/></svg><span>Pagoda front</span></button>
+      <button class="view-button" data-view="samurai" aria-pressed="false" aria-label="Samurai Closeup"><svg class="icon"><use href="#i-helmet"/></svg><span>The guardians</span></button>
+      <button class="view-button" data-view="meadow" aria-pressed="false" aria-label="Pastoral Meadow"><svg class="icon"><use href="#i-meadow"/></svg><span>Pastoral meadow</span></button>
+      <button class="view-button" data-view="mountain" aria-pressed="false" aria-label="Mountain Vista"><svg class="icon"><use href="#i-mountain"/></svg><span>Mountain vista</span></button>
+      <button class="view-button" data-view="aerial" aria-pressed="false" aria-label="Bird's Eye"><svg class="icon"><use href="#i-bird"/></svg><span>Bird's eye</span></button>
+    </section>
+    <section class="audio-card glass" aria-label="Ambient audio">
+      <div class="audio-top">
+        <button id="audio-toggle" aria-pressed="false" aria-label="Enable ambient sound"><svg class="icon"><use id="audio-icon" href="#i-muted"/></svg></button>
+        <div><div class="audio-title">Sounds of stillness</div><div id="audio-status" role="status">Wind & gentle chimes</div></div>
+      </div>
+      <div class="volume-row"><svg class="icon"><use href="#i-sound"/></svg><label class="sr-only" for="volume">Ambient volume</label><input id="volume" type="range" min="0" max="100" value="35"></div>
+    </section>
+    <div class="footer-hint"><svg class="icon"><use href="#i-mouse"/></svg><span id="interaction-hint">Drag to explore</span><span class="hint-dot">·</span><span id="zoom-hint">Scroll to get closer</span></div>
+    <div class="coordinates">35° 00′ N &nbsp; 135° 46′ E &nbsp; / &nbsp; AN IMAGINED KYOTO</div>
+    <div class="sound-caption"><svg class="icon"><use href="#i-heart"/></svg>Made for a slower moment</div>
+    <div id="toast" role="alert"></div>
+    <div class="loader" id="loader" role="status">
+      <div class="loading-inner text-center"><svg class="brand-mark"><use href="#i-brand"/></svg><p class="loading-title">Finding a quiet place.</p><div id="loading-message">Growing the bamboo. Waking the mountains.</div><button id="retry">Try again</button></div>
+    </div>
+  </main>
+  <dialog id="about-dialog" aria-labelledby="about-title">
+    <button class="round-button modal-close transition-colors hover:bg-white" id="close-about" aria-label="Close about dialog"><svg class="icon"><use href="#i-close"/></svg></button>
+    <div class="eyebrow">A WORLD WITH NO TO-DO LIST</div>
+    <h2 id="about-title">Sunlight through<br>the leaves.</h2>
+    <p>That's <em>komorebi</em>: the Japanese word for the light that finds its way through trees. This imagined mountain sanctuary is a small invitation to notice, wander, and do a little less.</p>
+    <p>Every beam, blossom, and snowy peak is built from blocks. Guardians breathe, sheep graze, petals fall. The world keeps its own gentle rhythm.</p>
+    <p class="text-xs">This single-file world needs WebGL and an internet connection for Three.js, Tailwind, and fonts. All scenery, textures, animation, and sound are generated here.</p>
+    <div class="modal-detail">
+      <div><strong>Make yourself at home</strong><span>Drag to orbit. Scroll or pinch to zoom.<br>Right-drag or two-finger drag to pan.<br>Use the five views to find a new corner.</span></div>
+      <div><strong>Listen to the quiet</strong><span>Turn on native synthesized wind and chimes. No recordings, no tracking, no destination to reach.</span></div>
+    </div>
+  </dialog>
+  <script type="module">
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => [...document.querySelectorAll(selector)];
+    const toast = (message) => {
+      $('#toast').textContent = message;
+      $('#toast').style.display = 'block';
+      clearTimeout(toast.timer);
+      toast.timer = setTimeout(() => { $('#toast').style.display = 'none'; }, 6500);
+    };
+    const dialog = $('#about-dialog');
+    for (const id of ['nav-about', 'help-button']) $('#' + id).addEventListener('click', () => dialog.showModal());
+    $('#close-about').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', (event) => { if (event.target === dialog) { const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); } });
+    $('#retry').addEventListener('click', () => location.reload());
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+    if (matchMedia('(pointer: coarse)').matches) { $('#interaction-hint').textContent = 'Swipe to explore'; $('#zoom-hint').textContent = 'Pinch to get closer'; }
+    const loadTimeout = setTimeout(() => { $('#loading-message').textContent = 'Taking longer than expected. Check your connection: this world loads Three.js from a CDN.'; $('#retry').style.display = 'inline-block'; }, 20000);
+
+    try {
+      const THREE = await import('three');
+      const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+      const canvas = $('#scene');
+      const world = $('#world');
+      const scene = new THREE.Scene();
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 1.6));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.14;
+      const camera = new THREE.PerspectiveCamera(41, 1, .5, 650);
+      const controls = new OrbitControls(camera, canvas);
+      controls.enableDamping = true;
+      controls.dampingFactor = .055;
+      controls.minDistance = 8;
+      controls.maxDistance = 225;
+      controls.maxPolarAngle = Math.PI / 2 - .025;
+      controls.minPolarAngle = .08;
+      controls.zoomSpeed = .75;
+      controls.panSpeed = .65;
+      controls.listenToKeyEvents(canvas);
+      controls.target.set(-3, 9, 0);
+      camera.position.set(88, 66, 105);
+
+      let seed = 7419;
+      const random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+      const rand = (min, max) => min + random() * (max - min);
+      const choose = (list) => list[Math.floor(random() * list.length)];
+      const texture = (color, contrast = .075, pattern = 'noise') => {
+        const image = document.createElement('canvas');
+        image.width = image.height = 16;
+        const ctx = image.getContext('2d');
+        const base = new THREE.Color(color);
+        for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+          let shade = 1 + rand(-contrast, contrast);
+          if (pattern === 'wood' && (x % 5 === 0 || (x + y * 3) % 23 === 0)) shade -= .13;
+          if (pattern === 'tile' && (y === 0 || y === 8)) shade -= .16;
+          const c = base.clone().multiplyScalar(shade);
+          ctx.fillStyle = '#' + c.getHexString();
+          ctx.fillRect(x, y, 1, 1);
+        }
+        const map = new THREE.CanvasTexture(image);
+        map.magFilter = map.minFilter = THREE.NearestFilter;
+        map.colorSpace = THREE.SRGBColorSpace;
+        map.generateMipmaps = false;
+        return map;
+      };
+      const mat = (color, options = {}, pattern = 'noise') => new THREE.MeshStandardMaterial({ map: texture(color, .065, pattern), roughness: .94, ...options });
+      const M = {
+        grass: mat('#8da963'), grassLight: mat('#9eb973'), grassDark: mat('#789658'), edge: mat('#758754'),
+        dirt: mat('#a08c6e'), soil: mat('#897963'), stone: mat('#9ba59b'), stoneDark: mat('#7b8985'),
+        path: mat('#c4c5ae'), pathDark: mat('#b3bba4'), snow: mat('#edf0e4'), snowShade: mat('#d1ddd8'),
+        wood: mat('#483e35', {}, 'wood'), woodLight: mat('#78634a', {}, 'wood'), red: mat('#b64c38', {}, 'wood'),
+        roof: mat('#4b5c5c', {}, 'tile'), roofEdge: mat('#61716b', {}, 'tile'),
+        paper: mat('#fff0ba', { emissive: '#ffbb57', emissiveIntensity: .22 }),
+        gold: mat('#d9b45b', { metalness: .45, roughness: .45 }), bamboo: mat('#5d8645'),
+        bambooLight: mat('#94ad57'), leaves: mat('#5e8750'), leavesLight: mat('#7da05a'),
+        pink: mat('#edb1b7'), pinkLight: mat('#f6ced0'), pinkDark: mat('#d695a3'),
+        water: mat('#78b7b0', { transparent: true, opacity: .86, roughness: .25, metalness: .15 }),
+        waterDeep: mat('#5faaa4', { roughness: .6 }), lily: mat('#5d915f'), flower: mat('#eac8ae'),
+        wool: mat('#f4eee0'), woolShade: mat('#ded8c8'), skin: mat('#c99c76'),
+        black: mat('#343b36'), armor: mat('#4b6666'), armorRed: mat('#9c4b3b'),
+        cream: mat('#e7d5b7'), cloud: mat('#f8f7ed'), cloudShade: mat('#e4eadd'),
+      };
+      const cube = new THREE.BoxGeometry(1, 1, 1);
+      const matrix = new THREE.Matrix4();
+      const position = new THREE.Vector3(), scale = new THREE.Vector3(), quaternion = new THREE.Quaternion();
+      let voxelCount = 0;
+      class Voxels {
+        constructor() { this.batches = new Map(); }
+        add(material, x, y, z, sx = 1, sy = sx, sz = sx, ry = 0) {
+          if (!this.batches.has(material)) this.batches.set(material, []);
+          this.batches.get(material).push([x, y, z, sx, sy, sz, ry]);
+        }
+        finish(parent, shadows = true) {
+          for (const [material, blocks] of this.batches) {
+            const mesh = new THREE.InstancedMesh(cube, material, blocks.length);
+            blocks.forEach((b, i) => {
+              position.set(b[0], b[1], b[2]); scale.set(b[3], b[4], b[5]);
+              quaternion.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, b[6]);
+              matrix.compose(position, quaternion, scale); mesh.setMatrixAt(i, matrix);
+            });
+            mesh.castShadow = shadows;
+            mesh.receiveShadow = shadows;
+            mesh.instanceMatrix.needsUpdate = true;
+            parent.add(mesh);
+            voxelCount += blocks.length;
+          }
+        }
+      }
+      const terrain = new Voxels();
+      const architecture = new Voxels();
+      const flora = new Voxels();
+      const add = (b, material, x, y, z, sx = 1, sy = sx, sz = sx) => b.add(material, x, y, z, sx, sy, sz);
+      // Terrain is assembled in larger voxels; buildings and living details use progressively smaller ones.
+      const ground = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), mat('#b2bf94'));
+      ground.rotation.x = -Math.PI / 2; ground.position.y = -5; ground.receiveShadow = true; scene.add(ground);
+      const pondX = 4, pondZ = 20;
+      const inPond = (x, z, padding = 0) => ((x - pondX) / (19 + padding)) ** 2 + ((z - pondZ) / (12 + padding)) ** 2 < 1;
+      for (let x = -68; x <= 68; x += 4) for (let z = -55; z <= 59; z += 4) {
+        if ((Math.abs(x) > 60 && Math.abs(z) > 47) || ((Math.abs(x) > 64 || z > 55) && random() < .4)) continue;
+        const height = .16 + (Math.sin(x * .065) * Math.cos(z * .09) + 1) * .3;
+        if (inPond(x, z)) {
+          add(terrain, M.waterDeep, x, -1.4, z, 4, 1, 4);
+          continue;
+        }
+        add(terrain, choose([M.grass, M.grass, M.grassLight, M.grassDark]), x, height - 1.1, z, 4, 2.2, 4);
+        if (Math.abs(x) >= 60 || z >= 55 || z <= -51) {
+          add(terrain, M.dirt, x, -2.7, z, 4, 1.1, 4);
+          add(terrain, M.soil, x, -3.7, z, 4, 1, 4);
+        }
+      }
+      const waterBlocks = new Voxels();
+      for (let x = -16; x <= 24; x += 2) for (let z = 6; z <= 34; z += 2) {
+        if (inPond(x, z, -.4)) add(waterBlocks, M.water, x, -.05, z, 2, .5, 2);
+        else if (inPond(x, z, 1.5)) add(terrain, choose([M.stone, M.path, M.grassDark]), x, .25, z, 2, .7, 2);
+      }
+      const waterGroup = new THREE.Group(); waterBlocks.finish(waterGroup, false); scene.add(waterGroup);
+      for (let i = 0; i < 22; i++) {
+        const x = rand(-12, 21), z = rand(10, 30);
+        if (!inPond(x, z, -2) || Math.abs(x - 4) < 4) continue;
+        add(architecture, M.lily, x, .25, z, 1.5, .17, 1.5);
+        add(architecture, M.lily, x + .55, .25, z + .5, .7, .17, .7);
+        if (i % 3 === 0) { add(architecture, M.flower, x, .44, z, .5, .25, .5); add(architecture, M.pinkLight, x, .6, z, .22, .16, .22); }
+      }
+      // Broad four-unit mountain columns form stepped slopes with snow determined by elevation.
+      function mountain(cx, cz, height, radius, stretch = 1) {
+        for (let dx = -radius; dx <= radius; dx += 4) for (let dz = -radius; dz <= radius; dz += 4) {
+          const distance = Math.sqrt(dx * dx + (dz / stretch) ** 2);
+          const ridge = Math.sin(dx * .17 + cz) * 2.5 + Math.cos(dz * .19) * 2;
+          const h = Math.floor((height * Math.max(0, 1 - distance / radius) + ridge) / 4) * 4;
+          if (h < 4) continue;
+          let material = h > height * .62 ? choose([M.snow, M.snow, M.snowShade]) : h > height * .33 ? choose([M.stone, M.stoneDark, M.stone]) : choose([M.grassDark, M.edge, M.stoneDark]);
+          add(terrain, material, cx + dx, h / 2 - 2, cz + dz, 4, h, 4);
+          if (h > height * .58 && random() > .4) add(terrain, M.snow, cx + dx, h - 1.5, cz + dz, 4, 1, 4);
+        }
+      }
+      mountain(-73, -91, 65, 37, 1.1);
+      mountain(-29, -109, 89, 44, .94);
+      mountain(28, -114, 73, 37, 1.2);
+      mountain(76, -83, 66, 36, 1.1);
+      mountain(99, -39, 43, 28, 1.1);
+      mountain(-104, -35, 42, 31, 1.05);
+      // Pagoda: open verandas, latticed shoji panels, and stepped roofs with raised corner eaves.
+      const px = -9, pz = -11;
+      for (let y = .7, w = 25; y <= 2.2; y += .5, w -= 1.3) add(architecture, M.stone, px, y, pz, w, .5, w);
+      for (let i = 0; i < 4; i++) add(architecture, M.path, px, .45 + i * .4, pz + 16 - i * 1.3, 9, .5, 1.5);
+      function roof(y, half, rise) {
+        for (let ring = 0; ring <= half; ring++) {
+          const edge = half - ring;
+          const roofY = y + ring * rise;
+          if (edge < .5) { add(architecture, M.roof, px, roofY, pz, 2, .7, 2); continue; }
+          for (let t = -edge; t <= edge; t++) {
+            const cornerLift = ring < 2 ? Math.max(0, Math.abs(t) - edge + 3) * .29 * (2 - ring) : 0;
+            const material = ring === 0 ? M.roofEdge : M.roof;
+            add(architecture, material, px + t, roofY + cornerLift, pz - edge, 1, .7, 1);
+            add(architecture, material, px + t, roofY + cornerLift, pz + edge, 1, .7, 1);
+            if (Math.abs(t) < edge) {
+              add(architecture, material, px - edge, roofY + cornerLift, pz + t, 1, .7, 1);
+              add(architecture, material, px + edge, roofY + cornerLift, pz + t, 1, .7, 1);
+            }
+          }
+        }
+      }
+      function tier(base, width, height, roofHalf) {
+        const half = width / 2;
+        add(architecture, M.wood, px, base, pz, width + 2, .65, width + 2);
+        add(architecture, M.woodLight, px, base + .4, pz, width + 1.3, .15, width + 1.3);
+        for (const x of [-half, 0, half]) for (const z of [-half, half]) add(architecture, M.wood, px + x, base + height / 2, pz + z, .7, height, .7);
+        for (const x of [-half, half]) add(architecture, M.wood, px + x, base + height / 2, pz, .7, height, .7);
+        for (const side of [-1, 1]) {
+          add(architecture, M.paper, px, base + height / 2 + .1, pz + side * (half - .6), width - 1.3, height - 1.4, .24);
+          add(architecture, M.paper, px + side * (half - .6), base + height / 2 + .1, pz, .24, height - 1.4, width - 1.3);
+          for (let i = -half + 1; i < half; i += 1) {
+            add(architecture, M.woodLight, px + i, base + height / 2, pz + side * (half - .4), .1, height - 1.2, .2);
+            add(architecture, M.woodLight, px + side * (half - .4), base + height / 2, pz + i, .2, height - 1.2, .1);
+          }
+          for (let j = 1.3; j < height - .3; j += 1.15) {
+            add(architecture, M.woodLight, px, base + j, pz + side * (half - .4), width - .7, .12, .2);
+            add(architecture, M.woodLight, px + side * (half - .4), base + j, pz, .2, .12, width - .7);
+          }
+          add(architecture, M.wood, px, base + .85, pz + side * (half + .8), width + 2.3, .25, .3);
+          add(architecture, M.wood, px + side * (half + .8), base + .85, pz, .3, .25, width + 2.3);
+          for (let i = -half; i <= half; i += 2) {
+            add(architecture, M.red, px + i, base + .5, pz + side * (half + .8), .19, .85, .19);
+            add(architecture, M.red, px + side * (half + .8), base + .5, pz + i, .19, .85, .19);
+          }
+          add(architecture, M.wood, px, base + height, pz + side * half, width + 1, .7, 1);
+          add(architecture, M.wood, px + side * half, base + height, pz, 1, .7, width + 1);
+        }
+        roof(base + height + .2, roofHalf, .36);
+      }
+      tier(2.3, 17, 5.1, 12);
+      tier(11.1, 12, 4.2, 9);
+      tier(18.2, 8, 3.7, 7);
+      add(architecture, M.gold, px, 27.2, pz, .55, 6, .55);
+      for (let i = 0; i < 7; i++) add(architecture, M.gold, px, 25.5 + i * .58, pz, 2.2 - i * .2, .19, 2.2 - i * .2);
+      add(architecture, M.gold, px, 30.5, pz, .9, .9, .9);
+      add(architecture, M.gold, px, 31.35, pz, .25, 1, .25);
+      // Entrance gate and the continuous stone trail through the pond.
+      const gx = 4, gz = 43;
+      for (const side of [-1, 1]) {
+        add(architecture, M.stoneDark, gx + side * 5.5, .8, gz, 2.3, 1.3, 2.3);
+        add(architecture, M.red, gx + side * 5.5, 5.8, gz, 1.25, 11, 1.25);
+        add(architecture, M.black, gx + side * 5.5, 1.7, gz, 1.4, 1.4, 1.4);
+      }
+      add(architecture, M.red, gx, 8.1, gz, 14.5, 1.05, 1);
+      add(architecture, M.red, gx, 11.2, gz, 16, 1.1, 1.5);
+      add(architecture, M.wood, gx, 11.85, gz, 17.5, .45, 1.8);
+      for (const side of [-1, 1]) {
+        add(architecture, M.red, gx + side * 8.5, 11.6, gz, 2, 1, 1.5);
+        add(architecture, M.wood, gx + side * 8.5, 12.2, gz, 2, .45, 1.8);
+      }
+      add(architecture, M.red, gx, 9.6, gz, .55, 2.3, .8);
+      add(architecture, M.gold, gx, 9.7, gz + .55, 1.5, 1.9, .2);
+      add(architecture, M.wood, gx, 9.7, gz + .69, .9, 1.25, .12);
+      for (let z = 36; z <= 55; z += 2.5) {
+        add(architecture, choose([M.path, M.pathDark]), gx - 1.4 + rand(-.2,.2), .45, z, 2.5, .3, 2);
+        add(architecture, choose([M.path, M.pathDark]), gx + 1.4 + rand(-.2,.2), .47, z - .25, 2.5, .3, 2);
+      }
+      for (let i = 0; i <= 12; i++) {
+        const z = 6 - i * 1.15, x = gx + (px - gx) * i / 12;
+        add(architecture, choose([M.path, M.pathDark]), x, .5, z, 3.8, .33, 1.7);
+      }
+      const bridgeCenter = 20, bridgeHalf = 13;
+      for (let i = -bridgeHalf; i <= bridgeHalf; i++) {
+        const z = bridgeCenter + i;
+        const h = .8 + 3.2 * (1 - (i / bridgeHalf) ** 2);
+        add(architecture, M.red, gx, h, z, 6, .4, 1);
+        add(architecture, M.woodLight, gx, h + .23, z, 5.4, .12, .87);
+        for (const side of [-1,1]) {
+          add(architecture, M.red, gx + side * 3.1, h + 1.7, z, .35, .3, 1.13);
+          add(architecture, M.red, gx + side * 3.1, h + .85, z, .26, .2, 1.1);
+          if (i % 3 === 0) { add(architecture, M.red, gx + side * 3.1, h + .95, z, .45, 2.3, .45); add(architecture, M.gold, gx + side * 3.1, h + 2.17, z, .55, .17, .55); }
+        }
+      }
+      const lanterns = [];
+      function lantern(x, z, hanging = false, y = 0) {
+        if (!hanging) {
+          add(architecture, M.stone, x, .5, z, 2, .6, 2);
+          add(architecture, M.stone, x, 1.4, z, .9, 1.4, .9);
+          add(architecture, M.stone, x, 2.1, z, 1.7, .3, 1.7);
+          add(architecture, M.paper, x, 2.65, z, 1.15, .8, 1.15);
+          for (const sx of [-.65,.65]) for (const sz of [-.65,.65]) add(architecture, M.stoneDark, x + sx, 2.65, z + sz, .2, 1, .2);
+          add(architecture, M.stone, x, 3.2, z, 2.1, .35, 2.1);
+          add(architecture, M.stone, x, 3.5, z, 1.4, .3, 1.4);
+          add(architecture, M.stone, x, 3.8, z, .55, .3, .55);
+          y = 2.7;
+        } else {
+          add(architecture, M.wood, x, y + .9, z, .1, 1, .1);
+          add(architecture, M.paper, x, y, z, .95, 1.25, .95);
+          for (const level of [-.66,0,.66]) add(architecture, M.red, x, y + level, z, 1.05, .12, 1.05);
+          add(architecture, M.gold, x, y - .95, z, .15, .45, .15);
+        }
+        const light = new THREE.PointLight('#ffbe67', 1.3, hanging ? 13 : 10, 1.6);
+        light.position.set(x, y, z + .3); scene.add(light); lanterns.push(light);
+      }
+      for (const [x,z] of [[-5,38],[13,38],[-5,4],[-17,4],[-23,-20],[7,-20],[26,17],[-18,23]]) lantern(x,z);
+      for (const [x,z,y] of [[px-8,pz+8,6.6],[px+8,pz+8,6.6],[px-5.5,pz+5.5,14.7],[px+5.5,pz+5.5,14.7]]) lantern(x,z,true,y);
+      function sakura(x, z, size = 1) {
+        const h = 10 * size;
+        add(flora, M.woodLight, x, h/2, z, 1.1*size, h, 1.1*size);
+        add(flora, M.wood, x + 1.2*size, h*.72, z, 3.5*size, .8*size, .8*size);
+        add(flora, M.wood, x - 1.3*size, h*.9, z + .8*size, 3.4*size, .7*size, .7*size);
+        for (const [ox,oy,oz,r] of [[0,1,0,4],[-3,0,0,3],[3,-1,1,3],[-1,-1,3,3],[1,0,-3,3]]) {
+          for (let dx = -r; dx <= r; dx += 1.25) for (let dy = -2; dy <= 2; dy += 1.25) for (let dz = -r; dz <= r; dz += 1.25) {
+            if ((dx/r)**2 + (dz/r)**2 + (dy/2.7)**2 > 1.15 || random() < .15) continue;
+            add(flora, choose([M.pink,M.pink,M.pinkLight,M.pinkDark]), x+(ox+dx)*size, h+(oy+dy)*size, z+(oz+dz)*size, 1.35*size, 1.15*size, 1.35*size);
+          }
+        }
+        for (let i=0;i<18;i++) add(flora,M.pinkLight,x+rand(-5,5)*size,.5,z+rand(-4,4)*size,.24,.07,.24);
+        return {x,z,h};
+      }
+      const cherryTrees = [sakura(-30,9,1.15),sakura(24,-7,1.1),sakura(-28,-28,.9),sakura(23,37,.8),sakura(-43,35,.9)];
+      for (let i=0;i<33;i++) {
+        const x = rand(-47,-28), z = rand(-26,-3), h = rand(7,16);
+        add(flora,M.bamboo,x,h/2,z,.42,h,.42);
+        for (let y=1;y<h;y+=1.6) {
+          add(flora,M.bambooLight,x,y,z,.52,.18,.52);
+          if (y>h*.5 && random()>.4) {
+            const dir=random()>.5?1:-1;
+            add(flora,M.bamboo,x+dir*.7,y+.4,z,1.5,.16,.2);
+            add(flora,M.leaves,x+dir*1.4,y+.5,z,1.8,.18,.6);
+            add(flora,M.leavesLight,x+dir*.9,y+.65,z+.6,.6,.2,1.2);
+          }
+        }
+      }
+      function pine(x,z,h) {
+        add(flora,M.wood,x,h/2,z,.8,h,.8);
+        for (let i=0;i<4;i++) {
+          const w=(5.8-i*1.1)*h/11;
+          add(flora,i%2?M.leaves:M.leavesLight,x,h*.45+i*h*.15,z,w,h*.17,w);
+        }
+        add(flora,M.leaves,x,h*1.08,z,1.2,1.3,1.2);
+      }
+      for(let i=0;i<27;i++) pine(rand(-64,64),rand(-55,-38),rand(7,14));
+      for (const [x,z] of [[49,7],[55,-13],[-52,14],[-57,38],[40,46],[54,37],[-43,-37]]) pine(x,z,rand(8,13));
+      for(let i=0;i<58;i++) {
+        const x=rand(-57,57),z=rand(-43,52);
+        if(inPond(x,z,4) || (Math.abs(x-px)<17&&Math.abs(z-pz)<17) || (Math.abs(x-gx)<6&&z>4)) continue;
+        const w=rand(1.4,3.2);
+        add(flora,choose([M.leaves,M.leavesLight,M.grassDark]),x,.9,z,w,1.2,w);
+        add(flora,M.leavesLight,x-.5,1.7,z+.2,w*.65,.7,w*.65);
+      }
+      for(let i=0;i<270;i++) {
+        const x=rand(-60,60),z=rand(-48,54);
+        if(inPond(x,z,2)||(Math.abs(x-px)<16&&Math.abs(z-pz)<17)||(Math.abs(x-gx)<5&&z>3))continue;
+        add(flora,choose([M.grassDark,M.leavesLight,M.bambooLight]),x,.65,z,.15,rand(.3,.8),.15);
+        if(i%5===0) {add(flora,M.flower,x,.95,z,.27,.22,.27);add(flora,M.pinkLight,x+.3,.8,z+.4,.2,.2,.2);}
+      }
+      // Raked gravel garden, rock groupings, and a little bench reward a closer look.
+      add(architecture,M.pathDark,-35,.45,-32,15,.2,10);
+      for(let i=0;i<15;i++) add(architecture,M.path,-41+i*.85,.58,-32,.18,.05,9.5);
+      for(const [x,z,s] of [[-36,-32,2.8],[-32,-33,1.6],[-37,-29,1.2],[32,2,2.2],[35,3,1.3]]) {
+        add(architecture,M.stoneDark,x,s*.4,z,s,s*.8,s*.85);
+        add(architecture,M.stone,x-.2,s*.85,z,s*.7,s*.3,s*.6);
+      }
+      add(architecture,M.woodLight,30,1.4,31,6,.5,1.6);
+      for(const x of [28,32])add(architecture,M.wood,x,.7,31,.5,1.2,1.2);
+      terrain.finish(scene); architecture.finish(scene); flora.finish(scene);
+
+      const guardians=[];
+      function samurai(x,z,accent,rotation=0) {
+        const group=new THREE.Group(), body=new THREE.Group(), b=new Voxels();
+        group.position.set(x,.55,z); group.rotation.y=rotation; group.add(body);
+        for(const side of [-1,1]) {
+          add(b,M.black,side*.36,.2,0,.52,.4,.82);
+          add(b,M.armor,side*.36,.78,0,.45,.8,.55);
+          add(b,accent,side*.36,.95,.31,.48,.22,.13);
+          add(b,accent,side*.38,1.42,0,.66,.7,.8);
+          for(let j=0;j<3;j++)add(b,M.gold,side*.38,1.2+j*.22,.42,.5,.065,.08);
+          add(b,M.armor,side*.9,2.13,0,.42,1.1,.5);
+          for(let j=0;j<4;j++) {
+            add(b,accent,side*1.02,2.65-j*.18,0,.62,.15,.8);
+            add(b,M.gold,side*1.03,2.62-j*.18,.43,.54,.045,.07);
+          }
+          add(b,M.skin,side*.9,1.49,.07,.33,.33,.35);
+        }
+        add(b,M.armor,0,2.07,0,1.3,1.3,.8);
+        for(let j=0;j<4;j++) {add(b,accent,0,1.72+j*.22,.46,1.15,.18,.15);add(b,M.gold,0,1.76+j*.22,.55,.65,.035,.05);}
+        add(b,M.black,0,1.45,0,1.5,.17,.95);
+        add(b,M.gold,0,1.45,.53,.3,.22,.08);
+        add(b,M.skin,0,3.1,.05,.75,.8,.65);
+        add(b,M.black,0,3.53,0,1.08,.28,.95);
+        add(b,M.armor,0,3.75,-.08,.8,.3,.75);
+        add(b,M.black,0,3.98,-.08,.45,.19,.45);
+        for(const side of [-1,1]) {
+          add(b,M.armor,side*.49,3.18,-.1,.24,.6,.7);
+          add(b,accent,side*.49,2.93,-.1,.34,.15,.8);
+          add(b,M.black,side*.18,3.18,.395,.11,.08,.05);
+          add(b,M.gold,side*.34,3.8,.53,.18,.2,.16);
+          add(b,M.gold,side*.53,3.99,.53,.18,.24,.16);
+          add(b,M.gold,side*.67,4.24,.53,.15,.28,.15);
+          add(b,M.gold,side*.73,4.5,.53,.12,.25,.12);
+        }
+        add(b,accent,0,2.85,.4,.6,.2,.16);
+        add(b,M.gold,0,3.63,.56,.24,.24,.14);
+        const sword=new THREE.Group(),sb=new Voxels();
+        add(sb,M.black,0,0,0,.18,2.2,.2);add(sb,M.gold,0,1.17,0,.45,.1,.3);
+        add(sb,M.wood,0,1.49,0,.18,.58,.21);
+        for(let j=0;j<4;j++)add(sb,M.cream,0,1.28+j*.13,.11,.2,.035,.04);
+        sb.finish(sword);sword.position.set(-.88,1.2,-.1);sword.rotation.z=-.43;body.add(sword);
+        b.finish(body);scene.add(group);guardians.push({group,body,phase:rand(0,6)});
+      }
+      samurai(-14,4,M.armorRed,.2); samurai(-4,1,M.armor,-.25);
+
+      const animals=[];
+      function animal(x,z,type) {
+        const group=new THREE.Group(),body=new THREE.Group(),head=new THREE.Group(),b=new Voxels(),hb=new Voxels();
+        const alpaca=type==='alpaca', wool=alpaca?M.cream:M.wool;
+        group.position.set(x,.5,z);group.add(body);
+        const legs=[];
+        for(const sx of [-.48,.48])for(const sz of [-.72,.72]) {
+          const leg=new THREE.Group(),lb=new Voxels();
+          add(lb,M.skin,0,-.3,0,.22,.7,.23);add(lb,M.black,0,-.67,.04,.24,.15,.3);
+          lb.finish(leg);leg.position.set(sx,.75,sz);group.add(leg);legs.push(leg);
+        }
+        for(let xx=-.6;xx<=.61;xx+=.4)for(let yy=.8;yy<=1.61;yy+=.4)for(let zz=-.9;zz<=.91;zz+=.4) {
+          add(b,random()>.2?wool:M.woolShade,xx,yy,zz,.45,.45,.45);
+        }
+        add(b,wool,0,1.25,-1.2,.35,.35,.45);
+        head.position.set(0,alpaca?1.35:1.25,.9);
+        if(alpaca) {
+          add(hb,wool,0,.8,0,.54,1.8,.55);
+          add(hb,wool,0,1.8,.12,.68,.6,.8);
+          add(hb,M.skin,0,1.67,.57,.42,.32,.4);
+          for(const side of [-1,1]) {add(hb,wool,side*.22,2.35,.05,.18,.6,.24);add(hb,M.skin,side*.22,2.35,.19,.09,.37,.06);add(hb,M.black,side*.35,1.87,.35,.06,.1,.1);}
+        } else {
+          add(hb,M.skin,0,.13,.22,.64,.6,.64);
+          add(hb,wool,0,.49,.12,.72,.2,.7);
+          add(hb,M.skin,0,-.08,.6,.45,.3,.4);
+          for(const side of [-1,1]) {add(hb,M.skin,side*.46,.26,.15,.35,.14,.25);add(hb,M.black,side*.33,.23,.47,.065,.095,.1);}
+        }
+        hb.finish(head);body.add(head);b.finish(body);scene.add(group);
+        animals.push({group,body,head,legs,type,home:new THREE.Vector3(x,.5,z),phase:rand(0,6),walk:rand(0,20),angle:rand(-Math.PI,Math.PI)});
+      }
+      for(const [x,z,t] of [[34,19,'sheep'],[43,21,'sheep'],[38,31,'sheep'],[46,12,'sheep'],[30,42,'sheep'],[43,37,'alpaca'],[51,25,'alpaca'],[35,9,'alpaca']])animal(x,z,t);
+
+      const clouds=[];
+      for(let i=0;i<12;i++) {
+        const group=new THREE.Group(),b=new Voxels();
+        for(let j=0;j<8;j++)add(b,j<2?M.cloudShade:M.cloud,rand(-9,9),rand(-1,2),rand(-3,3),rand(4,9),rand(2,4),rand(3,7));
+        b.finish(group,false);group.position.set(rand(-150,150),rand(57,100),rand(-150,-60));scene.add(group);
+        clouds.push({group,speed:rand(.4,.9)});
+      }
+      const birds=[];
+      for(let i=0;i<12;i++) {
+        const group=new THREE.Group(),b=new Voxels(),wingL=new THREE.Group(),wingR=new THREE.Group();
+        add(b,M.black,0,0,0,.28,.3,.9);add(b,M.cream,0,.02,.48,.26,.24,.28);add(b,M.gold,0,0,.68,.12,.1,.2);
+        b.finish(group,false);
+        for(const [wing,side] of [[wingL,-1],[wingR,1]]) {
+          const wb=new Voxels();add(wb,M.black,side*.6,0,-.05,1.15,.12,.46);add(wb,M.cream,side*1.15,0,-.17,.32,.1,.3);wb.finish(wing,false);group.add(wing);
+        }
+        scene.add(group);birds.push({group,wingL,wingR,phase:rand(0,Math.PI*2),radius:rand(24,48),height:rand(25,39),speed:rand(.065,.1)});
+      }
+      const petalCount=200,petalPositions=new Float32Array(petalCount*3),petalData=[];
+      for(let i=0;i<petalCount;i++) {
+        const tree=choose(cherryTrees),p={tree,x:tree.x+rand(-6,6),y:rand(.7,tree.h+3),z:tree.z+rand(-5,5),speed:rand(.5,1.3),phase:rand(0,6)};
+        petalData.push(p);petalPositions.set([p.x,p.y,p.z],i*3);
+      }
+      const petalGeo=new THREE.BufferGeometry();petalGeo.setAttribute('position',new THREE.BufferAttribute(petalPositions,3));
+      const petals=new THREE.Points(petalGeo,new THREE.PointsMaterial({color:'#f6c5cc',size:.27,sizeAttenuation:true,transparent:true,opacity:.88}));
+      scene.add(petals);
+      const starPositions=new Float32Array(450*3);
+      for(let i=0;i<450;i++) {
+        const theta=rand(0,Math.PI*2),phi=rand(.12,1.4),radius=rand(220,270);
+        starPositions.set([Math.cos(theta)*Math.sin(phi)*radius,Math.cos(phi)*radius,Math.sin(theta)*Math.sin(phi)*radius],i*3);
+      }
+      const starGeo=new THREE.BufferGeometry();starGeo.setAttribute('position',new THREE.BufferAttribute(starPositions,3));
+      const stars=new THREE.Points(starGeo,new THREE.PointsMaterial({color:'#fff4cf',size:.62,transparent:true,opacity:0,depthWrite:false,fog:false}));scene.add(stars);
+      const celestial=new THREE.Group();
+      const sunMaterial=new THREE.MeshBasicMaterial({color:'#fff0bb',fog:false});
+      const sun=new THREE.Mesh(new THREE.BoxGeometry(9,9,.8),sunMaterial);celestial.add(sun);
+      const moonMarks=new Voxels();add(moonMarks,M.snowShade,-1,1,.5,2,.9,.15);add(moonMarks,M.snowShade,2,-2,.5,1.8,1.5,.15);
+      const moonDetails=new THREE.Group();moonMarks.finish(moonDetails,false);celestial.add(moonDetails);moonDetails.visible=false;
+      scene.add(celestial);
+      const hemi=new THREE.HemisphereLight('#ecf0de','#7e9260',2.4);scene.add(hemi);
+      const sunLight=new THREE.DirectionalLight('#fff0d3',3.3);sunLight.position.set(-35,75,35);
+      sunLight.castShadow=true;sunLight.shadow.mapSize.set(2048,2048);
+      Object.assign(sunLight.shadow.camera,{left:-85,right:85,top:85,bottom:-85,near:1,far:230});
+      sunLight.shadow.bias=-.00045;sunLight.shadow.normalBias=.05;sunLight.shadow.radius=3;
+      sunLight.target.position.set(0,0,-5);scene.add(sunLight,sunLight.target);
+      const fillLight=new THREE.DirectionalLight('#d9e6df',.55);fillLight.position.set(60,30,-60);scene.add(fillLight);
+      const modes={
+        morning:{sky:'#d5e3d9',fog:'#d9e5d9',hemi:'#edf0df',ground:'#819c69',sun:'#fff0d5',intensity:3.3,ambient:2.4,lantern:1.1,emissive:.22,stars:0,exposure:1.14,position:[-130,46,-80],lightPosition:[-35,75,35],clock:'08:24 AM',description:'Soft sunlight. A fresh beginning.'},
+        sunset:{sky:'#d3a998',fog:'#dcc0a4',hemi:'#edd1b4',ground:'#84705c',sun:'#ffba7b',intensity:2.8,ambient:1.45,lantern:5,emissive:.65,stars:0,exposure:1.05,position:[-130,30,-80],lightPosition:[-80,35,20],clock:'06:42 PM',description:'Golden skies. Let the day drift away.'},
+        night:{sky:'#172d3b',fog:'#304951',hemi:'#8fabce',ground:'#344c45',sun:'#c2d5f4',intensity:.9,ambient:.68,lantern:11,emissive:1.7,stars:.9,exposure:.94,position:[-130,50,-80],lightPosition:[-30,80,20],clock:'09:16 PM',description:'A thousand stars. Nowhere else to be.'}
+      };
+      let currentMode='morning';
+      const initial=modes.morning;
+      scene.background=new THREE.Color(initial.sky);scene.fog=new THREE.FogExp2(initial.fog,.0038);
+      celestial.position.fromArray(initial.position);
+      const colorTarget=new THREE.Color(),celestialTarget=new THREE.Vector3(),lightTarget=new THREE.Vector3();
+      function setTime(mode) {
+        currentMode=mode;world.dataset.time=mode;
+        $$('.time-option').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.time===mode)));
+        $('#time-clock').textContent=modes[mode].clock;$('#time-description').textContent=modes[mode].description;
+        moonDetails.visible=mode==='night';
+      }
+      $$('.time-option').forEach(button=>button.addEventListener('click',()=>setTime(button.dataset.time)));
+      const presets={
+        pagoda:{position:[88,66,105],target:[-3,9,0],label:'THE SANCTUARY'},
+        samurai:{position:[-2,7,20],target:[-10,2.5,3],label:'THE QUIET GUARDIANS'},
+        meadow:{position:[66,20,61],target:[40,2.8,25],label:'THE PASTORAL MEADOW'},
+        mountain:{position:[72,40,73],target:[-12,30,-65],label:'THE MOUNTAIN VISTA'},
+        aerial:{position:[38,135,62],target:[-2,0,-2],label:'A WORLD FROM ABOVE'}
+      };
+      let cameraTravel=null,currentView='pagoda';
+      const cameraEnd=new THREE.Vector3(),targetEnd=new THREE.Vector3();
+      function adjustedPreset(name) {
+        const preset=presets[name],pos=new THREE.Vector3().fromArray(preset.position),target=new THREE.Vector3().fromArray(preset.target);
+        if(world.clientWidth<600 && (name==='pagoda'||name==='aerial'))pos.sub(target).multiplyScalar(1.23).add(target);
+        return {pos,target};
+      }
+      function goToView(name,immediate=false) {
+        currentView=name;const {pos,target}=adjustedPreset(name);
+        cameraEnd.copy(pos);targetEnd.copy(target);
+        $$('.view-button').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.view===name)));
+        $('#view-label').textContent=presets[name].label+' · LIVE';
+        if(immediate||reducedMotion.matches) {camera.position.copy(pos);controls.target.copy(target);cameraTravel=null;controls.update();}
+        else cameraTravel={position:camera.position.clone(),target:controls.target.clone(),started:performance.now()};
+      }
+      $$('.view-button').forEach(button=>button.addEventListener('click',()=>goToView(button.dataset.view)));
+      controls.addEventListener('start',()=>{cameraTravel=null;currentView=null;$$('.view-button').forEach(button=>button.setAttribute('aria-pressed','false'));$('#view-label').textContent='YOUR OWN PERSPECTIVE · LIVE';});
+      $('#reset-view').addEventListener('click',()=>goToView('pagoda'));
+      $('#nav-sanctuary').addEventListener('click',()=>goToView('pagoda'));
+      $('.brand').addEventListener('click',(event)=>{event.preventDefault();goToView('pagoda');});
+      function zoom(factor) {
+        cameraTravel=null;
+        const offset=camera.position.clone().sub(controls.target),distance=THREE.MathUtils.clamp(offset.length()*factor,controls.minDistance,controls.maxDistance);
+        offset.setLength(distance);camera.position.copy(controls.target).add(offset);controls.update();
+      }
+      $('#zoom-in').addEventListener('click',()=>zoom(.85));$('#zoom-out').addEventListener('click',()=>zoom(1.18));
+      $('#fullscreen').addEventListener('click',async()=>{
+        try {
+          if(document.fullscreenElement) await document.exitFullscreen();
+          else if(document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+          else toast('Fullscreen is not supported by this browser. You can still explore every view.');
+        }catch(error){console.error('Fullscreen failed:',error);toast('Fullscreen is unavailable. You can still explore in this window.');}
+      });
+      document.addEventListener('fullscreenchange',()=>$('#fullscreen').setAttribute('aria-label',document.fullscreenElement?'Exit fullscreen':'Enter fullscreen'));
+      let narrowLayout=world.clientWidth<600;
+      function resize() {
+        const width=world.clientWidth,height=world.clientHeight;
+        renderer.setSize(width,height,false);camera.aspect=width/height;
+        camera.clearViewOffset();
+        if(width>600)camera.setViewOffset(width,height,-width*.075,0,width,height);
+        else camera.setViewOffset(width,height,0,-height*.055,width,height);
+        camera.updateProjectionMatrix();
+        const isNarrow=width<600;
+        if(isNarrow!==narrowLayout&&currentView)goToView(currentView,true);
+        narrowLayout=isNarrow;
+      }
+      new ResizeObserver(resize).observe(world);resize();goToView('pagoda',true);
+      canvas.addEventListener('webglcontextlost',(event)=>{event.preventDefault();canvas.dataset.state='error';$('#loader').classList.remove('hidden');$('.loading-title').textContent='The world needs a moment.';$('#loading-message').textContent='The graphics connection was interrupted. Reload to return to the sanctuary.';$('#retry').style.display='inline-block';});
+
+      // Audio starts only after a gesture. A filtered noise loop and inharmonic sine partials need no assets.
+      let audioContext=null,masterGain=null,audioOn=false,nextChime=0,windSource=null;
+      function makeAudio() {
+        const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+        if(!AudioContextClass)throw new Error('Web Audio is not supported in this browser.');
+        audioContext=new AudioContextClass();
+        masterGain=audioContext.createGain();masterGain.gain.value=Number($('#volume').value)/100*.32;masterGain.connect(audioContext.destination);
+        const buffer=audioContext.createBuffer(1,audioContext.sampleRate*6,audioContext.sampleRate),data=buffer.getChannelData(0);
+        let brown=0;
+        for(let i=0;i<data.length;i++){brown=(brown+(Math.random()*2-1)*.025)/1.015;data[i]=brown*3;}
+        windSource=audioContext.createBufferSource();windSource.buffer=buffer;windSource.loop=true;
+        const lowpass=audioContext.createBiquadFilter();lowpass.type='lowpass';lowpass.frequency.value=500;
+        const highpass=audioContext.createBiquadFilter();highpass.type='highpass';highpass.frequency.value=95;
+        const windGain=audioContext.createGain();windGain.gain.value=.55;
+        const lfo=audioContext.createOscillator(),lfoGain=audioContext.createGain();
+        lfo.frequency.value=.075;lfoGain.gain.value=.16;lfo.connect(lfoGain);lfoGain.connect(windGain.gain);
+        windSource.connect(lowpass);lowpass.connect(highpass);highpass.connect(windGain);windGain.connect(masterGain);
+        windSource.start();lfo.start();
+      }
+      function chime() {
+        if(!audioContext||audioContext.state!=='running')return;
+        const notes=[523.25,587.33,659.25,783.99,880],base=notes[Math.floor(Math.random()*notes.length)];
+        const now=audioContext.currentTime;
+        for(const [ratio,strength,decay] of [[1,.16,4],[2.76,.045,2.8],[4.07,.015,1.6]]) {
+          const oscillator=audioContext.createOscillator(),gain=audioContext.createGain();
+          oscillator.type='sine';oscillator.frequency.value=base*ratio;
+          gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(strength,now+.015);gain.gain.exponentialRampToValueAtTime(.0001,now+decay);
+          oscillator.connect(gain);gain.connect(masterGain);oscillator.start(now);oscillator.stop(now+decay+.1);
+          oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
+        }
+      }
+      function updateAudioUI() {
+        $('#audio-toggle').setAttribute('aria-pressed',String(audioOn));$('#audio-toggle').setAttribute('aria-label',audioOn?'Mute ambient sound':'Enable ambient sound');
+        $('#audio-icon').setAttribute('href',audioOn?'#i-sound':'#i-muted');
+        $('#audio-status').textContent=audioOn?'The breeze is playing':'Wind & gentle chimes';
+      }
+      $('#audio-toggle').addEventListener('click',async()=>{
+        const button=$('#audio-toggle');button.disabled=true;
+        try {
+          if(!audioContext)makeAudio();
+          if(audioOn){await audioContext.suspend();audioOn=false;}
+          else {await audioContext.resume();audioOn=true;nextChime=audioContext.currentTime+1.2;}
+          updateAudioUI();
+        }catch(error){console.error('Ambient audio failed:',error);audioOn=false;updateAudioUI();toast('Could not start the ambient sound: '+error.message);}
+        finally{button.disabled=false;}
+      });
+      $('#volume').addEventListener('input',()=>{if(masterGain)masterGain.gain.setTargetAtTime(Number($('#volume').value)/100*.32,audioContext.currentTime,.12);});
+      document.addEventListener('visibilitychange',async()=>{
+        if(!audioContext||!audioOn)return;
+        try {if(document.hidden)await audioContext.suspend();else{await audioContext.resume();nextChime=audioContext.currentTime+3;}}
+        catch(error){console.error('Could not resume ambient sound:',error);audioOn=false;updateAudioUI();toast('Audio was paused by your browser. Tap the sound button to resume.');}
+      });
+
+      const clock=new THREE.Clock();let elapsed=0;
+      function animate() {
+        const frameDelta=clock.getDelta(),dt=Math.min(frameDelta,.05);
+        if(!reducedMotion.matches)elapsed+=dt;
+        const blend=reducedMotion.matches?1:1-Math.exp(-Math.min(frameDelta,1)*2.2),mode=modes[currentMode];
+        scene.background.lerp(colorTarget.set(mode.sky),blend);scene.fog.color.lerp(colorTarget.set(mode.fog),blend);
+        hemi.color.lerp(colorTarget.set(mode.hemi),blend);hemi.groundColor.lerp(colorTarget.set(mode.ground),blend);
+        hemi.intensity=THREE.MathUtils.lerp(hemi.intensity,mode.ambient,blend);
+        sunLight.color.lerp(colorTarget.set(mode.sun),blend);sunLight.intensity=THREE.MathUtils.lerp(sunLight.intensity,mode.intensity,blend);
+        sunLight.position.lerp(lightTarget.fromArray(mode.lightPosition),blend);
+        sunMaterial.color.lerp(colorTarget.set(currentMode==='night'?'#e3eaf0':currentMode==='sunset'?'#ffce87':'#fff0bb'),blend);
+        celestial.position.lerp(celestialTarget.fromArray(mode.position),blend);celestial.quaternion.copy(camera.quaternion);
+        stars.material.opacity=THREE.MathUtils.lerp(stars.material.opacity,mode.stars,blend);
+        M.paper.emissiveIntensity=THREE.MathUtils.lerp(M.paper.emissiveIntensity,mode.emissive,blend);
+        for(const light of lanterns)light.intensity=THREE.MathUtils.lerp(light.intensity,mode.lantern,blend);
+        renderer.toneMappingExposure=THREE.MathUtils.lerp(renderer.toneMappingExposure,mode.exposure,blend);
+        if(cameraTravel) {
+          const t=Math.min((performance.now()-cameraTravel.started)/2100,1),ease=t*t*(3-2*t);
+          camera.position.lerpVectors(cameraTravel.position,cameraEnd,ease);controls.target.lerpVectors(cameraTravel.target,targetEnd,ease);
+          if(t===1)cameraTravel=null;
+        }
+        controls.update();
+        if(!reducedMotion.matches) {
+          waterGroup.position.y=Math.sin(elapsed*.7)*.045;
+          for(const g of guardians){g.body.scale.y=1+Math.sin(elapsed*1.4+g.phase)*.012;g.body.rotation.z=Math.sin(elapsed*.65+g.phase)*.005;}
+          for(const a of animals) {
+            const cycle=(elapsed+a.walk)%24,walking=cycle<12;
+            if(walking) {
+              const angle=a.angle+Math.sin(elapsed*.11+a.phase)*.45;
+              const nx=a.group.position.x+Math.sin(angle)*dt*.65,nz=a.group.position.z+Math.cos(angle)*dt*.65;
+              if(nx<28||nx>56||nz<6||nz>49||a.group.position.distanceTo(a.home)>10)a.angle+=Math.PI;
+              else{a.group.position.x=nx;a.group.position.z=nz;}
+              a.group.rotation.y=angle;a.body.position.y=Math.sin(elapsed*4+a.phase)*.035;
+              a.legs.forEach((leg,i)=>leg.rotation.x=Math.sin(elapsed*4+a.phase+(i%2)*Math.PI)*.2);
+              a.head.rotation.x=THREE.MathUtils.lerp(a.head.rotation.x,0,dt*3);
+            } else {
+              a.legs.forEach(leg=>leg.rotation.x=THREE.MathUtils.lerp(leg.rotation.x,0,dt*3));
+              a.head.rotation.x=THREE.MathUtils.lerp(a.head.rotation.x,.55+Math.sin(elapsed*2.1+a.phase)*.1,dt*3);
+              a.body.position.y=Math.sin(elapsed*1.5+a.phase)*.025;
+            }
+          }
+          for(const c of clouds){c.group.position.x+=dt*c.speed;if(c.group.position.x>185)c.group.position.x=-185;}
+          for(const b of birds) {
+            const a=elapsed*b.speed+b.phase;
+            b.group.position.set(Math.cos(a)*b.radius, b.height+Math.sin(a*2)*2, -22+Math.sin(a)*b.radius*.55);
+            b.group.rotation.y=-a;b.group.rotation.z=Math.sin(a)*.12;
+            b.wingL.rotation.z=Math.sin(elapsed*5+b.phase)*.48;b.wingR.rotation.z=-b.wingL.rotation.z;
+          }
+          for(let i=0;i<petalCount;i++) {
+            const p=petalData[i];p.y-=dt*p.speed;p.x+=Math.sin(elapsed*.7+p.phase)*dt*.35+dt*.18;p.z+=Math.cos(elapsed*.6+p.phase)*dt*.2;
+            if(p.y<.5){p.y=p.tree.h+rand(-1,3);p.x=p.tree.x+rand(-5,5);p.z=p.tree.z+rand(-4,4);}
+            petalPositions.set([p.x,p.y,p.z],i*3);
+          }
+          petalGeo.attributes.position.needsUpdate=true;
+        }
+        if(audioOn&&audioContext.state==='running'&&audioContext.currentTime>nextChime){chime();nextChime=audioContext.currentTime+8+Math.random()*11;}
+        renderer.render(scene,camera);
+      }
+      animate();renderer.setAnimationLoop(animate);
+      canvas.dataset.state='ready';canvas.dataset.voxels=String(voxelCount);
+      clearTimeout(loadTimeout);$('#loader').classList.add('hidden');
+      if(reducedMotion.matches) {
+        // Static arrangements remain visible when ambient animation is disabled.
+        for(const b of birds){const a=b.phase;b.group.position.set(Math.cos(a)*b.radius,b.height,-22+Math.sin(a)*b.radius*.55);b.group.rotation.y=-a;}
+      }
+    } catch(error) {
+      clearTimeout(loadTimeout);
+      console.error('Sanctuary initialization failed:',error);
+      $('#scene').dataset.state='error';
+      $('.loading-title').textContent='A small pause in the journey.';
+      $('#loading-message').textContent='The world could not load. Check your internet connection and WebGL support, then try again. '+error.message;
+      $('#retry').style.display='inline-block';
+    }
+  </script>
+</body>
+</html>

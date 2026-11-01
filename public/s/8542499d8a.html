@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f7f6f0">
+  <meta name="description" content="A small world for a slower moment. Explore an animated voxel Japanese sanctuary, with mountains, cherry blossoms, and synthesized ambient sound.">
+  <title>Zen Sanctuary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+  <style>
+    :root { --paper:#f7f6f0; --ink:#283c32; --muted:#92958a; --line:#e5e6dc; --accent:#b86549; --green:#536c53; }
+    * { box-sizing:border-box; }
+    html,body { margin:0; width:100%; height:100%; overflow:hidden; }
+    body { background:var(--paper); color:var(--ink); font-family:"DM Sans",sans-serif; font-size:13px; -webkit-font-smoothing:antialiased; }
+    button { font:inherit; color:inherit; cursor:pointer; }
+    button:focus-visible,a:focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
+    button { -webkit-tap-highlight-color:transparent; }
+    svg { flex-shrink:0; }
+    .icon { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+    .app-header { height:78px; padding:0 32px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); position:relative; z-index:5; }
+    .brand { display:flex; align-items:center; gap:12px; }
+    .brand-mark { width:38px; height:38px; color:var(--green); }
+    .brand-name { font-size:19px; letter-spacing:3.5px; font-weight:600; line-height:1.3; }
+    .brand-tag { font-size:8px; letter-spacing:2.7px; color:#899082; margin-top:3px; }
+    .header-center { position:absolute; left:50%; transform:translateX(-50%); font-family:"Lora",serif; font-size:13px; font-style:italic; color:#8c9386; }
+    .header-right { display:flex; gap:25px; align-items:center; }
+    .about-button { border:0; background:none; font-size:11px; color:#707969; }
+    .status { font-size:10px; display:flex; align-items:center; gap:8px; letter-spacing:.2px; }
+    .status-dot { width:6px; height:6px; border-radius:50%; background:#7e9570; box-shadow:0 0 0 4px #e9eddf; }
+    main { height:calc(100dvh - 78px); display:grid; grid-template-columns:272px minmax(0,1fr); }
+    .sidebar { padding:28px 23px 23px; display:flex; flex-direction:column; background:var(--paper); border-right:1px solid var(--line); z-index:3; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#cfd5c4 transparent; }
+    .eyebrow { font-size:9px; letter-spacing:1.8px; font-weight:600; color:#919787; }
+    .intro h2 { font-family:"Lora",serif; font-weight:400; font-size:25px; line-height:1.4; margin:10px 0 10px; letter-spacing:-.9px; }
+    .intro p { color:#8a9184; font-size:11px; line-height:1.9; margin:0; max-width:210px; }
+    .divider { border:0; border-top:1px solid var(--line); margin:22px 0; }
+    .section-label { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+    .section-label span:last-child { color:#b2b5a8; font-size:9px; }
+    .perspectives { display:flex; flex-direction:column; gap:4px; }
+    .view-button { border:1px solid transparent; background:transparent; display:flex; text-align:left; align-items:center; gap:13px; width:100%; padding:9px 12px; border-radius:7px; transition:background .2s,border-color .2s; }
+    .view-button:hover { background:#eeefe6; }
+    .view-button.active { background:#e9eddf; border-color:#d9e0cd; }
+    .view-button .icon { width:21px; height:21px; color:#959c8b; }
+    .view-button.active .icon { color:#536d4c; }
+    .view-copy { flex:1; }
+    .view-name { display:block; font-size:11px; font-weight:500; }
+    .view-caption { display:block; color:#969b8d; font-size:9px; margin-top:4px; }
+    .view-button .view-dot { width:5px; height:5px; border-radius:50%; background:#789164; opacity:0; }
+    .view-button.active .view-dot { opacity:1; }
+    .time-section { margin-top:24px; }
+    .times { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+    .time-button { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:9px; padding:13px 2px 11px; background:transparent; border:1px solid var(--line); border-radius:7px; font-size:9px; color:#919584; transition:all .2s; }
+    .time-button .icon { width:21px; height:21px; }
+    .time-button:hover { border-color:#bcbfac; }
+    .time-button.active { color:#a46446; border-color:#d9bca0; background:#f2eadc; }
+    .audio-card { margin-top:20px; border:1px solid var(--line); border-radius:8px; padding:12px 11px; display:flex; align-items:center; gap:10px; }
+    .audio-card>.icon { color:#8d9982; width:19px; }
+    .audio-copy { flex:1; font-size:10px; font-weight:500; }
+    .audio-copy span { display:block; color:#a1a597; font-size:8px; font-weight:400; margin-top:4px; }
+    .switch { width:31px; height:18px; border:0; background:#d9ddcf; border-radius:20px; padding:3px; transition:background .25s; }
+    .switch::before { display:block; content:""; width:12px; height:12px; background:#fffefa; border-radius:50%; transition:transform .25s; box-shadow:0 1px 2px #0001; }
+    .switch[aria-checked="true"] { background:#789064; }
+    .switch[aria-checked="true"]::before { transform:translateX(13px); }
+    .sidebar-footer { margin-top:auto; padding-top:24px; display:flex; align-items:center; gap:10px; }
+    .sidebar-footer svg { width:26px; height:34px; color:#a8ad99; }
+    .sidebar-footer p { color:#a0a594; font-size:9px; line-height:1.9; margin:0; }
+    .scene { position:relative; overflow:hidden; min-width:0; background:#d6dfd1; isolation:isolate; }
+    #world { display:block; width:100%; height:100%; position:absolute; inset:0; outline:none; }
+    .scene::after { position:absolute; content:""; pointer-events:none; inset:0; background:linear-gradient(180deg,#f3f4e32e 0%,transparent 32%,transparent 80%,#243c2920 100%); z-index:1; }
+    .scene-heading { position:absolute; left:37px; top:34px; z-index:2; pointer-events:none; transition:color 1s; }
+    .location-label { display:flex; align-items:center; gap:8px; font-size:8px; letter-spacing:2px; color:#647b66; font-weight:600; }
+    .location-label::before { content:""; height:1px; width:18px; background:currentColor; }
+    .scene-heading h1 { font-family:"Lora",serif; font-size:46px; font-weight:400; line-height:1.16; margin:13px 0 14px; letter-spacing:-2.2px; color:#354d3b; }
+    .scene-heading h1 em { font-weight:400; color:#657c55; }
+    .scene-heading p { color:#70836c; font-size:10px; line-height:1.8; margin:0; letter-spacing:.1px; }
+    .world-tag { position:absolute; top:31px; right:28px; z-index:2; display:flex; align-items:center; gap:7px; padding:8px 11px; color:#556a55; background:#f7f8ec66; border:1px solid #f9faef88; backdrop-filter:blur(14px); border-radius:30px; font-size:8px; letter-spacing:.6px; }
+    .world-tag .icon { width:12px; height:12px; }
+    .scene-bottom { position:absolute; bottom:23px; left:28px; right:25px; z-index:2; display:flex; justify-content:space-between; align-items:flex-end; gap:15px; }
+    .place-card { display:flex; gap:12px; align-items:center; padding:13px 17px; border-radius:9px; color:#50634b; }
+    .glass { background:#f7f8efb8; border:1px solid #fafbf3b3; backdrop-filter:blur(18px); box-shadow:0 3px 20px #253e2a05; }
+    .place-card>.icon { width:26px; height:26px; color:#6f8160; }
+    .place-title { font-family:"Lora",serif; font-size:13px; }
+    .place-meta { color:#89917c; margin-top:5px; font-size:8px; letter-spacing:.7px; }
+    .view-hint { display:flex; flex-direction:column; align-items:center; gap:7px; color:#fdfef0; text-shadow:0 1px 8px #20322666; font-size:9px; margin-bottom:7px; white-space:nowrap; }
+    .view-hint .icon { width:18px; height:18px; }
+    .utility-wrap { display:flex; flex-direction:column; align-items:flex-end; gap:9px; }
+    .clock { padding:6px 11px; border-radius:20px; display:flex; align-items:center; gap:6px; font-size:8px; letter-spacing:.6px; color:#647259; }
+    .clock .icon { width:12px; height:12px; }
+    .utilities { display:flex; align-items:center; padding:5px; border-radius:8px; }
+    .utility { width:33px; height:31px; display:flex; justify-content:center; align-items:center; border:0; background:none; border-radius:5px; color:#66785b; }
+    .utility:hover { background:#dce3d0; }
+    .utility .icon { width:16px; height:16px; }
+    .utility-divider { width:1px; height:17px; background:#ced6c4; margin:0 4px; }
+    .night .scene-heading h1 { color:#e8ecdd; }
+    .night .scene-heading h1 em { color:#aebd9a; }
+    .night .location-label,.night .scene-heading p { color:#bdc9b0; }
+    .loading { position:absolute; inset:0; z-index:6; display:flex; flex-direction:column; justify-content:center; align-items:center; background:#e4e8dc; transition:opacity .65s; text-align:center; padding:25px; }
+    .loading.hidden { opacity:0; pointer-events:none; }
+    .loading-mark { width:48px; height:48px; color:#6d8263; animation:breathe 2s ease-in-out infinite; margin-bottom:20px; }
+    .loading h2 { font:400 24px "Lora",serif; margin:0 0 12px; }
+    .loading p { color:#88917e; font-size:11px; line-height:1.8; max-width:350px; }
+    .loading button { border:1px solid #9dac92; padding:8px 16px; border-radius:5px; background:#f7f6f0; margin-top:10px; }
+    @keyframes breathe { 50% { opacity:.45; transform:translateY(-3px); } }
+    .toast { position:absolute; z-index:9; left:50%; bottom:95px; transform:translate(-50%,12px); opacity:0; pointer-events:none; transition:opacity .2s,transform .2s; padding:11px 18px; border-radius:7px; background:#f7f6f0f0; color:#526548; box-shadow:0 5px 25px #17261825; font-size:11px; text-align:center; max-width:90%; width:max-content; }
+    .toast.visible { opacity:1; transform:translate(-50%,0); }
+    dialog { border:1px solid var(--line); border-radius:14px; background:var(--paper); color:var(--ink); padding:35px; max-width:480px; width:calc(100% - 40px); box-shadow:0 20px 80px #13231d30; }
+    dialog::backdrop { background:#20332960; backdrop-filter:blur(5px); }
+    dialog h2 { font:400 30px "Lora",serif; letter-spacing:-1px; margin:15px 0; }
+    dialog p { font-size:12px; color:#7a8573; line-height:1.9; }
+    dialog h3 { font-size:10px; letter-spacing:1px; margin-top:25px; color:#64765d; }
+    .dialog-close { position:absolute; top:16px; right:16px; background:none; border:0; padding:5px; }
+    .keys { display:grid; grid-template-columns:1fr 1fr; gap:9px; font-size:10px; color:#89907f; margin-top:13px; }
+    kbd { border:1px solid #dce1d2; background:#edefe5; border-radius:3px; padding:2px 5px; margin-right:7px; color:#65765a; font:10px "DM Sans",sans-serif; }
+    .scene:fullscreen { width:100vw; height:100dvh; }
+    @media (min-height:930px) { .sidebar { padding-top:42px; } .divider { margin:32px 0; } .view-button { padding-top:14px; padding-bottom:14px; } .time-section { margin-top:34px; } }
+    @media (max-height:850px) and (min-width:761px) { .sidebar { padding-top:22px; } .intro h2 { font-size:22px; } .intro p { font-size:10px; } .divider { margin:17px 0; } .view-button { padding:8px 10px; } .time-section { margin-top:18px; } .audio-card { margin-top:16px; } .sidebar-footer { padding-top:20px; } }
+    @media (max-height:800px) and (min-width:761px) { .intro p,.sidebar-footer { display:none; } }
+    @media (max-width:1100px) { main { grid-template-columns:242px minmax(0,1fr); } .sidebar { padding-left:17px; padding-right:17px; } .scene-heading { left:27px; } .scene-heading h1 { font-size:39px; } .view-hint { display:none; } .header-center { display:none; } .place-card { padding:11px 13px; } .place-title { font-size:11px; } }
+    @media (max-width:760px) {
+      .app-header { height:65px; padding:0 20px; } .brand-mark { width:31px; height:31px; } .brand-name { font-size:15px; letter-spacing:3px; } .brand-tag { font-size:7px; letter-spacing:2px; }
+      .status { display:none; } .header-right { gap:0; } .about-button { font-size:10px; }
+      main { height:calc(100dvh - 65px); display:flex; flex-direction:column-reverse; }
+      .scene { flex:1; min-height:0; } .sidebar { flex:none; padding:14px 16px 15px; border-top:1px solid var(--line); border-right:0; overflow:visible; display:grid; grid-template-columns:1fr auto; gap:12px 15px; }
+      .intro,.divider,.sidebar-footer,.view-caption,.view-dot,.perspective-section .section-label { display:none; }
+      .perspective-section { grid-column:1/-1; overflow:hidden; }
+      .perspectives { flex-direction:row; gap:5px; overflow-x:auto; scrollbar-width:none; }
+      .perspectives::-webkit-scrollbar { display:none; }
+      .view-button { flex:none; width:auto; gap:7px; padding:9px 11px; border-color:var(--line); }
+      .view-name { white-space:nowrap; font-size:10px; } .view-button .icon { width:16px; height:16px; }
+      .time-section { margin:0; } .time-section .section-label { display:none; }
+      .times { display:flex; gap:5px; } .time-button { flex-direction:row; gap:6px; padding:8px 10px; font-size:9px; } .time-button .icon { width:16px; height:16px; }
+      .audio-card { margin:0; padding:7px 9px; gap:7px; } .audio-copy { font-size:9px; } .audio-copy span { display:none; } .audio-card>.icon { display:none; }
+      .scene-heading { left:23px; top:23px; } .scene-heading h1 { font-size:34px; margin-top:10px; letter-spacing:-1.5px; } .scene-heading p { display:none; } .location-label { font-size:7px; letter-spacing:1.5px; }
+      .world-tag { right:17px; top:24px; font-size:7px; padding:6px 8px; } .world-tag .icon { display:none; }
+      .scene-bottom { left:16px; right:16px; bottom:15px; } .place-card { padding:9px 11px; gap:8px; } .place-card>.icon { width:19px; height:19px; } .place-title { font-size:10px; } .place-meta { font-size:7px; letter-spacing:0; }
+      .utility { width:28px; height:28px; } .utility-divider { margin:0 2px; } .clock { font-size:7px; padding:5px 9px; } .postcard-button { display:none; }
+      .toast { bottom:77px; font-size:10px; }
+    }
+    @media (max-width:380px) { .sidebar { gap:10px 7px; padding-left:10px; padding-right:10px; } .time-button { padding:8px 7px; gap:4px; } .audio-card { padding:6px; gap:5px; } .place-card { display:none; } .scene-bottom { justify-content:flex-end; } .world-tag { display:none; } }
+    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; } }
+  </style>
+</head>
+<body>
+  <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+    <symbol id="i-mon" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M10 15h20M12 12h16M13 15v14m14-14v14M11 21h18M20 12v-4m0 13v10M7 29h26" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="m12 12-3-2m19 2 3-2" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+    <symbol id="i-temple" viewBox="0 0 24 24"><path d="m3 9 9-4 9 4M5 9h14M7 9v5m10-5v5M2 15l10-3 10 3M4 15h16M6 15v6m12-6v6M3 21h18M10 21v-4h4v4M12 5V2"/></symbol>
+    <symbol id="i-samurai" viewBox="0 0 24 24"><path d="M6 10c0-4 2-6 6-6s6 2 6 6M4 10h16M8 11v5l4 3 4-3v-5M9 14h6M12 4V2M7 6 4 3m13 3 3-3M5 14v5l3 2m11-7v5l-3 2"/></symbol>
+    <symbol id="i-meadow" viewBox="0 0 24 24"><path d="M3 20h18M6 20v-6m0 3-3-3m3 0 3-3M15 20v-9m0 5 4-4m-4 1-3-3M12 6l1-3m5 3 3-1"/><path d="M6 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" transform="translate(0 2)"/></symbol>
+    <symbol id="i-mountain" viewBox="0 0 24 24"><path d="m2 20 8-14 8 14H2Zm12-10 3-6 6 16h-5M7 11l3 2 3-2M16 7l2 2"/></symbol>
+    <symbol id="i-bird" viewBox="0 0 24 24"><path d="M2 10c5-1 7 1 10 5 3-4 5-6 10-5M4 7c3 0 5 1 8 4 3-3 5-4 8-4M12 15v4"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></symbol>
+    <symbol id="i-sunset" viewBox="0 0 24 24"><path d="M2 17h20M5 21h14M6 17a6 6 0 0 1 12 0M12 3v4M3 8l3 3m15-3-3 3M12 11V7m-2 2 2-2 2 2"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 14.5A9 9 0 0 1 9.5 3.5a9 9 0 1 0 11 11Z"/><path d="M18 2v4m-2-2h4"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M3 10v4m4-7v10m4-13v16m4-13v10m4-7v4"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 0 1 14 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+    <symbol id="i-mouse" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="6"/><path d="M12 6v4"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M3 7h4l2-3h6l2 3h4v13H3Z"/><circle cx="12" cy="13" r="4"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8Z"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 32"><path d="M12 30V7m0 12C2 19 2 9 2 9s10 0 10 10Zm0-5C22 14 22 4 22 4s-10 0-10 10Zm0 13C22 27 22 17 22 17s-10 0-10 10Z" fill="none" stroke="currentColor" stroke-width="1.1"/></symbol>
+  </svg>
+  <header class="app-header">
+    <div class="brand"><svg class="brand-mark" aria-hidden="true"><use href="#i-mon"/></svg><div><div class="brand-name">KOMOREBI</div><div class="brand-tag">A VOXEL SANCTUARY</div></div></div>
+    <div class="header-center">A little world. A little stillness.</div>
+    <div class="header-right"><button class="about-button hover:text-stone-800 transition-colors" id="about-button">About this place <span aria-hidden="true">&nbsp;↗</span></button><div class="status"><span class="status-dot"></span> No rush. Just be.</div></div>
+  </header>
+  <main>
+    <aside class="sidebar" aria-label="Sanctuary controls">
+      <div class="intro"><div class="eyebrow">WELCOME TO YOUR EXHALE</div><h2>Nothing to do.<br>Just a place to be.</h2><p>Let the world slow down.<br>Stay a while. See where you wander.</p></div>
+      <hr class="divider">
+      <section class="perspective-section" aria-labelledby="perspective-label">
+        <div class="section-label"><h2 class="eyebrow m-0" id="perspective-label">FIND YOUR PERSPECTIVE</h2><span>01 — 05</span></div>
+        <div class="perspectives">
+          <button class="view-button active" data-view="temple" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-temple"/></svg><span class="view-copy"><span class="view-name">Pagoda front</span><span class="view-caption">The heart of the sanctuary</span></span><span class="view-dot"></span></button>
+          <button class="view-button" data-view="samurai" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-samurai"/></svg><span class="view-copy"><span class="view-name">Samurai closeup</span><span class="view-caption">Meet the quiet guardians</span></span><span class="view-dot"></span></button>
+          <button class="view-button" data-view="meadow" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-meadow"/></svg><span class="view-copy"><span class="view-name">Pastoral meadow</span><span class="view-caption">A softer kind of company</span></span><span class="view-dot"></span></button>
+          <button class="view-button" data-view="mountain" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-mountain"/></svg><span class="view-copy"><span class="view-name">Mountain vista</span><span class="view-caption">A little sense of wonder</span></span><span class="view-dot"></span></button>
+          <button class="view-button" data-view="bird" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-bird"/></svg><span class="view-copy"><span class="view-name">Bird's eye</span><span class="view-caption">See the whole little world</span></span><span class="view-dot"></span></button>
+        </div>
+      </section>
+      <section class="time-section" aria-labelledby="time-label">
+        <div class="section-label"><h2 class="eyebrow m-0" id="time-label">SET THE MOOD</h2><span>A moment in time</span></div>
+        <div class="times">
+          <button class="time-button active" data-time="morning" aria-pressed="true" aria-label="Morning Sun"><svg class="icon" aria-hidden="true"><use href="#i-sun"/></svg><span>Morning</span></button>
+          <button class="time-button" data-time="sunset" aria-pressed="false" aria-label="Sunset"><svg class="icon" aria-hidden="true"><use href="#i-sunset"/></svg><span>Sunset</span></button>
+          <button class="time-button" data-time="night" aria-pressed="false" aria-label="Night"><svg class="icon" aria-hidden="true"><use href="#i-moon"/></svg><span>Night</span></button>
+        </div>
+      </section>
+      <div class="audio-card"><svg class="icon" aria-hidden="true"><use href="#i-sound"/></svg><div class="audio-copy">Sounds of stillness<span>Soft wind &amp; distant chimes</span></div><button id="audio-toggle" class="switch" role="switch" aria-checked="false" aria-label="Ambient sound"></button></div>
+      <div class="sidebar-footer"><svg aria-hidden="true"><use href="#i-leaf"/></svg><p>Built block by block.<br>Made for a slower moment.</p></div>
+    </aside>
+    <section class="scene" id="scene" aria-label="Interactive voxel Japanese sanctuary">
+      <canvas id="world" aria-label="3D sanctuary. Drag to orbit, scroll to zoom, or use the camera preset buttons." tabindex="0"></canvas>
+      <div class="scene-heading"><div class="location-label">SOMEWHERE IN THE QUIET</div><h1>A world away.<br>A little more <em>here.</em></h1><p>Among the mountains, beneath the blossoms.<br>Your moment of komorebi.</p></div>
+      <div class="world-tag"><svg class="icon" aria-hidden="true"><use href="#i-leaf"/></svg> A LIVING LITTLE WORLD</div>
+      <div class="scene-bottom">
+        <div class="place-card glass backdrop-blur-xl rounded-lg"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg><div><div class="place-title" id="place-title">The mountain sanctuary</div><div class="place-meta" id="place-meta">CHERRY BLOSSOMS &amp; QUIET BEGINNINGS</div></div></div>
+        <div class="view-hint"><svg class="icon" aria-hidden="true"><use href="#i-mouse"/></svg><span>Drag to explore · Scroll to wander</span></div>
+        <div class="utility-wrap">
+          <div class="clock glass"><svg class="icon" aria-hidden="true" id="clock-icon"><use href="#i-sun"/></svg><span id="clock-label">07:24 AM · MORNING LIGHT</span></div>
+          <div class="utilities glass">
+            <button class="utility" id="zoom-in" title="Zoom in" aria-label="Zoom in"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button>
+            <button class="utility" id="zoom-out" title="Zoom out" aria-label="Zoom out"><svg class="icon" aria-hidden="true"><use href="#i-minus"/></svg></button>
+            <span class="utility-divider"></span>
+            <button class="utility" id="motion-toggle" title="Pause motion" aria-label="Pause motion" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-pause"/></svg></button>
+            <button class="utility postcard-button" id="postcard" title="Save a postcard" aria-label="Save a postcard"><svg class="icon" aria-hidden="true"><use href="#i-camera"/></svg></button>
+            <button class="utility" id="fullscreen" title="Enter fullscreen" aria-label="Enter fullscreen"><svg class="icon" aria-hidden="true"><use href="#i-expand"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <div class="loading" id="loading" role="status" aria-live="polite"><svg class="loading-mark" aria-hidden="true"><use href="#i-mon"/></svg><h2>A quieter world is growing.</h2><p>Placing the last few blossoms...</p></div>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </section>
+  </main>
+  <dialog id="about-dialog" aria-labelledby="about-title">
+    <button class="dialog-close" id="close-dialog" aria-label="Close about this place"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    <div class="eyebrow">THE LIGHT BETWEEN THE LEAVES</div><h2 id="about-title">A moment of komorebi.</h2>
+    <p>Komorebi is the Japanese word for sunlight filtering through trees. This little sanctuary is an invitation to notice it: the cherry blossoms drifting, the sheep grazing, the lanterns coming to life.</p>
+    <p>Everything here is built from blocks, from the snow on the mountains to the golden crescents on the guardians' helmets. Even the wind and chimes are made here, synthesized gently in your browser.</p>
+    <h3>MAKE YOURSELF AT HOME</h3><p>Drag to look around. Scroll or pinch to get closer. Right-drag or use two fingers to pan. Choose a perspective, change the light, and turn on the sounds when you're ready.</p>
+    <div class="keys"><span><kbd>1–5</kbd> Camera views</span><span><kbd>M</kbd> Change the mood</span><span><kbd>Space</kbd> Pause the world</span><span><kbd>F</kbd> Fullscreen</span></div>
+    <p style="font-size:10px;margin:25px 0 0;color:#a1a694">No accounts. No destinations. Just this moment.<br>Internet is needed to load Three.js, Tailwind, and fonts.</p>
+  </dialog>
+  <script>
+    const aboutDialog = document.getElementById('about-dialog');
+    document.getElementById('about-button').addEventListener('click', () => aboutDialog.showModal());
+    document.getElementById('close-dialog').addEventListener('click', () => aboutDialog.close());
+    aboutDialog.addEventListener('click', event => { if (event.target === aboutDialog) { const bounds = aboutDialog.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) aboutDialog.close(); } });
+  </script>
+  <script type="module">
+    const loading = document.getElementById('loading');
+    let toastTimer;
+    function notify(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('visible');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('visible'), 4000);
+    }
+    function showFailure(error) {
+      console.error('Sanctuary initialization failed:', error);
+      loading.classList.remove('hidden');
+      loading.replaceChildren();
+      const title = document.createElement('h2');
+      title.textContent = 'The world needs a little help.';
+      const description = document.createElement('p');
+      description.textContent = 'Please check your connection and make sure WebGL is enabled. The sanctuary needs access to the Three.js CDN to grow.';
+      const retry = document.createElement('button');
+      retry.textContent = 'Try again';
+      retry.addEventListener('click', () => location.reload());
+      loading.append(title, description, retry);
+    }
+    try {
+      const [THREE, { OrbitControls }] = await Promise.all([import('three'), import('three/addons/controls/OrbitControls.js')]);
+      buildSanctuary(THREE, OrbitControls);
+    } catch (error) { showFailure(error); }
+
+    function buildSanctuary(T, OrbitControls) {
+      const container = document.getElementById('scene');
+      const canvas = document.getElementById('world');
+      const renderer = new T.WebGLRenderer({ canvas, antialias:true, alpha:false, preserveDrawingBuffer:true, powerPreference:'high-performance' });
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = T.PCFSoftShadowMap;
+      renderer.outputColorSpace = T.SRGBColorSpace;
+      renderer.toneMapping = T.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
+      const scene = new T.Scene();
+      scene.background = new T.Color('#d6e1d0');
+      scene.fog = new T.Fog('#d6e1d0', 130, 285);
+      const camera = new T.PerspectiveCamera(39, 1, 0.2, 650);
+      const controls = new OrbitControls(camera, canvas);
+      controls.enableDamping = true;
+      controls.dampingFactor = .055;
+      controls.maxPolarAngle = Math.PI * .485;
+      controls.minDistance = 8;
+      controls.maxDistance = 235;
+      controls.panSpeed = .65;
+      controls.rotateSpeed = .55;
+      controls.zoomSpeed = .75;
+      controls.target.set(-5, 10, -6);
+      const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let paused = reducedMotion;
+      let worldTime = 0;
+      let mode = 'morning';
+      let currentView = 'temple';
+      let cameraTravel = null;
+      let audioOn = false;
+      let audioContext, masterGain, chimeTimer;
+      let seed = 48371;
+      function random() { seed = (Math.imul(1664525, seed) + 1013904223) >>> 0; return seed / 4294967296; }
+      const pick = items => items[Math.floor(random() * items.length)];
+      const grassColors = ['#76965b','#7e9e61','#819f61','#8aa66b','#74925a','#93ac72'];
+      const blossomColors = ['#eeb7b6','#e6a5ad','#f2c8c1','#d990a2','#f4d2c9','#eab8c4'];
+      const cube = new T.BoxGeometry(1, 1, 1);
+      const textures = {};
+      function pixelTexture(name, contrast = 16) {
+        if (textures[name]) return textures[name];
+        const surface = document.createElement('canvas');
+        surface.width = surface.height = 16;
+        const context = surface.getContext('2d');
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, 16, 16);
+        for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+          let value = 255 - Math.floor(random() * contrast);
+          if (name === 'wood' && (x === 3 || x === 10)) value -= 18;
+          if (name === 'roof' && y % 5 === 0) value -= 25;
+          if (name === 'stone' && random() > .92) value -= 25;
+          if (name === 'water' && y % 5 === 0 && x > 2 && x < 11) value -= 28;
+          context.fillStyle = `rgb(${value},${value},${value})`;
+          context.fillRect(x, y, 1, 1);
+        }
+        const texture = new T.CanvasTexture(surface);
+        texture.magFilter = T.NearestFilter;
+        texture.minFilter = T.NearestFilter;
+        texture.colorSpace = T.SRGBColorSpace;
+        textures[name] = texture;
+        return texture;
+      }
+      const materials = {
+        grass:new T.MeshStandardMaterial({ map:pixelTexture('grass',22), roughness:1 }),
+        soil:new T.MeshStandardMaterial({ map:pixelTexture('soil',30), roughness:1 }),
+        stone:new T.MeshStandardMaterial({ map:pixelTexture('stone',24), roughness:1 }),
+        wood:new T.MeshStandardMaterial({ map:pixelTexture('wood',22), roughness:.92 }),
+        roof:new T.MeshStandardMaterial({ map:pixelTexture('roof',14), roughness:.9 }),
+        foliage:new T.MeshStandardMaterial({ map:pixelTexture('foliage',18), roughness:1 }),
+        snow:new T.MeshStandardMaterial({ map:pixelTexture('snow',8), roughness:.95 }),
+        red:new T.MeshStandardMaterial({ map:pixelTexture('wood',22), roughness:.8 }),
+        gold:new T.MeshStandardMaterial({ map:pixelTexture('gold',12), metalness:.5, roughness:.45 }),
+        paper:new T.MeshStandardMaterial({ map:pixelTexture('paper',10), emissive:'#ffc474', emissiveIntensity:.25, roughness:.9 }),
+        glow:new T.MeshStandardMaterial({ color:'#ffda90', emissive:'#ffb64d', emissiveIntensity:.8 }),
+        water:new T.MeshStandardMaterial({ map:pixelTexture('water',10), roughness:.22, metalness:.28, transparent:true, opacity:.9 }),
+        foam:new T.MeshStandardMaterial({ color:'#b9e1d2', transparent:true, opacity:.42, roughness:.3 }),
+        skin:new T.MeshStandardMaterial({ map:pixelTexture('skin',10), roughness:1 }),
+        armor:new T.MeshStandardMaterial({ map:pixelTexture('armor',15), metalness:.28, roughness:.65 }),
+        wool:new T.MeshStandardMaterial({ map:pixelTexture('wool',14), roughness:1 })
+      };
+      // Each material is one instanced draw call, regardless of how many blocks it contains.
+      class Voxels {
+        constructor(parent) { this.parent = parent; this.blocks = new Map(); }
+        add(kind, color, x, y, z, sx = 1, sy = 1, sz = 1, rotation = 0) {
+          if (!this.blocks.has(kind)) this.blocks.set(kind, []);
+          this.blocks.get(kind).push({ color, x, y, z, sx, sy, sz, rotation });
+        }
+        finish(shadows = true) {
+          const transform = new T.Object3D();
+          const color = new T.Color();
+          for (const [kind, blocks] of this.blocks) {
+            const mesh = new T.InstancedMesh(cube, materials[kind], blocks.length);
+            blocks.forEach((block, index) => {
+              transform.position.set(block.x, block.y, block.z);
+              transform.scale.set(block.sx, block.sy, block.sz);
+              transform.rotation.set(0, block.rotation, 0);
+              transform.updateMatrix();
+              mesh.setMatrixAt(index, transform.matrix);
+              mesh.setColorAt(index, color.set(block.color));
+            });
+            mesh.castShadow = shadows && kind !== 'water' && kind !== 'foam' && kind !== 'glow';
+            mesh.receiveShadow = shadows && kind !== 'glow';
+            mesh.instanceMatrix.needsUpdate = true;
+            mesh.instanceColor.needsUpdate = true;
+            mesh.computeBoundingSphere();
+            this.parent.add(mesh);
+          }
+          this.blocks.clear();
+        }
+      }
+      const terrain = new T.Group();
+      scene.add(terrain);
+      const vox = new Voxels(terrain);
+      const add = (...args) => vox.add(...args);
+      const hemisphere = new T.HemisphereLight('#ecf4df', '#67794d', 2.6);
+      scene.add(hemisphere);
+      const ambient = new T.AmbientLight('#e8edda', .28);
+      scene.add(ambient);
+      const sunLight = new T.DirectionalLight('#fff0cd', 3.3);
+      sunLight.position.set(-55, 90, 48);
+      sunLight.target.position.set(0, 0, -12);
+      sunLight.castShadow = true;
+      sunLight.shadow.mapSize.set(2048, 2048);
+      Object.assign(sunLight.shadow.camera, { left:-88, right:88, top:88, bottom:-88, near:1, far:230 });
+      sunLight.shadow.normalBias = .16;
+      sunLight.shadow.bias = -.00035;
+      sunLight.shadow.radius = 3;
+      scene.add(sunLight, sunLight.target);
+      const lanternLights = [];
+      function warmLight(x,y,z,power = 9, distance = 12) {
+        const light = new T.PointLight('#ffbd69', power, distance, 1.5);
+        light.position.set(x,y,z);
+        scene.add(light);
+        lanternLights.push({light, power});
+      }
+
+      // Four-unit terrain columns leave room for one-unit buildings and quarter-unit details.
+      function pondAt(x,z,extra = 0) { return ((x - 23) / (17 + extra)) ** 2 + ((z - 15) / (12 + extra)) ** 2 < 1; }
+      for (let z = -58; z <= 62; z += 4) for (let x = -74; x <= 74; x += 4) {
+        if ((Math.abs(x) > 66 && z > 46) || (Math.abs(x) > 70 && z > 34)) continue;
+        const edge = z > 54 || Math.abs(x) > 66;
+        const top = edge ? .4 : .8;
+        const depth = edge ? 5 : 6.4;
+        const isPond = pondAt(x,z);
+        const soilTop = isPond ? -.35 : top;
+        add('soil', pick(['#80674b','#917452','#8b704e']), x, soilTop-depth/2, z, 4, depth, 4);
+        if (isPond) {
+          add('stone','#768b76',x,.03,z,4,.2,4);
+          add('water',pick(['#5faba0','#66b7ac','#6db3a7','#74b9aa']),x,.43,z,4,.55,4);
+        } else {
+          add('grass',pick(grassColors),x,top,z,4,.35,4);
+          if (edge) add('soil','#a18a62',x,-1.5,z,4,.65,4);
+        }
+      }
+      const peaks = [
+        {x:-86,z:-76,h:42,r:31}, {x:-52,z:-90,h:61,r:39},
+        {x:-20,z:-70,h:45,r:31}, {x:18,z:-96,h:72,r:40},
+        {x:54,z:-77,h:52,r:36}, {x:90,z:-94,h:60,r:33}
+      ];
+      const mountainVoxels = new Voxels(scene);
+      for (let x=-118;x<=118;x+=4) for (let z=-132;z<=-42;z+=4) {
+        let height = 0;
+        for (const peak of peaks) {
+          const dx = x-peak.x, dz = (z-peak.z)*1.04;
+          const distance = Math.sqrt(dx*dx+dz*dz);
+          const ridge = Math.sin(x*.19+z*.13)*1.8 + Math.cos(z*.26-x*.11)*1.5;
+          height = Math.max(height,peak.h * Math.max(0,1-distance/peak.r) + ridge);
+        }
+        height = Math.floor(height / 4)*4;
+        if (height < 4) continue;
+        const snowline = 32 + Math.sin(x*.12)*4 + Math.cos(z*.15)*3;
+        for (let y=0;y<height;y+=4) {
+          const snowy = y >= snowline && y >= height-8;
+          const stony = y > 14;
+          mountainVoxels.add(snowy?'snow':stony?'stone':'grass', snowy?pick(['#e4e8dc','#f3f0e4','#dbe3d9']):stony?pick(['#87938a','#96a095','#7c897f','#a7afa1']):pick(['#6c8163','#788d68','#829372']), x, y+1.8, z, 4,4,4);
+        }
+      }
+      mountainVoxels.finish(false);
+      for (let i=0;i<35;i++) {
+        const a=random()*Math.PI*2;
+        const x=23+Math.cos(a)*(17.7+random()*1.8), z=15+Math.sin(a)*(12.5+random()*1.8);
+        add('stone',pick(['#929c87','#a7ac97','#818e7b']),x,1.05,z,1.2+random(),.8+random()*.6,1.4);
+      }
+      for (let i=0;i<28;i++) {
+        const x=9+random()*28,z=5+random()*20;
+        if (!pondAt(x,z,-1)||Math.abs(x-23)<3) continue;
+        add('foliage',pick(['#679758','#79a55f','#90ae6b']),x,.75,z,.8+random()*.6,.12,.8+random()*.6);
+        if (i%3===0) {
+          add('foliage','#f4c8c5',x,.9,z,.3,.15,.3);
+          add('gold','#edc888',x,.99,z,.12,.08,.12);
+        }
+      }
+      for (let i=0;i<40;i++) {
+        const x=8+random()*30,z=4+random()*21;
+        if (pondAt(x,z,-1)) add('foam','#e2efcf',x,.72,z,.6+random()*1.7,.015,.13);
+      }
+      function stonePath(x,z,width=3) {
+        add('stone',pick(['#a9ae94','#bec0a6','#989f88']),x,1.05,z,width,.35,1.6,random()*.15-.075);
+        add('stone','#c5c7af',x-.4,1.24,z-.3,.6,.04,.5);
+      }
+      for (let z=5;z<56;z+=3) stonePath(-8+Math.sin(z*.25)*.25,z,3.7);
+      for (let x=-5;x<20;x+=3) stonePath(x,32-Math.sin(x*.12)*3,2.7);
+      for (let z=29;z<45;z+=3) stonePath(24+Math.sin(z)*.3,z,2.7);
+
+      const px=-8,pz=-12;
+      add('stone','#929a86',px,1.1,pz,24,.7,24);
+      add('stone','#aeb29c',px,1.8,pz,21,.7,21);
+      add('stone','#c0bca2',px,2.4,pz,19,.5,19);
+      for (let i=0;i<4;i++) add('stone',i%2?'#aeb49b':'#c1bea4',px,1.05+i*.36,pz+12-i*.9,6,.4,2);
+      function story(width, floor, height) {
+        const half=width/2;
+        add('wood','#634e3b',px,floor,pz,width+.8,.55,width+.8);
+        add('wood','#3b3529',px,floor+height-.3,pz,width+.4,.5,width+.4);
+        for (const x of [-half,half]) for (const z of [-half,half]) {
+          add('wood','#49382b',px+x,floor+height/2,pz+z,.8,height,.8);
+          add('wood','#7a5038',px+x,floor+.55,pz+z,1,.3,1);
+        }
+        for (const side of [-1,1]) {
+          add('paper','#e8c18b',px,floor+height*.5,pz+side*(half-.05),width-1,height-1.3,.24);
+          add('paper','#e8c18b',px+side*(half-.05),floor+height*.5,pz,.24,height-1.3,width-1);
+          for (let x=-half+.6;x<half;x+=1.5) add('wood','#63472f',px+x,floor+height*.5,pz+side*(half+.12),.13,height-1.2,.15);
+          for (let z=-half+.6;z<half;z+=1.5) add('wood','#63472f',px+side*(half+.12),floor+height*.5,pz+z,.15,height-1.2,.13);
+          for (let y=floor+1.5;y<floor+height-.6;y+=1.5) {
+            add('wood','#654c34',px,y,pz+side*(half+.12),width-.8,.12,.15);
+            add('wood','#654c34',px+side*(half+.12),y,pz,.15,.12,width-.8);
+          }
+          add('wood','#4c3b2c',px,floor+.7,pz+side*half,width,.28,.3);
+          add('wood','#4c3b2c',px+side*half,floor+.7,pz,.3,.28,width);
+        }
+        if (floor>4) {
+          for (const side of [-1,1]) {
+            add('red','#93543b',px,floor+1.1,pz+side*(half+1.05),width+2.6,.18,.18);
+            add('red','#93543b',px+side*(half+1.05),floor+1.1,pz,.18,.18,width+2.6);
+            for (let offset=-half-1;offset<=half+1;offset+=1.5) {
+              add('wood','#65402f',px+offset,floor+.6,pz+side*(half+1.05),.17,1.2,.17);
+              add('wood','#65402f',px+side*(half+1.05),floor+.6,pz+offset,.17,1.2,.17);
+            }
+          }
+        }
+      }
+      function roof(half,y,layers) {
+        for (let i=0;i<layers;i++) {
+          const size=(half-i*1.5)*2;
+          add('roof',i%2?'#3e514b':'#354843',px,y+i*.63,pz,size,.5,size);
+          for (const side of [-1,1]) {
+            add('roof','#53625a',px,y+i*.63+.08,pz+side*(size/2-.1),size+.3,.22,.3);
+            add('roof','#53625a',px+side*(size/2-.1),y+i*.63+.08,pz,.3,.22,size+.3);
+          }
+        }
+        for (const sx of [-1,1]) for (const sz of [-1,1]) {
+          for (let i=0;i<4;i++) {
+            add('roof','#34453f',px+sx*(half-2+i*.8),y+.15+i*.23,pz+sz*(half-2+i*.8),1.7,.36,1.7);
+          }
+          add('gold','#ba9a54',px+sx*(half+.4),y+1.08,pz+sz*(half+.4),.45,.25,.45);
+        }
+        for (const side of [-1,1]) {
+          add('wood','#77573a',px,y-.35,pz+side*(half-1),half*2-.7,.3,.4);
+          add('wood','#77573a',px+side*(half-1),y-.35,pz,.4,.3,half*2-.7);
+        }
+      }
+      story(16,3,7.3); roof(12,10.6,6);
+      story(10.8,14.15,4.4); roof(9.2,18.6,5);
+      story(6.7,21.7,3.8); roof(6.6,25.5,4);
+      add('gold','#c8aa5e',px,30.2,pz,.35,6,.35);
+      for (let i=0;i<7;i++) add('gold',i%2?'#a68642':'#debd6e',px,28.1+i*.55,pz,1.25-i*.1,.16,1.25-i*.1);
+      add('gold','#e5c477',px,33.5,pz,.65,.8,.65);
+      add('gold','#e5c477',px,34.2,pz,.25,.5,.25);
+      add('wood','#352c23',px,5.15,pz+8.25,3.5,4,.3);
+      for (const offset of [-.85,.85]) add('paper','#f6d393',px+offset,5.15,pz+8.43,1.5,3.7,.15);
+      add('wood','#654831',px,5.15,pz+8.55,.15,4,.15);
+      function hangingLantern(x,y,z) {
+        add('wood','#574532',x,y+.7,z,.09,1.2,.09);
+        add('red','#b96542',x,y,z,.85,1.05,.85);
+        add('glow','#ffffff',x,y,z,.7,.8,.7);
+        for (const dy of [-.55,.55]) add('wood','#5b4530',x,y+dy,z,.9,.14,.9);
+        add('gold','#d7b36a',x,y-.75,z,.13,.35,.13);
+        warmLight(x,y,z,9,12);
+      }
+      for (const side of [-1,1]) { hangingLantern(px+side*6.2,8.2,pz+8.9); hangingLantern(px+side*5,16.7,pz+6.1); }
+      warmLight(px,6.3,pz+5,16,18);
+
+      const gateZ=31;
+      for (const side of [-1,1]) {
+        add('stone','#7c8674',px+side*5.15,1.2,gateZ,1.8,.65,1.8);
+        add('wood','#3c3a2e',px+side*5.15,2.05,gateZ,1.3,1.25,1.3);
+        add('red','#bd553b',px+side*5.15,6.3,gateZ,1.05,8.8,1.05);
+        add('red','#d26945',px+side*5.15+.25,6.3,gateZ+.54,.13,8.8,.08);
+      }
+      add('red','#bd553b',px,9.2,gateZ,13,.6,.8);
+      add('red','#b14a33',px,11.1,gateZ,15,.7,1.3);
+      add('wood','#353d32',px,11.6,gateZ,15.4,.4,1.5);
+      for (const side of [-1,1]) {
+        add('red','#bc533a',px+side*7,11.55,gateZ,2.1,.6,1.3);
+        add('wood','#394234',px+side*7.2,11.95,gateZ,2.3,.3,1.5);
+      }
+      add('red','#a54934',px,10.15,gateZ,.55,2.1,.7);
+      add('gold','#bc9d5d',px,10.1,gateZ+.49,1.1,1.45,.15);
+      add('wood','#48503a',px,10.1,gateZ+.6,.6,.9,.12);
+
+      for (let i=-11;i<=11;i++) {
+        const z=15+i, y=1.1+Math.sin((i+11)/22*Math.PI)*2.8;
+        add('wood',i%2?'#985942':'#a56447',23,y,z,5,.35,.95);
+        add('red','#b44d36',23,y-.3,z,5.3,.25,.9);
+        for (const side of [-1,1]) {
+          add('red','#cf6446',23+side*2.7,y+1.8,z,.22,.24,1.05);
+          add('red','#b34d38',23+side*2.7,y+.8,z,.18,.18,1.05);
+          if (i%2!==0) {
+            add('red','#bf5239',23+side*2.7,y+1,z,.3,2,.3);
+            add('gold','#cfad66',23+side*2.7,y+2.15,z,.4,.2,.4);
+          }
+        }
+      }
+      function stoneLantern(x,z) {
+        add('stone','#a4aa92',x,1.2,z,1.8,.45,1.8);
+        add('stone','#9ca58d',x,1.85,z,.8,1.1,.8);
+        add('stone','#b5b69b',x,2.6,z,1.65,.4,1.65);
+        add('glow','#ffffff',x,3.1,z,.65,.75,.65);
+        for (const sx of [-1,1]) for (const sz of [-1,1]) add('stone','#8c9784',x+sx*.55,3.1,z+sz*.55,.25,.9,.25);
+        add('stone','#9da78f',x,3.68,z,2,.35,2);
+        add('stone','#abb19a',x,3.95,z,1.5,.25,1.5);
+        add('stone','#abb19a',x,4.25,z,.65,.4,.65);
+        warmLight(x,3.1,z,7,10);
+      }
+      [[-14,23],[-2,23],[-14,42],[-2,42],[17,30],[29,1],[-23,0],[3,0]].forEach(([x,z])=>stoneLantern(x,z));
+
+      add('soil','#c1b696',-32,1.03,-5,18,.4,14);
+      add('stone','#989e87',-32,1.22,-12,19,.4,.7);
+      add('stone','#989e87',-32,1.22,2,19,.4,.7);
+      add('stone','#989e87',-41,1.22,-5,.7,.4,14);
+      add('stone','#989e87',-23,1.22,-5,.7,.4,14);
+      for (let i=0;i<16;i++) add('soil','#d5caaa',-39+i,1.26,-5,.12,.04,12.4);
+      for (const [x,z,w,h] of [[-33,-7,2.5,2.2],[-30,-5,1.8,1.4],[-35,-4,1.6,1]]) {
+        add('stone','#788572',x,1.4+h/2,z,w,h,w*.8);
+        add('foliage','#8f9a63',x,1.45+h,z,w*.8,.12,w*.65);
+        for (let ring=0;ring<3;ring++) {
+          const r=w+ring*.6;
+          for (const side of [-1,1]) {
+            add('soil','#e0d2b2',x,1.29,z+side*r/2,r,.04,.09);
+            add('soil','#e0d2b2',x+side*r/2,1.29,z,.09,.04,r);
+          }
+        }
+      }
+      for (let i=0;i<30;i++) {
+        const x=-55+random()*13,z=-31+random()*24,h=7+random()*8;
+        add('foliage',pick(['#557d42','#668c46','#74954b']),x,1+h/2,z,.32,h,.32);
+        for (let y=2;y<h;y+=1.4) {
+          add('foliage','#8aa15d',x,y,z,.42,.16,.42);
+          if (y>5) {
+            const side=random()>.5?1:-1;
+            add('foliage','#5a7d3e',x+side*.65,y+.45,z,1.5,.15,.35,side*.4);
+            add('foliage','#72924a',x+side*1.2,y+.65,z+.3,1.2,.13,.45,-side*.4);
+          }
+        }
+      }
+      const trees=[];
+      function sakura(x,z,scale=1) {
+        const h=6.2*scale;
+        add('wood','#715344',x,1+h/2,z,.9*scale,h,1*scale);
+        add('wood','#7a5c4b',x+.55*scale,h-1,z,.65*scale,3*scale,.65*scale);
+        add('wood','#76513f',x-1.2*scale,h-.8,z+.3,2.2*scale,.7*scale,.65*scale);
+        add('wood','#76513f',x+1.2*scale,h,z-.4,2.8*scale,.7*scale,.65*scale);
+        for (let ix=-3;ix<=3;ix++) for (let iz=-3;iz<=3;iz++) for (let iy=0;iy<3;iy++) {
+          const distance=(ix/3.3)**2+(iz/3.2)**2+((iy-1)/1.9)**2;
+          if (distance>1.1||random()<.11) continue;
+          add('foliage',pick(blossomColors),x+ix*1.35*scale+(random()-.5)*.45,h+iy*1.15*scale,z+iz*1.35*scale+(random()-.5)*.45,1.6*scale,1.35*scale,1.6*scale);
+        }
+        trees.push({x,z,h:h+3*scale,scale});
+        for (let i=0;i<12;i++) add('foliage',pick(blossomColors),x+(random()-.5)*7*scale,1.02,z+(random()-.5)*7*scale,.15,.04,.2);
+      }
+      [[-29,23,1.05],[-34,-23,1.1],[9,-7,1.05],[40,22,1.15],[47,-9,1.2],[-30,42,.9],[-8,-34,1],[33,-30,1.1],[53,-30,1.2],[-51,8,1.1],[-51,32,1],[7,42,.75],[1,-29,.9]].forEach(args=>sakura(...args));
+      function bush(x,z,scale=1) {
+        for (let i=0;i<7;i++) add('foliage',pick(['#567b45','#648749','#799657','#89a063']),x+(random()-.5)*2.3*scale,1.25+random()*1.3*scale,z+(random()-.5)*2.3*scale,1.1*scale,.9*scale,1.1*scale);
+      }
+      for (let i=0;i<60;i++) {
+        const x=-59+random()*119,z=-43+random()*97;
+        if (Math.abs(x-px)<16&&z<10||pondAt(x,z,3)||Math.abs(x+8)<6&&z>0||x>17&&x<53&&z>29) continue;
+        bush(x,z,.65+random()*.6);
+      }
+      for (let i=0;i<230;i++) {
+        const x=-60+random()*120,z=-42+random()*100;
+        if (pondAt(x,z,3)||Math.abs(x-px)<15&&z<3||Math.abs(x+8)<5&&z>0) continue;
+        add('foliage',pick(['#819b59','#b8bc79','#719053']),x,1.25,z,.15,.65,.15);
+        add('foliage',pick(['#94a76a','#cad298','#e3d8a3']),x+.13,1.45,z,.23,.17,.2);
+      }
+      for (let i=0;i<16;i++) {
+        const a=i/16*Math.PI*2,x=23+Math.cos(a)*18,z=15+Math.sin(a)*13;
+        for (let n=0;n<3;n++) {
+          add('foliage','#6f8c4d',x+n*.3,1.7,z,.14,1.8,.14);
+          add('wood','#947d4f',x+n*.3,2.65,z,.2,.5,.2);
+        }
+      }
+      // A low bamboo fence gives the meadow a deliberately open, pastoral edge.
+      for (let x=32;x<=62;x+=3) {
+        add('wood','#aaa06d',x,1.7,49,.25,1.8,.25);
+        add('wood','#b7ad78',x+1.5,2.1,49,3,.16,.16);
+        add('wood','#b7ad78',x+1.5,1.5,49,3,.16,.16);
+      }
+      vox.finish();
+
+      const guardians=[];
+      function samurai(x,z,turn=0) {
+        const root=new T.Group();
+        root.position.set(x,1.05,z); root.rotation.y=turn;
+        scene.add(root);
+        const legs=new Voxels(root);
+        for (const side of [-1,1]) {
+          legs.add('armor','#303e3b',side*.38,.58,0,.52,1.1,.65);
+          legs.add('armor','#765342',side*.38,.63,.36,.44,.7,.15);
+          legs.add('wood','#292e28',side*.38,.12,.16,.6,.25,.95);
+          for (let i=0;i<3;i++) legs.add('gold','#b39b65',side*.38,.39+i*.22,.45,.44,.06,.06);
+        }
+        legs.finish();
+        const upper=new T.Group(); root.add(upper);
+        const v=new Voxels(upper);
+        v.add('armor','#293e3c',0,1.77,0,1.25,1.28,.85);
+        for (let row=0;row<5;row++) {
+          v.add('armor',row%2?'#754332':'#8b5038',0,1.32+row*.23,.5,1.3,.18,.18);
+          v.add('gold','#b29862',0,1.36+row*.23,.605,1.15,.035,.04);
+          for (const side of [-1,1]) v.add('gold','#d5b76f',side*.4,1.36+row*.23,.63,.065,.065,.065);
+        }
+        v.add('red','#ab6545',0,1.21,0,1.5,.2,1);
+        for (const side of [-1,1]) {
+          for (let row=0;row<3;row++) {
+            v.add('armor',row%2?'#744b39':'#3a4841',side*.64,.94+row*.2,.07,.43,.17,1.15);
+            v.add('armor',row%2?'#985a3c':'#71422e',side*.98,2.12-row*.2,0,.6,.16,.9);
+            v.add('gold','#c6a464',side*.98,2.13-row*.2,.48,.55,.05,.055);
+          }
+          v.add('armor','#34463d',side*.97,1.6,0,.35,.75,.43);
+          v.add('skin','#cda782',side*.97,1.1,.06,.32,.34,.35);
+        }
+        v.add('skin','#d3af87',0,2.65,.02,.74,.7,.69);
+        v.add('wood','#332f27',0,2.88,.42,.76,.16,.06);
+        for (const side of [-1,1]) v.add('wood','#252e29',side*.19,2.71,.39,.095,.08,.05);
+        v.add('armor','#49443a',0,2.44,.4,.57,.19,.12);
+        v.add('armor','#253d3b',0,3.16,-.07,1,.44,.98);
+        v.add('armor','#304540',0,3.45,-.09,.69,.23,.74);
+        v.add('armor','#314641',0,2.93,-.39,1.14,.63,.26);
+        for (const side of [-1,1]) {
+          v.add('armor','#314641',side*.51,2.91,-.05,.24,.55,.79);
+          for (let i=0;i<4;i++) v.add('gold','#e1bd66',side*(.18+i*.16),3.31+i*.11,.55,.2,.18,.14);
+          v.add('gold','#e9c972',side*.73,3.83,.55,.14,.25,.14);
+        }
+        v.add('gold','#c7a862',0,3.2,.55,.18,.25,.14);
+        v.add('wood','#262d28',-.93,1.23,-.11,.16,1.9,.16,-.15);
+        v.add('gold','#c5a365',-.93,1.94,-.11,.46,.11,.35);
+        v.add('wood','#34372b',-.93,2.19,-.11,.18,.4,.2);
+        for (let i=0;i<3;i++) v.add('gold','#b6a172',-.93,2.06+i*.12,.01,.18,.04,.04);
+        v.finish();
+        guardians.push({upper,phase:random()*Math.PI*2});
+      }
+      samurai(-14.5,2,.12); samurai(-1.5,2,-.12);
+      const animals=[];
+      function animal(type,x,z) {
+        const root=new T.Group();root.position.set(x,1.02,z);scene.add(root);
+        const body=new T.Group();root.add(body);
+        const v=new Voxels(body);
+        const alpaca=type==='alpaca';
+        const woolColor=alpaca?pick(['#d9c6a4','#e6d4b4','#c5ae89']):'#eee9d8';
+        v.add('wool',woolColor,0,1.05,0,1.15,1,1.8);
+        for (let ix=-2;ix<=2;ix++) for (let iy=-1;iy<=2;iy++) for (let iz=-3;iz<=3;iz++) {
+          if ((ix/2.6)**2+((iy-.5)/2.1)**2+(iz/3.7)**2>1.45) continue;
+          v.add('wool',random()>.3?woolColor:alpaca?'#c8b38e':'#dedfce',ix*.25,1.05+iy*.25,iz*.25,.31,.31,.31);
+        }
+        for (const side of [-1,1]) for (const end of [-1,1]) {
+          v.add('wood',alpaca?'#95836b':'#757468',side*.36,.4,end*.58,.22,.75,.25);
+          v.add('wood','#55594d',side*.36,.08,end*.58,.25,.16,.3);
+        }
+        if (alpaca) {
+          v.add('wool',woolColor,0,1.85,-.7,.52,1.75,.56);
+          for (let i=0;i<6;i++) v.add('wool',i%2?woolColor:'#dac7a5',.03,1.2+i*.25,-.82,.6,.3,.58);
+          v.add('wool',woolColor,0,2.65,-.85,.68,.6,.8);
+          for (const side of [-1,1]) v.add('wool',woolColor,side*.23,3.1,-.7,.17,.6,.2);
+          v.add('skin','#b39f83',0,2.48,-1.3,.38,.23,.3);
+        } else {
+          v.add('wool','#ede7d7',0,1.65,-.83,.73,.55,.65);
+          v.add('skin','#807e6e',0,1.32,-1.03,.54,.52,.56);
+          for (const side of [-1,1]) v.add('skin','#a6a08a',side*.43,1.47,-.9,.35,.18,.22);
+          v.add('wood','#4c5548',0,1.2,-1.33,.25,.17,.08);
+        }
+        for (const side of [-1,1]) v.add('wood','#343e32',side*(alpaca?.28:.27),alpaca?2.69:1.46,alpaca?-1.22:-1.31,.07,.07,.05);
+        v.add('wool',woolColor,0,1.25,1.04,.27,.38,.43);
+        v.finish();
+        animals.push({root,body,x,z,angle:random()*Math.PI*2,phase:random()*10,type,speed:.12+random()*.12});
+      }
+      [['sheep',32,38],['sheep',37,34],['sheep',44,39],['sheep',31,44],['sheep',51,43],['alpaca',46,31],['alpaca',54,35],['alpaca',41,45]].forEach(args=>animal(...args));
+
+      const birds=[];
+      for (let i=0;i<13;i++) {
+        const root=new T.Group();scene.add(root);
+        const v=new Voxels(root);
+        v.add('wood','#4f5f55',0,0,0,.22,.23,.7);
+        v.add('wood','#536156',0,.12,-.37,.24,.22,.26);
+        v.add('gold','#bc9e64',0,.1,-.57,.12,.1,.2);
+        v.add('wood','#566357',0,-.04,.44,.16,.12,.3);
+        v.finish(false);
+        const wings=[];
+        for (const side of [-1,1]) {
+          const wing=new T.Group();root.add(wing);
+          const w=new Voxels(wing);
+          w.add('wood','#6d7a69',side*.6,0,.07,1.1,.1,.39);
+          w.add('wood','#526155',side*1.17,0,.16,.45,.08,.29);
+          w.finish(false);wings.push(wing);
+        }
+        birds.push({root,wings,phase:i*.47,radius:22+random()*18,height:30+random()*16,speed:.075+random()*.035});
+      }
+      const clouds=[];
+      const cloudMaterial=new T.MeshStandardMaterial({ color:'#eef0e4', roughness:1, transparent:true, opacity:.88 });
+      for (let i=0;i<11;i++) {
+        const group=new T.Group();
+        const count=5+Math.floor(random()*4);
+        const mesh=new T.InstancedMesh(cube,cloudMaterial,count);
+        const transform=new T.Object3D();
+        for (let n=0;n<count;n++) {
+          transform.position.set((n-count/2)*4,(random()-.5)*2,(random()-.5)*5);
+          transform.scale.set(6+random()*5,3+random()*3,5+random()*4);
+          transform.updateMatrix();mesh.setMatrixAt(n,transform.matrix);
+        }
+        mesh.computeBoundingSphere();group.add(mesh);
+        group.position.set(-135+random()*270,56+random()*23,-45-random()*82);
+        scene.add(group);clouds.push({group,speed:.35+random()*.35});
+      }
+      const petalCount=105;
+      const petalGeometry=new T.BoxGeometry(.16,.045,.22);
+      const petalMaterial=new T.MeshStandardMaterial({color:'#f2bec1',roughness:1,side:T.DoubleSide});
+      const petalMesh=new T.InstancedMesh(petalGeometry,petalMaterial,petalCount);
+      petalMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
+      petalMesh.frustumCulled=false;scene.add(petalMesh);
+      const petals=Array.from({length:petalCount},()=>({tree:pick(trees),phase:random()*14,dx:(random()-.5)*5,dz:(random()-.5)*5,speed:.45+random()*.4}));
+      const petalTransform=new T.Object3D();
+      const celestialMaterial=new T.MeshBasicMaterial({color:'#fff4c3',fog:false});
+      const celestial=new T.Mesh(new T.BoxGeometry(7,7,1.3),celestialMaterial);
+      celestial.position.set(-135,47,-160);celestial.rotation.y=.35;scene.add(celestial);
+      const glowCanvas=document.createElement('canvas');glowCanvas.width=glowCanvas.height=64;
+      const glowContext=glowCanvas.getContext('2d');
+      const gradient=glowContext.createRadialGradient(32,32,4,32,32,32);
+      gradient.addColorStop(0,'rgba(255,239,178,.5)');gradient.addColorStop(1,'rgba(255,239,178,0)');
+      glowContext.fillStyle=gradient;glowContext.fillRect(0,0,64,64);
+      const celestialGlow=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(glowCanvas),transparent:true,depthWrite:false,fog:false}));
+      celestialGlow.position.copy(celestial.position);celestialGlow.scale.set(29,29,1);scene.add(celestialGlow);
+      const starPositions=[];
+      for (let i=0;i<240;i++) {
+        const angle=random()*Math.PI*2,radius=220+random()*60;
+        starPositions.push(Math.cos(angle)*radius,50+random()*170,Math.sin(angle)*radius);
+      }
+      const starGeometry=new T.BufferGeometry();
+      starGeometry.setAttribute('position',new T.Float32BufferAttribute(starPositions,3));
+      const starMaterial=new T.PointsMaterial({color:'#e3ecd7',size:.55,transparent:true,opacity:0,fog:false});
+      const stars=new T.Points(starGeometry,starMaterial);scene.add(stars);
+
+      const moods={
+        morning:{sky:'#d6e1d0',sun:'#fff0ce',hemi:'#edf3df',ground:'#728252',sunIntensity:3.3,hemiIntensity:2.6,exposure:1.15,lantern:.45,paper:.22,celestial:'#fff2bf',sunPosition:[-55,90,48],celestialPosition:[-135,47,-160],clock:'07:24 AM · MORNING LIGHT',icon:'sun'},
+        sunset:{sky:'#dbb7a1',sun:'#ffc18a',hemi:'#ffe0be',ground:'#796b5a',sunIntensity:2.7,hemiIntensity:1.7,exposure:1.05,lantern:2.5,paper:.8,celestial:'#ffd292',sunPosition:[-85,36,22],celestialPosition:[-110,39,-140],clock:'05:48 PM · GOLDEN HOUR',icon:'sunset'},
+        night:{sky:'#192d36',sun:'#afcbd9',hemi:'#a1bacb',ground:'#344d46',sunIntensity:.7,hemiIntensity:.8,exposure:.95,lantern:7,paper:1.9,celestial:'#e1e8d6',sunPosition:[-40,90,-55],celestialPosition:[-135,50,-160],clock:'09:16 PM · LANTERN HOURS',icon:'moon'}
+      };
+      const lightTarget={sky:new T.Color(),sun:new T.Color(),hemi:new T.Color(),ground:new T.Color(),celestial:new T.Color(),sunPosition:new T.Vector3(),celestialPosition:new T.Vector3()};
+      function setMood(next) {
+        mode=next;
+        const mood=moods[next];
+        for (const key of ['sky','sun','hemi','ground','celestial']) lightTarget[key].set(mood[key]);
+        lightTarget.sunPosition.fromArray(mood.sunPosition);
+        lightTarget.celestialPosition.fromArray(mood.celestialPosition);
+        document.querySelectorAll('button[data-time]').forEach(button=>{const selected=button.dataset.time===next;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});
+        container.classList.toggle('night',next==='night');
+        document.getElementById('clock-label').textContent=mood.clock;
+        document.querySelector('#clock-icon use').setAttribute('href',`#i-${mood.icon}`);
+        canvas.dataset.time=next;
+      }
+      setMood('morning');
+      const views={
+        temple:{position:[78,59,100],target:[-4,10,-8],title:'The mountain sanctuary',meta:'CHERRY BLOSSOMS & QUIET BEGINNINGS'},
+        samurai:{position:[-4,7.3,16.5],target:[-13,2.9,1],title:'The quiet guardians',meta:'GOLDEN CRESTS & UNWAVERING STILLNESS'},
+        meadow:{position:[66,20,64],target:[40,2.2,36],title:'The pastoral meadow',meta:'SOFT WOOL & SLOW AFTERNOONS'},
+        mountain:{position:[81,49,49],target:[8,26,-67],title:'Where the mountains meet the sky',meta:'SNOW-CAPPED PEAKS & PASSING CLOUDS'},
+        bird:{position:[64,137,95],target:[0,1,-8],title:'A little world, all together',meta:'EVERY PATH LEADS TO A QUIETER MOMENT'}
+      };
+      function fittedPosition(view) {
+        const target=new T.Vector3().fromArray(view.target);
+        const offset=new T.Vector3().fromArray(view.position).sub(target);
+        const factor=camera.aspect<.8?1.5:camera.aspect<1.2?1.15:1;
+        return target.add(offset.multiplyScalar(factor));
+      }
+      function travel(position,target,duration=1500) {
+        if (reducedMotion) {camera.position.copy(position);controls.target.copy(target);controls.update();return;}
+        cameraTravel={start:performance.now(),duration,from:camera.position.clone(),fromTarget:controls.target.clone(),to:position,toTarget:target};
+      }
+      function setView(name,instant=false) {
+        const view=views[name];
+        currentView=name;
+        document.querySelectorAll('button[data-view]').forEach(button=>{const selected=button.dataset.view===name;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});
+        document.getElementById('place-title').textContent=view.title;
+        document.getElementById('place-meta').textContent=view.meta;
+        canvas.dataset.view=name;
+        const target=new T.Vector3().fromArray(view.target),position=fittedPosition(view);
+        if (instant) {cameraTravel=null;camera.position.copy(position);controls.target.copy(target);controls.update();}
+        else travel(position,target);
+      }
+      controls.addEventListener('start',()=>{
+        cameraTravel=null;currentView=null;
+        document.querySelectorAll('button[data-view]').forEach(button=>{button.classList.remove('active');button.setAttribute('aria-pressed','false');});
+        document.getElementById('place-title').textContent='Your own little perspective';
+        document.getElementById('place-meta').textContent='TAKE YOUR TIME. THERE IS NO WRONG WAY.';
+        canvas.dataset.view='custom';
+      });
+      document.querySelectorAll('button[data-view]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)));
+      document.querySelectorAll('button[data-time]').forEach(button=>button.addEventListener('click',()=>setMood(button.dataset.time)));
+      function zoom(factor) {
+        const offset=camera.position.clone().sub(controls.target);
+        const distance=T.MathUtils.clamp(offset.length()*factor,controls.minDistance,controls.maxDistance);
+        travel(controls.target.clone().add(offset.setLength(distance)),controls.target.clone(),400);
+      }
+      document.getElementById('zoom-in').addEventListener('click',()=>zoom(.82));
+      document.getElementById('zoom-out').addEventListener('click',()=>zoom(1.22));
+      const motionButton=document.getElementById('motion-toggle');
+      function updateMotionButton() {
+        const label=paused?'Resume motion':'Pause motion';
+        motionButton.setAttribute('aria-label',label);motionButton.title=label;
+        motionButton.setAttribute('aria-pressed',String(paused));
+        motionButton.querySelector('use').setAttribute('href',paused?'#i-play':'#i-pause');
+        canvas.dataset.paused=String(paused);
+      }
+      function toggleMotion() {paused=!paused;updateMotionButton();notify(paused?'A still moment. Motion paused.':'The little world is moving again.');}
+      motionButton.addEventListener('click',toggleMotion);updateMotionButton();
+      function updateFullscreenButton() {
+        const label=document.fullscreenElement?'Exit fullscreen':'Enter fullscreen';
+        document.getElementById('fullscreen').setAttribute('aria-label',label);
+        document.getElementById('fullscreen').title=label;
+      }
+      async function fullscreen() {
+        try {
+          if (document.fullscreenElement) await document.exitFullscreen();
+          else if (container.requestFullscreen) await container.requestFullscreen();
+          else notify('Fullscreen is not supported in this browser.');
+          updateFullscreenButton();
+        } catch (error) {console.error('Fullscreen request failed:',error);notify('Your browser could not enter fullscreen.');}
+      }
+      document.getElementById('fullscreen').addEventListener('click',fullscreen);
+      document.addEventListener('fullscreenchange',updateFullscreenButton);
+      document.addEventListener('keydown',event=>{
+        if (event.repeat||event.ctrlKey||event.metaKey||event.altKey||aboutDialog.open||['INPUT','TEXTAREA','BUTTON','SELECT'].includes(event.target.tagName)) return;
+        if (event.key>='1'&&event.key<='5') setView(Object.keys(views)[Number(event.key)-1]);
+        else if (event.key.toLowerCase()==='m') setMood({morning:'sunset',sunset:'night',night:'morning'}[mode]);
+        else if (event.code==='Space') {event.preventDefault();toggleMotion();}
+        else if (event.key.toLowerCase()==='f') fullscreen();
+      });
+      document.getElementById('postcard').addEventListener('click',()=>{
+        try {
+          renderer.render(scene,camera);
+          const postcard=document.createElement('canvas');
+          postcard.width=canvas.width;postcard.height=canvas.height+Math.round(canvas.width*.075);
+          const context=postcard.getContext('2d');
+          context.fillStyle='#f7f6f0';context.fillRect(0,0,postcard.width,postcard.height);
+          context.drawImage(canvas,0,0);
+          context.fillStyle='#536c53';context.font=`500 ${Math.round(canvas.width*.016)}px "DM Sans", sans-serif`;
+          context.fillText('K O M O R E B I',canvas.width*.035,canvas.height+canvas.width*.044);
+          context.fillStyle='#89917c';context.textAlign='right';context.font=`${Math.round(canvas.width*.011)}px "DM Sans", sans-serif`;
+          context.fillText('A LITTLE WORLD. A LITTLE STILLNESS.',canvas.width*.965,canvas.height+canvas.width*.044);
+          postcard.toBlob(blob=>{
+            if (!blob) {notify('The postcard could not be created. Please try again.');return;}
+            const url=URL.createObjectURL(blob),link=document.createElement('a');
+            link.href=url;link.download=`komorebi-${mode}.png`;link.hidden=true;
+            document.body.append(link);link.click();link.remove();
+            setTimeout(()=>URL.revokeObjectURL(url),3000);
+            notify('A little stillness, saved. Your postcard is ready.');
+          },'image/png');
+        } catch (error) {console.error('Postcard creation failed:',error);notify('The postcard could not be saved. Please try again.');}
+      });
+
+      function createAmbience() {
+        const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+        if (!AudioContextClass) throw new Error('Web Audio is not supported by this browser.');
+        audioContext=new AudioContextClass();
+        masterGain=audioContext.createGain();masterGain.gain.value=0;masterGain.connect(audioContext.destination);
+        const buffer=audioContext.createBuffer(1,audioContext.sampleRate*5,audioContext.sampleRate);
+        const samples=buffer.getChannelData(0);
+        let previous=0;
+        for (let i=0;i<samples.length;i++) {previous=(previous+(Math.random()*2-1)*.018)/1.018;samples[i]=previous*3.2;}
+        const noise=audioContext.createBufferSource();noise.buffer=buffer;noise.loop=true;
+        const filter=audioContext.createBiquadFilter();filter.type='lowpass';filter.frequency.value=620;filter.Q.value=.4;
+        const windGain=audioContext.createGain();windGain.gain.value=.2;
+        noise.connect(filter);filter.connect(windGain);windGain.connect(masterGain);noise.start();
+        const breeze=audioContext.createOscillator();breeze.frequency.value=.075;
+        const breezeDepth=audioContext.createGain();breezeDepth.gain.value=.055;
+        breeze.connect(breezeDepth);breezeDepth.connect(windGain.gain);breeze.start();
+      }
+      function chime() {
+        if (!audioOn) return;
+        const start=audioContext.currentTime;
+        const notes=[587.33,783.99,880,1174.66,1318.51];
+        for (let i=0;i<2+Math.floor(Math.random()*2);i++) {
+          const frequency=notes[Math.floor(Math.random()*notes.length)],when=start+i*.3+Math.random()*.12;
+          for (const harmonic of [1,2.76]) {
+            const oscillator=audioContext.createOscillator(),gain=audioContext.createGain();
+            oscillator.type='sine';oscillator.frequency.value=frequency*harmonic;
+            gain.gain.setValueAtTime(.0001,when);
+            gain.gain.exponentialRampToValueAtTime(harmonic===1?.13:.025,when+.015);
+            gain.gain.exponentialRampToValueAtTime(.0001,when+3.8);
+            oscillator.connect(gain);gain.connect(masterGain);
+            oscillator.start(when);oscillator.stop(when+4);
+            oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
+          }
+        }
+        chimeTimer=setTimeout(chime,6500+Math.random()*8500);
+      }
+      const audioButton=document.getElementById('audio-toggle');
+      audioButton.addEventListener('click',async()=>{
+        audioButton.disabled=true;
+        try {
+          if (!audioContext) createAmbience();
+          if (!audioOn) {
+            await audioContext.resume();
+            audioOn=true;masterGain.gain.setTargetAtTime(.45,audioContext.currentTime,.8);
+            clearTimeout(chimeTimer);chimeTimer=setTimeout(chime,1000);
+          } else {
+            audioOn=false;masterGain.gain.setTargetAtTime(0,audioContext.currentTime,.12);
+            clearTimeout(chimeTimer);
+            setTimeout(()=>{if (!audioOn) audioContext.suspend().catch(error=>{console.error('Audio suspension failed:',error);notify('Your browser could not suspend the sound engine.');});},500);
+          }
+          audioButton.setAttribute('aria-checked',String(audioOn));
+        } catch (error) {
+          console.error('Ambient audio failed:',error);audioOn=false;
+          if (masterGain) masterGain.gain.value=0;
+          clearTimeout(chimeTimer);audioButton.setAttribute('aria-checked','false');
+          notify('Sound could not start. Please check your browser audio permissions.');
+        } finally {audioButton.disabled=false;}
+      });
+      let aspectCategory=null;
+      function resize() {
+        const width=container.clientWidth,height=container.clientHeight;
+        if (!width||!height) return;
+        camera.aspect=width/height;camera.updateProjectionMatrix();
+        renderer.setSize(width,height,false);
+        const nextCategory=camera.aspect<.8?0:camera.aspect<1.2?1:2;
+        if (aspectCategory!==null&&aspectCategory!==nextCategory&&currentView) setView(currentView,true);
+        aspectCategory=nextCategory;
+      }
+      new ResizeObserver(resize).observe(container);
+      resize();setView('temple',true);
+      canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();console.error('The WebGL context was lost.');notify('The graphics connection was interrupted. Reload to return to the sanctuary.');});
+      canvas.addEventListener('webglcontextrestored',()=>location.reload());
+      let previous=performance.now(), firstFrame=true;
+      function animate(now) {
+        const elapsed=Math.max(0,(now-previous)/1000);
+        const delta=Math.min(elapsed,.05);previous=now;
+        if (!paused && !document.hidden) worldTime+=delta;
+        const mood=moods[mode],blend=reducedMotion?1:1-Math.exp(-elapsed*2.5);
+        scene.background.lerp(lightTarget.sky,blend);scene.fog.color.copy(scene.background);
+        sunLight.color.lerp(lightTarget.sun,blend);
+        hemisphere.color.lerp(lightTarget.hemi,blend);hemisphere.groundColor.lerp(lightTarget.ground,blend);
+        sunLight.position.lerp(lightTarget.sunPosition,blend);
+        celestial.position.lerp(lightTarget.celestialPosition,blend);
+        celestialMaterial.color.lerp(lightTarget.celestial,blend);
+        celestialGlow.position.copy(celestial.position);
+        celestialGlow.material.opacity=T.MathUtils.lerp(celestialGlow.material.opacity,mode==='night'?.3:.8,blend);
+        sunLight.intensity=T.MathUtils.lerp(sunLight.intensity,mood.sunIntensity,blend);
+        hemisphere.intensity=T.MathUtils.lerp(hemisphere.intensity,mood.hemiIntensity,blend);
+        renderer.toneMappingExposure=T.MathUtils.lerp(renderer.toneMappingExposure,mood.exposure,blend);
+        materials.paper.emissiveIntensity=T.MathUtils.lerp(materials.paper.emissiveIntensity,mood.paper,blend);
+        materials.glow.emissiveIntensity=T.MathUtils.lerp(materials.glow.emissiveIntensity,mood.lantern,blend);
+        lanternLights.forEach(({light,power},i)=>{const intensity=power*mood.lantern*(1+Math.sin(worldTime*1.3+i)*.035);light.intensity=T.MathUtils.lerp(light.intensity,intensity,blend);});
+        starMaterial.opacity=T.MathUtils.lerp(starMaterial.opacity,mode==='night'?.85:0,blend);
+        cloudMaterial.opacity=T.MathUtils.lerp(cloudMaterial.opacity,mode==='night'?.37:.88,blend);
+        materials.foam.opacity=.35+Math.sin(worldTime*.8)*.1;
+        for (const guardian of guardians) guardian.upper.position.y=Math.sin(worldTime*1.7+guardian.phase)*.025;
+        for (const animal of animals) {
+          const t=worldTime*animal.speed+animal.phase;
+          const grazing=Math.sin(t*.85)>.1;
+          animal.root.position.x=animal.x+Math.sin(t)*2.8;
+          animal.root.position.z=animal.z+Math.cos(t*.7)*2.1;
+          animal.root.rotation.y=Math.atan2(Math.cos(t),-Math.sin(t*.7)*.7)+Math.PI;
+          animal.body.position.y=grazing?Math.sin(worldTime*2+animal.phase)*.035:Math.sin(worldTime*4+animal.phase)*.05;
+          animal.body.rotation.x=grazing?-.09+Math.sin(worldTime*1.3+animal.phase)*.035:0;
+        }
+        for (const bird of birds) {
+          const angle=worldTime*bird.speed+bird.phase;
+          bird.root.position.set(Math.cos(angle)*bird.radius-3,bird.height+Math.sin(angle*2)*2,-30+Math.sin(angle)*bird.radius*.55);
+          bird.root.rotation.y=Math.atan2(Math.sin(angle),-.55*Math.cos(angle));
+          bird.root.rotation.z=Math.sin(angle)*.09;
+          bird.wings[0].rotation.z=Math.sin(worldTime*5.5+bird.phase)*.55;
+          bird.wings[1].rotation.z=-Math.sin(worldTime*5.5+bird.phase)*.55;
+        }
+        if (!paused && !document.hidden) for (const cloud of clouds) {
+          cloud.group.position.x+=delta*cloud.speed;
+          if (cloud.group.position.x>160) cloud.group.position.x=-160;
+        }
+        petals.forEach((petal,index)=>{
+          const fall=(worldTime*petal.speed+petal.phase)%petal.tree.h;
+          petalTransform.position.set(petal.tree.x+petal.dx+Math.sin(worldTime*.6+petal.phase)*1.1+fall*.12,petal.tree.h-fall+1,petal.tree.z+petal.dz+Math.cos(worldTime*.4+petal.phase)*.7);
+          petalTransform.rotation.set(worldTime*.7+petal.phase,worldTime*.5+index,worldTime*.8);
+          petalTransform.updateMatrix();petalMesh.setMatrixAt(index,petalTransform.matrix);
+        });
+        petalMesh.instanceMatrix.needsUpdate=true;
+        if (cameraTravel) {
+          const progress=Math.min((now-cameraTravel.start)/cameraTravel.duration,1);
+          const smooth=progress*progress*(3-2*progress);
+          camera.position.lerpVectors(cameraTravel.from,cameraTravel.to,smooth);
+          controls.target.lerpVectors(cameraTravel.fromTarget,cameraTravel.toTarget,smooth);
+          if (progress===1) cameraTravel=null;
+        }
+        controls.update();renderer.render(scene,camera);
+        if (firstFrame) {firstFrame=false;loading.classList.add('hidden');canvas.dataset.ready='true';}
+      }
+      animate(performance.now());
+      renderer.setAnimationLoop(animate);
+      window.addEventListener('pagehide',()=>{clearTimeout(chimeTimer);if (audioContext) audioContext.suspend().catch(error=>console.error('Audio cleanup failed:',error));});
+    }
+  </script>
+</body>
+</html>

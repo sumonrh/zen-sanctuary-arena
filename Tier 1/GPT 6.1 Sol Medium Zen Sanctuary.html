@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Serve this single file with any HTTP server. Three.js, Tailwind, and fonts require internet access.
+       Drag / pinch to explore; keys 1-5 select views, R resets. Audio is synthesized after opt-in. -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#e9eee6">
+  <title>Komorebi — A Voxel Sanctuary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+  </script>
+  <style>
+    :root { --ink:#273b32; --muted:#7b8579; --line:rgba(65,82,61,.12); --glass:rgba(250,252,246,.82); --green:#506b45; }
+    * { box-sizing:border-box; }
+    body { margin:0; overflow:hidden; background:#dfe8dc; color:var(--ink); font-family:'DM Sans',sans-serif; }
+    button { font:inherit; cursor:pointer; }
+    button:focus-visible,a:focus-visible { outline:2px solid #698257; outline-offset:4px; }
+    button { -webkit-tap-highlight-color:transparent; }
+    #world { position:fixed; inset:0; }
+    #world canvas { display:block; width:100%; height:100%; outline:none; }
+    .vignette { position:fixed; inset:0; pointer-events:none; background:linear-gradient(180deg,rgba(238,242,231,.55),transparent 22%,transparent 78%,rgba(229,235,222,.64)),linear-gradient(90deg,rgba(235,240,228,.25),transparent 28%); }
+    .glass { background:var(--glass); border:1px solid rgba(255,255,255,.72); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); box-shadow:0 8px 40px rgba(36,57,31,.055); }
+    .icon { width:20px; height:20px; flex-shrink:0; stroke:currentColor; fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+    header { position:fixed; top:0; left:0; right:0; height:91px; display:flex; align-items:center; justify-content:space-between; padding:0 38px; border-bottom:1px solid var(--line); background:rgba(244,247,238,.61); backdrop-filter:blur(18px); z-index:5; }
+    .brand { display:flex; align-items:center; gap:13px; }
+    .brand-mark { width:39px; height:39px; display:grid; place-items:center; background:#4c6242; color:#f5f5e9; border-radius:11px; }
+    .brand-mark svg { width:27px; height:27px; }
+    .brand-name { font:800 22px 'Manrope',sans-serif; letter-spacing:-.8px; }
+    .brand-sub { font-size:9px; letter-spacing:2.8px; color:#829079; margin-top:3px; text-transform:uppercase; }
+    .header-center { display:flex; gap:27px; align-items:center; font-size:12px; color:#6d7a68; }
+    .header-center .dot { width:5px; height:5px; background:#91a486; border-radius:50%; }
+    .sound-button { display:flex; align-items:center; gap:10px; padding:10px 15px; border:1px solid #cdd6c7; background:rgba(255,255,255,.33); border-radius:9px; color:#4e6145; font-size:12px; }
+    .sound-led { width:5px; height:5px; background:#a7b19f; border-radius:50%; }
+    .sound-button[aria-pressed=true] .sound-led { background:#6d8a52; box-shadow:0 0 0 3px #6d8a5220; }
+    .intro { position:fixed; top:132px; left:39px; pointer-events:none; }
+    .eyebrow { display:flex; align-items:center; gap:8px; font-size:10px; letter-spacing:2.1px; text-transform:uppercase; color:#6b7b60; font-weight:600; }
+    .eyebrow .dash { width:22px; height:1px; background:#859677; }
+    .intro h1 { font:500 clamp(30px,3vw,47px)/1.17 'Manrope',sans-serif; letter-spacing:-2.1px; margin:16px 0 12px; }
+    .intro p { font-size:12px; line-height:1.8; color:#76836c; margin:0; }
+    .live-badge { margin-top:22px; display:inline-flex; align-items:center; gap:7px; border:1px solid #a5b29866; border-radius:20px; padding:6px 10px; font-size:9px; color:#6f7e63; letter-spacing:.5px; background:#edf2e250; }
+    .live-dot { width:5px; height:5px; background:#829f66; border-radius:50%; box-shadow:0 0 0 3px #829f6615; }
+    .panel { position:fixed; width:272px; right:30px; top:119px; border-radius:17px; padding:23px 20px 19px; z-index:4; }
+    .panel-title { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
+    .panel-title h2 { margin:0; font:700 15px 'Manrope',sans-serif; letter-spacing:-.35px; }
+    .panel-title .icon { width:17px; height:17px; color:#809074; }
+    .panel-subtitle { margin:0; color:#85907e; font-size:11px; }
+    .section-label { font-size:9px; font-weight:650; color:#7f8b74; text-transform:uppercase; letter-spacing:1.6px; margin:24px 0 10px; display:flex; justify-content:space-between; align-items:center; }
+    .section-label span { color:#a1aa99; font-weight:400; letter-spacing:.3px; text-transform:none; }
+    .time-options { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+    .time-option { border:1px solid #dfe5d9; border-radius:9px; background:transparent; color:#88927f; padding:11px 0 9px; font-size:10px; display:flex; flex-direction:column; align-items:center; gap:7px; transition:.2s; }
+    .time-option .icon { width:19px; height:19px; }
+    .time-option[aria-pressed=true] { background:#e8eddf; border-color:#a8b897; color:#536d42; box-shadow:inset 0 0 0 1px #a8b89722; }
+    .camera-list { display:flex; flex-direction:column; gap:5px; }
+    .camera-option { width:100%; text-align:left; display:flex; align-items:center; gap:11px; border:1px solid transparent; background:transparent; color:#788571; padding:10px 11px; font-size:11px; border-radius:8px; transition:.2s; }
+    .camera-option .icon { width:17px; height:17px; }
+    .camera-option .camera-shortcut { margin-left:auto; font-size:9px; opacity:.55; }
+    .camera-option[aria-pressed=true] { color:#4f6740; background:#e6ebdd; border-color:#d2ddc5; }
+    .camera-option:hover,.time-option:hover { background:#e9efdf; }
+    .panel-divider { border:0; border-top:1px solid var(--line); margin:19px 0 16px; }
+    .toggle-row { display:flex; align-items:center; justify-content:space-between; font-size:11px; color:#66745d; }
+    .toggle-label { display:flex; gap:9px; align-items:center; }
+    .toggle-label .icon { width:16px; height:16px; }
+    .switch { padding:0; border:0; width:29px; height:17px; border-radius:10px; background:#b6c0ae; transition:background .2s; }
+    .switch::after { content:''; display:block; width:11px; height:11px; border-radius:50%; background:#fff; margin-left:3px; transition:transform .2s; box-shadow:0 1px 3px #0002; }
+    .switch[aria-checked=true] { background:#6f8759; }
+    .switch[aria-checked=true]::after { transform:translateX(12px); }
+    .panel-note { font-size:9px; color:#9aa38f; margin:11px 0 0 25px; }
+    .scene-info { position:fixed; left:39px; bottom:115px; pointer-events:none; }
+    .location-tag { display:flex; align-items:center; gap:7px; font-size:9px; text-transform:uppercase; letter-spacing:2px; color:#708062; margin-bottom:9px; }
+    .location-tag .icon { width:13px; height:13px; }
+    .scene-info h3 { font:600 19px 'Manrope',sans-serif; letter-spacing:-.6px; margin:0 0 7px; }
+    .scene-info p { margin:0; font-size:11px; color:#788570; }
+    .bottom-bar { position:fixed; bottom:27px; left:50%; transform:translateX(-50%); border-radius:13px; padding:12px 17px; display:flex; align-items:center; gap:19px; white-space:nowrap; z-index:3; }
+    .control-tip { display:flex; align-items:center; gap:8px; font-size:10px; color:#7e8975; }
+    .control-tip .icon { width:15px; height:15px; }
+    .bar-separator { width:1px; height:20px; background:var(--line); }
+    .reset-button { border:0; padding:3px 0; background:none; display:flex; align-items:center; gap:7px; font-size:10px; color:#5b7050; }
+    .reset-button .icon { width:14px; height:14px; }
+    .footer-label { position:fixed; left:39px; bottom:34px; font-size:9px; color:#7a8870; letter-spacing:.4px; display:flex; align-items:center; gap:7px; }
+    .footer-label span { width:4px; height:4px; background:#8e9f7e; border-radius:50%; }
+    .fullscreen-button { position:fixed; right:31px; bottom:27px; width:42px; height:42px; border-radius:11px; display:grid; place-items:center; color:#6c7d60; }
+    .mobile-panel-button { display:none; }
+    #loading { position:fixed; inset:0; z-index:20; background:#e9eee6; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px; transition:opacity .65s; }
+    #loading .loader { width:32px; height:32px; border:2px solid #cbd6c1; border-top-color:#637f50; border-radius:50%; animation:spin 1s linear infinite; }
+    #loading p { font-size:12px; color:#7c8a71; letter-spacing:1px; }
+    #loading.hidden { opacity:0; pointer-events:none; }
+    #toast { position:fixed; bottom:89px; left:50%; transform:translate(-50%,12px); padding:11px 18px; border-radius:9px; font-size:11px; opacity:0; transition:.25s; pointer-events:none; z-index:30; max-width:90vw; text-align:center; }
+    #toast.visible { opacity:1; transform:translate(-50%,0); }
+    .night-ui { --ink:#edf0e4; --muted:#b2b9ac; --glass:rgba(25,39,42,.81); --line:rgba(195,217,187,.14); }
+    .night-ui header { background:rgba(25,39,42,.63); }
+    .night-ui .vignette { background:linear-gradient(180deg,rgba(14,24,36,.4),transparent 30%,transparent 70%,rgba(14,24,36,.45)); }
+    .night-ui .intro p,.night-ui .scene-info p,.night-ui .footer-label,.night-ui .eyebrow,.night-ui .location-tag,.night-ui .panel-subtitle,.night-ui .section-label,.night-ui .toggle-row,.night-ui .control-tip,.night-ui .reset-button,.night-ui .sound-button,.night-ui .header-center { color:#b0bdac; }
+    .night-ui .time-option,.night-ui .camera-option { color:#a6b59f; }
+    .night-ui .time-option { border-color:#52614f; }
+    .night-ui .camera-option[aria-pressed=true],.night-ui .time-option[aria-pressed=true] { background:#485944; border-color:#64785c; color:#ebf0df; }
+    .night-ui .camera-option:hover,.night-ui .time-option:hover { background:#435140; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    @media (min-width:1600px) { .panel { right:44px; top:139px; width:286px; } .intro { top:154px; } }
+    @media (max-width:1050px) { header { padding:0 25px; height:78px; } .intro { left:26px; top:109px; } .intro h1 { font-size:33px; } .panel { right:22px; top:100px; width:244px; padding:19px 16px; } .header-center { display:none; } .footer-label { display:none; } .scene-info { left:26px; } .bottom-bar { gap:12px; } }
+    @media (max-height:760px) and (min-width:701px) { .panel { top:105px; padding-top:16px; padding-bottom:15px; } .section-label { margin-top:17px; } .camera-option { padding:8px 10px; } .panel-divider { margin:13px 0; } .intro { top:112px; } .live-badge { margin-top:15px; } }
+    @media (max-width:700px) {
+      header { height:72px; padding:0 19px; } .brand-name { font-size:19px; } .brand-mark { width:33px; height:33px; } .brand-sub { font-size:8px; letter-spacing:2px; }
+      .sound-button { padding:9px; gap:0; } .sound-button .sound-text,.sound-led { display:none; }
+      .intro { top:99px; left:22px; } .intro h1 { font-size:31px; letter-spacing:-1.4px; margin-top:12px; } .intro p { font-size:11px; } .live-badge { display:none; } .eyebrow { font-size:8px; }
+      .panel { top:auto; bottom:87px; right:16px; width:250px; max-height:calc(100dvh - 170px); overflow:auto; display:none; } .panel.open { display:block; }
+      .mobile-panel-button { position:fixed; right:17px; top:96px; width:39px; height:39px; display:grid; place-items:center; border-radius:10px; z-index:6; color:#617451; }
+      .scene-info { left:22px; bottom:106px; } .scene-info h3 { font-size:17px; } .scene-info p { max-width:230px; font-size:10px; line-height:1.7; } .location-tag { font-size:8px; }
+      .bottom-bar { bottom:23px; padding:13px 15px; gap:12px; left:18px; transform:none; } .control-tip { font-size:9px; gap:5px; } .control-tip.pan-tip { display:none; } .pan-separator { display:none; } .reset-button { font-size:9px; } .fullscreen-button { bottom:23px; right:17px; }
+    }
+    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; } }
+  </style>
+</head>
+<body class="antialiased">
+  <svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></symbol>
+    <symbol id="i-sunset" viewBox="0 0 24 24"><path d="M3 17h18M5 21h14M6 14a6 6 0 0 1 12 0M12 2v3M3 7l2 2m16-2-2 2M12 10V6m-2 2 2-2 2 2"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10Z"/><path d="M17 3v4m-2-2h4"/></symbol>
+    <symbol id="i-temple" viewBox="0 0 24 24"><path d="m3 9 9-4 9 4M5 10h14M7 10v9m10-9v9M3 20h18M9 14h6M12 2v3"/></symbol>
+    <symbol id="i-samurai" viewBox="0 0 24 24"><path d="M5 10c0-5 3-7 7-7s7 2 7 7l2 3H3l2-3Z"/><path d="M8 13v5l4 3 4-3v-5M8 4 6 2m10 2 2-2M9 16h6"/></symbol>
+    <symbol id="i-meadow" viewBox="0 0 24 24"><path d="M3 20h18M7 20v-9m-3 2 3 3 3-4m6 8v-7m-3 3 3 2 4-5"/><path d="M6 5h.01M16 5h.01M11 8h.01"/></symbol>
+    <symbol id="i-mountain" viewBox="0 0 24 24"><path d="m2 20 8-15 5 9 3-6 4 12H2Z"/><path d="m7 11 3 2 3-2"/></symbol>
+    <symbol id="i-bird" viewBox="0 0 24 24"><path d="M2 7c5-1 8 2 10 7 2-5 5-8 10-7M12 14v4"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="m11 4-6 5H2v6h3l6 5V4Z"/><path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M5 3v6m0 4v8M12 3v12m0 4v2M19 3v2m0 4v12M2 9h6m1 6h6m1-10h6"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M5 19c-5-10 4-15 15-15 0 11-5 20-15 15Zm0 0L15 9"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 0 1 14 0Z"/><circle cx="12" cy="10" r="2"/></symbol>
+    <symbol id="i-mouse" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="6"/><path d="M12 2v7"/></symbol>
+    <symbol id="i-zoom" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6M7 10h6m-3-3v6"/></symbol>
+    <symbol id="i-pan" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3m12-6 3 3-3 3"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 10a9 9 0 1 1 1 8M3 4v6h6"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></symbol>
+  </svg>
+  <main id="world" aria-label="Interactive 3D voxel Japanese sanctuary"></main>
+  <div class="vignette"></div>
+  <header>
+    <div class="brand">
+      <div class="brand-mark"><svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M5 8c7 2 15 2 22 0M7 13h18M10 10v16m12-16v16M8 26h4m8 0h4M4 7v3m24-3v3" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg></div>
+      <div><div class="brand-name">komorebi<span style="color:#91a080">.</span></div><div class="brand-sub">A voxel sanctuary</div></div>
+    </div>
+    <div class="header-center"><span>A quiet corner of the internet</span><span class="dot"></span><span>Made to wander, not to rush</span></div>
+    <button id="sound" class="sound-button" aria-pressed="false" aria-label="Enable ambient wind and chimes"><svg class="icon"><use href="#i-sound"/></svg><span class="sound-text">Sound off</span><span class="sound-led"></span></button>
+  </header>
+  <section class="intro">
+    <div class="eyebrow"><span class="dash"></span>Find your moment of zen</div>
+    <h1>A little world.<br>A quieter mind.</h1>
+    <p>Between the mountains, beneath the blossoms.<br>Take a breath. Stay a while.</p>
+    <div class="live-badge"><span class="live-dot"></span>A living, breathing world</div>
+  </section>
+  <button id="mobile-panel" class="mobile-panel-button glass" aria-label="Open sanctuary settings" aria-expanded="false" aria-controls="settings"><svg class="icon"><use href="#i-sliders"/></svg></button>
+  <aside id="settings" class="panel glass" aria-label="Sanctuary settings">
+    <div class="panel-title"><h2>Your sanctuary</h2><svg class="icon"><use href="#i-sliders"/></svg></div>
+    <p class="panel-subtitle">A change of light. A new perspective.</p>
+    <div class="section-label">Time of day <span id="time-label">08:24 AM</span></div>
+    <div class="time-options" aria-label="Time of day">
+      <button class="time-option" data-time="morning" aria-pressed="true"><svg class="icon"><use href="#i-sun"/></svg>Morning</button>
+      <button class="time-option" data-time="sunset" aria-pressed="false"><svg class="icon"><use href="#i-sunset"/></svg>Sunset</button>
+      <button class="time-option" data-time="night" aria-pressed="false"><svg class="icon"><use href="#i-moon"/></svg>Night</button>
+    </div>
+    <div class="section-label">Explore the world <span>Views 1–5</span></div>
+    <div class="camera-list" aria-label="Camera presets">
+      <button class="camera-option" data-view="temple" aria-pressed="true"><svg class="icon"><use href="#i-temple"/></svg>Pagoda Front<span class="camera-shortcut">01</span></button>
+      <button class="camera-option" data-view="samurai" aria-pressed="false"><svg class="icon"><use href="#i-samurai"/></svg>Samurai Closeup<span class="camera-shortcut">02</span></button>
+      <button class="camera-option" data-view="meadow" aria-pressed="false"><svg class="icon"><use href="#i-meadow"/></svg>Pastoral Meadow<span class="camera-shortcut">03</span></button>
+      <button class="camera-option" data-view="mountains" aria-pressed="false"><svg class="icon"><use href="#i-mountain"/></svg>Mountain Vista<span class="camera-shortcut">04</span></button>
+      <button class="camera-option" data-view="overhead" aria-pressed="false"><svg class="icon"><use href="#i-bird"/></svg>Bird's Eye<span class="camera-shortcut">05</span></button>
+    </div>
+    <hr class="panel-divider">
+    <div class="toggle-row"><span class="toggle-label"><svg class="icon"><use href="#i-leaf"/></svg>Living world</span><button id="motion" class="switch" role="switch" aria-checked="true" aria-label="Animate wildlife, clouds and petals"></button></div>
+    <p class="panel-note">Let nature move at its own pace.</p>
+  </aside>
+  <section class="scene-info" aria-live="polite">
+    <div class="location-tag"><svg class="icon"><use href="#i-pin"/></svg><span id="scene-tag">The heart of the valley</span></div>
+    <h3 id="scene-title">The Komorebi Sanctuary</h3>
+    <p id="scene-description">Ancient rooftops. Soft light. A thousand little details.</p>
+  </section>
+  <div class="bottom-bar glass" aria-label="Navigation instructions">
+    <span class="control-tip"><svg class="icon"><use href="#i-mouse"/></svg><span id="orbit-tip">Drag to orbit</span></span>
+    <span class="bar-separator"></span>
+    <span class="control-tip"><svg class="icon"><use href="#i-zoom"/></svg><span id="zoom-tip">Scroll to zoom</span></span>
+    <span class="bar-separator pan-separator"></span>
+    <span class="control-tip pan-tip"><svg class="icon"><use href="#i-pan"/></svg>Right-drag to pan</span>
+    <span class="bar-separator"></span>
+    <button id="reset" class="reset-button"><svg class="icon"><use href="#i-reset"/></svg>Reset view</button>
+  </div>
+  <div class="footer-label"><span></span>Handcrafted in pixels. Rooted in stillness.</div>
+  <button id="fullscreen" class="fullscreen-button glass" aria-label="Enter fullscreen"><svg class="icon"><use href="#i-expand"/></svg></button>
+  <div id="toast" class="glass" role="status"></div>
+  <div id="loading" role="status"><div class="brand-name">komorebi.</div><div class="loader"></div><p>Planting a little peace…</p></div>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const $ = selector => document.querySelector(selector);
+    const toast = message => {
+      $('#toast').textContent = message;
+      $('#toast').classList.add('visible');
+      clearTimeout(toast.timer);
+      toast.timer = setTimeout(() => $('#toast').classList.remove('visible'), 4200);
+    };
+    const fail = error => {
+      console.error('Sanctuary initialization failed:', error);
+      $('#loading').innerHTML = '<div class="brand-name">A moment of interruption.</div><p>The sanctuary could not load. Check your connection and reload.</p>';
+    };
+    let seed = 1716;
+    function random() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+    const range = (a, b) => a + random() * (b - a);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#c4d7c6');
+    scene.fog = new THREE.FogExp2('#c4d7c6', .007);
+    let renderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+    } catch (error) { fail(error); throw error; }
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    $('#world').appendChild(renderer.domElement);
+    renderer.domElement.setAttribute('aria-label', 'Orbitable voxel sanctuary. Drag to rotate, scroll to zoom, right-drag to pan.');
+    const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, .1, 350);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = .055;
+    controls.minDistance = 4;
+    controls.maxDistance = 150;
+    controls.maxPolarAngle = Math.PI * .485;
+    controls.target.set(0, 5, 0);
+    camera.position.set(53, 38, 62);
+    const hemisphere = new THREE.HemisphereLight('#e8f0d5', '#687a4b', 2.3);
+    scene.add(hemisphere);
+    const sun = new THREE.DirectionalLight('#fff2cd', 3.2);
+    sun.position.set(-35, 65, 25);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    Object.assign(sun.shadow.camera, { left:-57, right:57, top:57, bottom:-57, near:1, far:180 });
+    sun.shadow.normalBias = .055;
+    sun.shadow.bias = -.0003;
+    sun.shadow.radius = 3;
+    scene.add(sun);
+
+    const cube = new THREE.BoxGeometry(1, 1, 1);
+    const materials = {};
+    function material(name, color, style='noise', extra={}) {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 16;
+      const ctx = canvas.getContext('2d');
+      const base = new THREE.Color(color);
+      for (let y=0; y<16; y++) for (let x=0; x<16; x++) {
+        let variation = range(.85, 1.1);
+        if (style === 'wood' && (x % 5 === 0 || (x === 8 && y < 12))) variation *= .72;
+        if (style === 'roof' && y % 4 === 0) variation *= .65;
+        if (style === 'stone' && (y === 0 || x === 0)) variation *= .85;
+        if (style === 'paper') variation = (x % 8 === 0 || y % 8 === 0) ? .43 : range(.95, 1.03);
+        const c = base.clone().multiplyScalar(variation);
+        ctx.fillStyle = `#${c.getHexString()}`;
+        ctx.fillRect(x,y,1,1);
+      }
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.magFilter = texture.minFilter = THREE.NearestFilter;
+      texture.colorSpace = THREE.SRGBColorSpace;
+      materials[name] = new THREE.MeshStandardMaterial({ map:texture, roughness:1, ...extra });
+      return materials[name];
+    }
+    material('grass','#779852');
+    material('grassLight','#86a45a');
+    material('grassDark','#668447');
+    material('earth','#746647');
+    material('cliff','#879079','stone');
+    material('mountain','#80907d','stone');
+    material('mountainDark','#697e70','stone');
+    material('mountainLight','#a0ad96','stone');
+    material('snow','#eff3e7');
+    material('stone','#a8ad95','stone');
+    material('stoneDark','#777f6c','stone');
+    material('sand','#b6b88a');
+    material('wood','#4c3528','wood');
+    material('woodLight','#806148','wood');
+    material('roof','#384d49','roof');
+    material('roofEdge','#4b6157','roof');
+    material('red','#b84432','wood');
+    material('redLight','#ce5540','wood');
+    material('gold','#d7ad55','noise',{ metalness:.35, roughness:.5 });
+    material('paper','#f9dda1','paper',{ emissive:'#ffd895', emissiveIntensity:.3 });
+    material('lantern','#ffe4ad','paper',{ emissive:'#ffb95b', emissiveIntensity:.7 });
+    material('bamboo','#6d934c','wood');
+    material('bambooJoint','#acc36b');
+    material('leaves','#597c43');
+    material('leavesLight','#75934d');
+    material('pink','#e9b3b8');
+    material('pinkLight','#f7cccd');
+    material('pinkDark','#d699a8');
+    material('wool','#ece9da');
+    material('woolLight','#faf4e4');
+    material('skin','#bd9771');
+    material('armor','#364b4a');
+    material('armorRed','#864638');
+    material('black','#282f2d');
+    material('white','#dfe6d7');
+    material('lily','#527f46');
+    material('flower','#f2d0c4');
+    material('cloud','#ffffff','noise',{ transparent:true, opacity:.88 });
+    const waterMaterial = new THREE.MeshStandardMaterial({ color:'#75b9ab', transparent:true, opacity:.8, roughness:.22, metalness:.15 });
+    materials.water = waterMaterial;
+    const batches = new Map();
+    const matrix = new THREE.Matrix4();
+    const quaternion = new THREE.Quaternion();
+    const vec = new THREE.Vector3();
+    const scale = new THREE.Vector3();
+    function box(mat, x,y,z, w=1,h=1,d=1, rotation=0, parent=null) {
+      if (parent) {
+        const mesh = new THREE.Mesh(cube, materials[mat]);
+        mesh.position.set(x,y,z);
+        mesh.scale.set(w,h,d);
+        mesh.rotation.y = rotation;
+        mesh.castShadow = mat !== 'cloud';
+        mesh.receiveShadow = true;
+        parent.add(mesh);
+        return mesh;
+      }
+      if (!batches.has(mat)) batches.set(mat, []);
+      quaternion.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, rotation);
+      matrix.compose(vec.set(x,y,z), quaternion, scale.set(w,h,d));
+      batches.get(mat).push(matrix.clone());
+    }
+    function flush() {
+      for (const [name, transforms] of batches) {
+        const mesh = new THREE.InstancedMesh(cube, materials[name], transforms.length);
+        transforms.forEach((transform, index) => mesh.setMatrixAt(index, transform));
+        mesh.castShadow = !['water','grass','grassLight','grassDark'].includes(name);
+        mesh.receiveShadow = true;
+        mesh.computeBoundingSphere();
+        scene.add(mesh);
+      }
+      batches.clear();
+    }
+    function compact(group) {
+      const meshes = new Map();
+      for (const child of [...group.children]) {
+        if (child.isGroup) compact(child);
+        if (!child.isMesh) continue;
+        if (!meshes.has(child.material)) meshes.set(child.material, []);
+        meshes.get(child.material).push(child);
+      }
+      for (const [mat, children] of meshes) {
+        if (children.length < 2) continue;
+        const instances = new THREE.InstancedMesh(cube, mat, children.length);
+        children.forEach((child, i) => {
+          child.updateMatrix();
+          instances.setMatrixAt(i, child.matrix);
+          group.remove(child);
+        });
+        instances.castShadow = children[0].castShadow;
+        instances.receiveShadow = true;
+        instances.computeBoundingSphere();
+        group.add(instances);
+      }
+    }
+
+    // Two-unit terrain tiles give way to one-unit architecture and quarter-unit living details.
+    function pondAt(x,z) { return ((x-12)/11)**2 + ((z-9)/10)**2 < 1; }
+    for (let x=-40; x<=40; x+=2) for (let z=-30; z<=30; z+=2) {
+      const pond = pondAt(x,z);
+      box(pond ? 'sand' : random()<.28 ? 'grassLight' : random()<.2 ? 'grassDark' : 'grass', x, pond ? -.85 : -.4, z, 2, pond ? 1 : 1.1, 2);
+      if (pond) box('water',x,.04,z,2,.12,2);
+      if (Math.abs(x)===40 || Math.abs(z)===30) {
+        box(random()<.45 ? 'earth' : 'cliff',x,-2.2,z,2,2.5,2);
+        if (random()<.35) box('stoneDark',x,-3.75,z,2,1,2);
+      }
+    }
+    box('earth',0,-2.1,0,81,2.3,61);
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(500,500), new THREE.MeshStandardMaterial({color:'#a7b596',roughness:1}));
+    ground.rotation.x = -Math.PI/2;
+    ground.position.y = -4.3;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    function mountain(cx,cz,radius,height,step=4) {
+      for (let x=-radius; x<=radius; x+=step) for (let z=-radius; z<=radius; z+=step) {
+        const dist = Math.sqrt((x/radius)**2 + (z/radius)**2);
+        if (dist>1) continue;
+        const ridge = Math.sin(x*.21 + cz)*1.6 + Math.cos(z*.3)*1.1;
+        const elevation = Math.max(step, Math.floor((height*(1-dist) + ridge)/step)*step);
+        for (let y=0; y<elevation; y+=step) {
+          const snowy = y > height*.62 + Math.sin(x*.4 + z*.3)*2;
+          const mat = snowy ? 'snow' : random()<.3 ? 'mountainDark' : random()<.4 ? 'mountainLight' : 'mountain';
+          box(mat,cx+x,y-2+step/2,cz+z,step,step,step);
+        }
+      }
+    }
+    mountain(-36,-47,27,38);
+    mountain(-8,-63,30,44);
+    mountain(26,-57,28,40);
+    mountain(49,-40,23,32);
+    mountain(-53,-15,20,25);
+    mountain(58,-9,18,22);
+    for (let i=0;i<58;i++) {
+      const x=range(-42,43), z=range(-33,-24);
+      box('stoneDark',x,range(.5,2),z,range(2,5),range(2,5),range(2,4));
+    }
+
+    // A three-tier pagoda with stepped hip roofs and raised corner finials.
+    const templeX=-9, templeZ=-7;
+    box('stoneDark',templeX,.45,templeZ,17,.8,15);
+    box('stone',templeX,.95,templeZ,15,.35,13);
+    box('woodLight',templeX,1.22,templeZ,14,.3,12);
+    for(let i=0;i<4;i++) box('stone',templeX,.2+i*.19,templeZ+8-i*.55,6,.38,1.1);
+    function roof(cx,cz,y,width,depth) {
+      const layers = 5;
+      for(let j=0;j<layers;j++) {
+        const w=width-j*1.65, d=depth-j*1.5;
+        box(j===0?'roofEdge':'roof',cx,y+j*.48,cz,w,.52,d);
+        for(const sx of [-1,1]) for(const sz of [-1,1]) {
+          box('roofEdge',cx+sx*(w/2-.45),y+j*.48+.27,cz+sz*(d/2-.45),1.35,.46,1.35);
+          if(j===0) box('roofEdge',cx+sx*(w/2+.15),y+.5,cz+sz*(d/2+.05),.9,.55,1);
+        }
+      }
+      box('roofEdge',cx,y+layers*.48,cz,width-8,.4,.75);
+    }
+    function tier(y,width,depth,level) {
+      const height=level===0?4.5:3.5;
+      box('wood',templeX,y+.1,templeZ,width,.3,depth);
+      for(const sx of [-1,1]) for(const sz of [-1,1]) {
+        box('wood',templeX+sx*(width/2-.45),y+height/2,templeZ+sz*(depth/2-.45),.6,height,.6);
+        box('woodLight',templeX+sx*(width/2-.45),y+height-.3,templeZ+sz*(depth/2-.45),.9,.45,.9);
+      }
+      for(let x=-width/2+1.5;x<width/2-1;x+=1.65) {
+        for(const side of [-1,1]) {
+          box('paper',templeX+x,y+height*.51,templeZ+side*(depth/2-.65),1.4,height*.65,.16);
+          box('wood',templeX+x-.77,y+height/2,templeZ+side*(depth/2-.55),.14,height,.25);
+          box('wood',templeX+x,y+height*.5,templeZ+side*(depth/2-.52),1.45,.12,.2);
+        }
+      }
+      for(let z=-depth/2+1.5;z<depth/2-1;z+=1.6) {
+        for(const side of [-1,1]) {
+          box('paper',templeX+side*(width/2-.65),y+height*.51,templeZ+z,.16,height*.65,1.4);
+          box('wood',templeX+side*(width/2-.55),y+height/2,templeZ+z-.76,.25,height,.14);
+        }
+      }
+      for(const side of [-1,1]) {
+        box('wood',templeX,y+height-.1,templeZ+side*(depth/2-.5),width,.42,.5);
+        box('wood',templeX+side*(width/2-.5),y+height-.1,templeZ,.5,.42,depth);
+      }
+      if(level>0) {
+        for(const side of [-1,1]) {
+          box('red',templeX,y+.6,templeZ+side*(depth/2+.4),width+1,.18,.18);
+          box('red',templeX+side*(width/2+.4),y+.6,templeZ,.18,.18,depth+1);
+        }
+        for(let x=-width/2;x<=width/2;x+=1) for(const side of [-1,1]) box('wood',templeX+x,y+.4,templeZ+side*(depth/2+.4),.15,.7,.15);
+      }
+      roof(templeX,templeZ,y+height,width+3.5,depth+3.5);
+    }
+    tier(1.3,13,11,0);
+    tier(7.8,9.8,8.5,1);
+    tier(13.5,7,6,2);
+    box('gold',templeX,21,templeZ,.28,4.2,.28);
+    for(let y=19.5;y<22.5;y+=.42) box('gold',templeX,y,templeZ,1.1-(y-19.5)*.18,.17,1.1-(y-19.5)*.18);
+    box('gold',templeX,23.35,templeZ,.4,.8,.4);
+    box('wood',templeX,3,templeZ+5.12,2.1,3.6,.23);
+    for(let y=1.6;y<4.7;y+=.35) box('woodLight',templeX, y,templeZ+5.26,1.9,.1,.1);
+
+    // Stepping stones lead through the torii and branch toward the pond.
+    for(let z=2;z<=29;z+=1.3) for(let x=-11;x<=-7;x+=1.3) {
+      if(random()<.08) continue;
+      box(random()<.2?'stoneDark':'stone',x+range(-.08,.08),.21,z+range(-.07,.07),1.13,.18,1.13);
+    }
+    for(let i=0;i<19;i++) {
+      const t=i/18, x=-7+t*11, z=10+Math.sin(t*Math.PI)*1.8;
+      box('stone',x,.24,z,1.1,.22,1.3,range(-.15,.15));
+    }
+    function torii(x,z,size=1) {
+      for(const side of [-1,1]) {
+        box('red',x+side*3.6*size,3.4*size,z,.75*size,6.8*size,.8*size);
+        box('black',x+side*3.6*size,.6*size,z,.9*size,1.15*size,.95*size);
+        box('stoneDark',x+side*3.6*size,.25,z,1.25*size,.4,1.3*size);
+      }
+      box('red',x,5.5*size,z,9.2*size,.65*size,.65*size);
+      box('redLight',x,6.75*size,z,10.6*size,.65*size,1*size);
+      box('black',x,7.12*size,z,11.2*size,.25*size,1.12*size);
+      for(const side of [-1,1]) {
+        box('redLight',x+side*5.25*size,6.99*size,z,1.25*size,.58*size,1*size);
+        box('black',x+side*5.45*size,7.37*size,z,.85*size,.22*size,1.12*size);
+      }
+      box('red',x,6.1*size,z,.65*size,1.2*size,.4*size);
+      box('wood',x,6.1*size,z+.28*size,.85*size,1.2*size,.15*size);
+      box('gold',x,6.1*size,z+.37*size,.3*size,.65*size,.05*size);
+    }
+    torii(-9,21);
+
+    function bridge() {
+      const segments=24;
+      for(let i=0;i<=segments;i++) {
+        const t=i/segments, x=3+t*18, y=.5+Math.sin(t*Math.PI)*2.7;
+        box('woodLight',x,y,9,.77,.3,3.2);
+        for(const side of [-1,1]) {
+          box('red',x,y+.22,9+side*1.55,.85,.28,.25);
+          box('redLight',x,y+1.35,9+side*1.55,.85,.2,.2);
+          if(i%3===0) {
+            box('red',x,y+.7,9+side*1.55,.23,1.6,.23);
+            box('gold',x,y+1.56,9+side*1.55,.3,.12,.3);
+          }
+        }
+      }
+      for(const x of [4.5,9,15,19.5]) for(const side of [-1,1]) box('red',x,.2,9+side*1.3,.38,2,.4);
+    }
+    bridge();
+    for(let i=0;i<26;i++) {
+      const x=range(3,21), z=range(0,18);
+      if(!pondAt(x,z) || Math.abs(z-9)<2) continue;
+      const s=range(.45,1.15);
+      box('lily',x,.15,z,s,.1,s);
+      box('lily',x+s*.4,.15,z+s*.35,s*.45,.1,s*.45);
+      if(random()<.42) {
+        box('flower',x,.29,z,.28,.17,.28);
+        box('gold',x,.4,z,.12,.07,.12);
+      }
+    }
+    const ripples=[];
+    for(let i=0;i<9;i++) {
+      const x=range(3,21),z=range(0,18);
+      if(!pondAt(x,z)) continue;
+      const mesh = new THREE.Mesh(new THREE.RingGeometry(.8,.835,4),new THREE.MeshBasicMaterial({color:'#d6ede1',transparent:true,opacity:.3,side:THREE.DoubleSide}));
+      mesh.rotation.x=-Math.PI/2; mesh.rotation.z=Math.PI/4; mesh.position.set(x,.12,z);
+      scene.add(mesh); ripples.push({mesh,phase:random()*5});
+    }
+    const koi=[];
+    for(let i=0;i<7;i++) {
+      const group=new THREE.Group();
+      box(i%2?'redLight':'wool',0,0,0,.65,.12,.22,0,group);
+      box('white',-.3,0,0,.2,.12,.27,0,group);
+      box('black',.3,.06,0,.1,.05,.14,0,group);
+      group.position.set(12,-.04,5);
+      scene.add(group); koi.push({group,phase:range(0,Math.PI*2),radius:range(3,6),speed:range(.07,.12)});
+    }
+
+    const lanternLights=[];
+    function lantern(x,z,h=2.6) {
+      box('stoneDark',x,.34,z,1.3,.45,1.3);
+      box('stone',x,h*.4,z,.44,h*.7,.44);
+      box('stone',x,h*.74,z,1.1,.25,1.1);
+      box('lantern',x,h*.87,z,.7,.65,.7);
+      for(const dx of [-.44,.44]) for(const dz of [-.44,.44]) box('stoneDark',x+dx,h*.89,z+dz,.15,.8,.15);
+      box('stoneDark',x,h*1.04,z,1.5,.28,1.5);
+      box('stone',x,h*1.14,z,1,.25,1);
+      box('stoneDark',x,h*1.23,z,.35,.3,.35);
+      const light=new THREE.PointLight('#ffc16e',.6,8,2);
+      light.position.set(x,h*.88,z); scene.add(light); lanternLights.push(light);
+    }
+    for(const [x,z] of [[-13,15],[-5,15],[-13,4],[-5,4],[1,9],[23,9],[-18,-13],[0,-13]]) lantern(x,z);
+    for(const x of [-14,-4]) {
+      box('wood',x,5.25,-.4,.09,1,.09);
+      box('lantern',x,4.56,-.4,.65,.9,.65);
+      box('red',x,5.04,-.4,.8,.15,.8);
+      box('red',x,4.07,-.4,.8,.15,.8);
+      box('gold',x,3.9,-.4,.1,.25,.1);
+      const light=new THREE.PointLight('#ffc375',1.2,10,2);
+      light.position.set(x,4.5,0); scene.add(light); lanternLights.push(light);
+    }
+    const innerLight=new THREE.PointLight('#ffbd68',2,20,2);
+    innerLight.position.set(-9,4,-7);scene.add(innerLight);lanternLights.push(innerLight);
+
+    function sakura(x,z,s=1) {
+      const h=range(5.8,8)*s;
+      for(let y=.5;y<h;y+=.65) box('wood',x+(y>h*.45?.35:0),y,z,.7*s,.7,.75*s);
+      box('wood',x-1*s,h*.72,z,.55*s,.55*s,2.6*s,Math.PI/2);
+      box('wood',x+1*s,h*.8,z+.7*s,2.8*s,.6*s,.55*s,.35);
+      const clusters=[[-2,0,-.6],[1.7,.4,-.4],[0,1.2,0],[-.5,.1,2],[1.8,0,1.8]];
+      for(const [dx,dy,dz] of clusters) {
+        for(let ix=-1;ix<=1;ix++) for(let iz=-1;iz<=1;iz++) {
+          const mat=random()<.3?'pinkDark':random()<.55?'pink':'pinkLight';
+          box(mat,x+(dx+ix*.85)*s,h+dy*s+range(-.2,.3),z+(dz+iz*.85)*s,1.25*s,range(1,1.7)*s,1.25*s);
+          if(random()<.4) box('pinkLight',x+(dx+ix*.85)*s,h+dy*s+.95*s,z+(dz+iz*.85)*s,.85*s,.55*s,.85*s);
+        }
+      }
+      return {x,z,h};
+    }
+    const cherryTrees=[];
+    for(const [x,z,s] of [[-23,7,1.2],[-21,-16,1.05],[1,-16,.95],[24,19,1.15],[-20,25,.8],[29,-10,1.15],[5,23,.8],[-31,-7,.95]]) cherryTrees.push(sakura(x,z,s));
+    function pine(x,z,h) {
+      box('wood',x,h*.4,z,.6,h*.8,.6);
+      for(let i=0;i<4;i++) {
+        const w=(5-i)*.95;
+        box(i%2?'leaves':'leavesLight',x,h*.4+i*h*.14,z,w,h*.2,w);
+      }
+    }
+    for(let i=0;i<45;i++) {
+      const x=range(-40,40), z=range(-28,-19);
+      if(Math.abs(x+9)<9) continue;
+      pine(x,z,range(5,10));
+    }
+    for(let i=0;i<56;i++) {
+      const x=range(-34,-22),z=range(-23,2),h=range(5,10);
+      box('bamboo',x,h/2,z,.23,h,.23);
+      for(let y=1;y<h;y+=1.1) {
+        box('bambooJoint',x,y,z,.28,.12,.28);
+        if(y>h*.5 && random()<.55) {
+          const side=random()<.5?-1:1;
+          box('bamboo',x+side*.45,y+.25,z,1,.1,.12,side*.4);
+          box('leaves',x+side*.8,y+.45,z,.9,.18,.7,side*.4);
+        }
+      }
+    }
+    for(let i=0;i<95;i++) {
+      const x=range(-38,38),z=range(-27,28);
+      if(pondAt(x,z) || (Math.abs(x+9)<9 && z<1) || (Math.abs(x+9)<4 && z>0)) continue;
+      if(random()<.5) {
+        box('leaves',x,.55,z,range(.6,1.4),range(.5,1.1),range(.6,1.4));
+        box('leavesLight',x+.3,.4,z+.3,.6,.6,.6);
+      } else {
+        box('grassDark',x,.4,z,.12,.6,.12);
+        box('grassLight',x+.18,.35,z,.12,.5,.12);
+        if(random()<.5) box(random()<.5?'flower':'gold',x,.7,z,.22,.18,.22);
+      }
+    }
+    for(let i=0;i<25;i++) {
+      const x=range(-36,36),z=range(-20,26);
+      if(pondAt(x,z)||(Math.abs(x+9)<9 && z<2)||(Math.abs(x+9)<6 && z>0)) continue;
+      box('stoneDark',x,.45,z,range(.8,1.7),range(.7,1.4),range(.8,1.6),range(0,1));
+    }
+
+    function samurai(x,z,rotation=0) {
+      const group=new THREE.Group();
+      const b=(m,x,y,z,w,h,d)=>box(m,x,y,z,w,h,d,0,group);
+      for(const side of [-1,1]) {
+        b('black',side*.28,.22,.08,.45,.32,.72);
+        b('armor',side*.28,.66,0,.4,.75,.42);
+        for(let y=.4;y<1.05;y+=.2) b('armorRed',side*.28,y,.23,.43,.07,.08);
+      }
+      b('armor',0,1.45,0,1.05,1.1,.62);
+      for(let y=1.1;y<1.95;y+=.18) {
+        b('armorRed',0,y,.34,1.08,.07,.1);
+        b('gold',-.37,y,.405,.09,.08,.04);
+        b('gold',.37,y,.405,.09,.08,.04);
+      }
+      b('gold',0,1.16,.39,.19,.17,.08);
+      for(const side of [-1,1]) {
+        for(let i=0;i<3;i++) {
+          b('armor',side*.48,.9-i*.17,.16,.5,.18,.6);
+          b('armorRed',side*.48,.85-i*.17,.47,.5,.06,.06);
+        }
+        b('armor',side*.77,1.76,0,.5,.63,.7);
+        for(let y=1.5;y<2.05;y+=.17) b('armorRed',side*.77,y,.39,.55,.07,.06);
+        b('armor',side*.78,1.2,.05,.3,.55,.35);
+        b('skin',side*.78,.96,.1,.25,.26,.26);
+      }
+      b('skin',0,2.2,.03,.62,.6,.58);
+      b('black',-.16,2.26,.34,.1,.07,.03);
+      b('black',.16,2.26,.34,.1,.07,.03);
+      b('armor',0,2.58,0,.93,.42,.83);
+      b('armor',0,2.84,-.07,.62,.17,.6);
+      b('armor',0,2.43,-.41,.85,.65,.2);
+      for(const side of [-1,1]) {
+        b('armor',side*.43,2.35,-.1,.21,.6,.55);
+        for(let i=0;i<5;i++) b('gold',side*(.14+i*.065),2.86+i*.065,.44,.14,.17,.13);
+        b('gold',side*.49,3.17,.44,.13,.3,.13);
+      }
+      b('gold',0,2.68,.45,.16,.18,.13);
+      const sword=new THREE.Group();
+      b('black',-.68,1.02,-.19,.13,1.1,.14);
+      box('black',0,0,0,.13,1.32,.16,0,sword);
+      box('gold',0,.42,0,.36,.08,.28,0,sword);
+      box('wood',0,.67,0,.14,.42,.16,0,sword);
+      for(let y=.5;y<.9;y+=.1) box('gold',0,y,.09,.16,.03,.03,0,sword);
+      sword.position.set(-.61,1.3,.1);sword.rotation.z=-.38;group.add(sword);
+      group.position.set(x,.2,z);group.rotation.y=rotation;scene.add(group);
+      return {group,baseY:.2,phase:range(0,6)};
+    }
+    const guardians=[samurai(-13.1,17.4,.22),samurai(-4.9,17.4,-.22),samurai(-15,1,.35)];
+
+    const animals=[];
+    function animal(type,x,z) {
+      const group=new THREE.Group(), body=new THREE.Group();
+      group.add(body);
+      const b=(m,x,y,z,w,h,d)=>box(m,x,y,z,w,h,d,0,body);
+      const alpaca=type==='alpaca';
+      b('wool',0,.94,0,1.2,.85,1.75);
+      for(let ix=-2;ix<=2;ix++) for(let iz=-3;iz<=3;iz++) {
+        if(random()<.12) continue;
+        b(random()<.5?'woolLight':'wool',ix*.25,1.3+range(-.04,.1),iz*.25,.32,.28,.32);
+        if(Math.abs(ix)===2) b('woolLight',ix*.28,1.02,iz*.25,.28,.45,.3);
+      }
+      const head=new THREE.Group(); body.add(head);
+      const headY=alpaca?2.25:1.1;
+      head.position.set(0,headY,.9);
+      if(alpaca) {
+        b('wool',0,1.72,.65,.42,1.32,.45);
+        box('wool',0,.04,.05,.55,.5,.7,0,head);
+      } else box('skin',0,0,.12,.52,.56,.6,0,head);
+      box('skin',0,-.13,.4,.4,.26,.25,0,head);
+      for(const side of [-1,1]) {
+        box(alpaca?'wool':'skin',side*.3,alpaca?.45:.12,0,alpaca?.14:.3,alpaca?.6:.17,.19,0,head);
+        box('black',side*.23,.08,.34,.08,.08,.06,0,head);
+      }
+      b('wool',0,.95,-1.02,.3,.3,.35);
+      const legs=[];
+      for(const sx of [-1,1]) for(const sz of [-1,1]) {
+        const leg=new THREE.Group();
+        leg.position.set(sx*.4,.6,sz*.58);
+        box('skin',0,-.24,0,.22,.55,.23,0,leg);
+        box('black',0,-.5,.02,.25,.17,.28,0,leg);
+        group.add(leg); legs.push(leg);
+      }
+      group.position.set(x,.2,z);group.rotation.y=range(0,Math.PI*2);scene.add(group);
+      animals.push({group,body,head,legs,phase:range(0,6),center:new THREE.Vector3(x,.2,z),type,speed:range(.1,.18)});
+    }
+    for(const [x,z] of [[25,1],[30,4],[27,14],[32,12],[22,-5],[34,-4],[-28,17],[-32,21]]) animal('sheep',x,z);
+    for(const [x,z] of [[30,20],[34,17],[23,24],[-30,12]]) animal('alpaca',x,z);
+
+    const birds=[];
+    for(let i=0;i<15;i++) {
+      const group=new THREE.Group();
+      box('black',0,0,0,.42,.24,.72,0,group);
+      box('gold',0,0,.48,.13,.11,.21,0,group);
+      box('white',0,-.1,0,.3,.12,.4,0,group);
+      const wings=[];
+      for(const side of [-1,1]) {
+        const wing=new THREE.Group();wing.position.x=side*.15;
+        box('black',side*.48,0,0,.85,.1,.42,0,wing);
+        box('black',side*.96,0,-.12,.3,.1,.3,0,wing);
+        group.add(wing);wings.push(wing);
+      }
+      scene.add(group); birds.push({group,wings,phase:range(0,6),radius:range(21,38),height:range(18,29),speed:range(.055,.09)});
+    }
+    const clouds=[];
+    for(let i=0;i<13;i++) {
+      const group=new THREE.Group(), x=range(-85,85),y=range(54,68),z=range(-80,-12);
+      for(let j=0;j<8;j++) box('cloud',range(-6,6),range(-1,1),range(-2,2),range(3,6),range(2,4),range(3,5),0,group);
+      group.position.set(x,y,z);scene.add(group);clouds.push({group,x,speed:range(.12,.27)});
+    }
+    const petalCount=220, petalPositions=new Float32Array(petalCount*3), petalData=[];
+    for(let i=0;i<petalCount;i++) {
+      const tree=cherryTrees[i%cherryTrees.length];
+      petalData.push({tree,x:range(-3,3),z:range(-3,3),height:range(0,tree.h+2),speed:range(.22,.6),phase:range(0,6)});
+    }
+    const petalGeometry=new THREE.BufferGeometry();
+    petalGeometry.setAttribute('position',new THREE.BufferAttribute(petalPositions,3));
+    const petalCanvas=document.createElement('canvas');petalCanvas.width=petalCanvas.height=16;
+    const petalCtx=petalCanvas.getContext('2d');petalCtx.fillStyle='#f6bccb';petalCtx.fillRect(4,3,8,9);petalCtx.fillRect(2,5,12,5);
+    const petalTexture=new THREE.CanvasTexture(petalCanvas);petalTexture.magFilter=petalTexture.minFilter=THREE.NearestFilter;
+    const petals=new THREE.Points(petalGeometry,new THREE.PointsMaterial({map:petalTexture,color:'#ffdae0',size:.2,transparent:true,alphaTest:.1,depthWrite:false}));
+    petals.frustumCulled=false;scene.add(petals);
+    const starGeometry=new THREE.BufferGeometry(),starPositions=[];
+    for(let i=0;i<350;i++) {
+      const angle=range(0,Math.PI*2),elevation=range(.1,1.4),r=140;
+      starPositions.push(Math.cos(angle)*Math.cos(elevation)*r,Math.sin(elevation)*r,Math.sin(angle)*Math.cos(elevation)*r);
+    }
+    starGeometry.setAttribute('position',new THREE.Float32BufferAttribute(starPositions,3));
+    const stars=new THREE.Points(starGeometry,new THREE.PointsMaterial({color:'#ecf3ee',size:.24,transparent:true,opacity:0,depthWrite:false}));
+    scene.add(stars);
+    const celestial=new THREE.Mesh(new THREE.BoxGeometry(5.5,5.5,1),new THREE.MeshBasicMaterial({color:'#fff0ba',fog:false}));
+    celestial.position.set(-72,42,-54);scene.add(celestial);
+    const halo=new THREE.Mesh(new THREE.PlaneGeometry(8,8),new THREE.MeshBasicMaterial({color:'#fff1c3',transparent:true,opacity:.12,depthWrite:false,fog:false}));
+    halo.position.copy(celestial.position);scene.add(halo);
+    [...guardians,...animals,...birds,...clouds,...koi].forEach(({group})=>compact(group));
+    flush();
+
+    const modes={
+      morning:{sky:'#c4d7c6',fog:'#c4d7c6',sun:'#fff0c8',intensity:3.2,skyLight:'#e8f0d5',ground:'#687a4b',ambient:2.3,exposure:1.2,position:[-35,65,25],celestial:[-72,42,-54],celestialColor:'#fff0ba',lantern:.7,paper:.3,time:'08:24 AM'},
+      sunset:{sky:'#dcb2a1',fog:'#d8b3a5',sun:'#ffb06a',intensity:2.7,skyLight:'#f4c5ad',ground:'#747060',ambient:1.7,exposure:1.05,position:[-65,23,15],celestial:[-72,28,-54],celestialColor:'#ffcf8b',lantern:2.8,paper:.7,time:'05:46 PM'},
+      night:{sky:'#182936',fog:'#213843',sun:'#adc4e8',intensity:1.1,skyLight:'#9eabc7',ground:'#374841',ambient:.85,exposure:1,position:[-30,65,-25],celestial:[-65,43,-68],celestialColor:'#e2e9d7',lantern:7,paper:1.3,time:'09:12 PM'}
+    };
+    let timeMode='morning', modeTransition=null;
+    function setTime(mode) {
+      const target=modes[mode]; timeMode=mode;
+      modeTransition={elapsed:0,start:{sky:scene.background.clone(),fog:scene.fog.color.clone(),sun:sun.color.clone(),intensity:sun.intensity,skyLight:hemisphere.color.clone(),ground:hemisphere.groundColor.clone(),ambient:hemisphere.intensity,exposure:renderer.toneMappingExposure,position:sun.position.clone(),celestial:celestial.position.clone(),celestialColor:celestial.material.color.clone(),lantern:materials.lantern.emissiveIntensity,paper:materials.paper.emissiveIntensity,stars:stars.material.opacity},target};
+      document.querySelectorAll('[data-time]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.time===mode)));
+      $('#time-label').textContent=target.time;
+      document.body.classList.toggle('night-ui',mode==='night');
+    }
+    document.querySelectorAll('[data-time]').forEach(button=>button.addEventListener('click',()=>setTime(button.dataset.time)));
+    const presets={
+      temple:{position:[69,50,84],target:[0,14,-8],tag:'The heart of the valley',title:'The Komorebi Sanctuary',description:'Ancient rooftops. Soft light. A thousand little details.'},
+      samurai:{position:[-6,5.5,26],target:[-12,1.9,17.4],tag:'Keepers of the quiet',title:'The Samurai Guardians',description:'Golden crests, lacquered armor, and a watchful stillness.'},
+      meadow:{position:[43,9,31],target:[28,1,15],tag:'Where the world slows down',title:'The Pastoral Meadow',description:'Soft wool, wandering hooves, and nowhere to be.'},
+      mountains:{position:[34,27,38],target:[-3,19,-42],tag:'Beyond the sanctuary',title:'The Sleeping Mountains',description:'Snow-capped peaks, drifting clouds, endless horizons.'},
+      overhead:{position:[15,89,48],target:[0,0,-5],tag:'A different perspective',title:'A World in Miniature',description:'Follow the paths. Find the pond. See how it all connects.'}
+    };
+    let currentView='temple', cameraTransition=null;
+    const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function setPanelOpen(open) {
+      $('#settings').classList.toggle('open',open);
+      $('#mobile-panel').setAttribute('aria-expanded',String(open));
+      $('#mobile-panel').setAttribute('aria-label',open?'Close sanctuary settings':'Open sanctuary settings');
+    }
+    function view(name,instant=false) {
+      const preset=presets[name];currentView=name;
+      const target=new THREE.Vector3(...preset.target),position=new THREE.Vector3(...preset.position);
+      if(innerWidth<=700) {
+        const distance=position.distanceTo(target);
+        const factor=Math.min(name==='temple'||name==='overhead'?1.4:1.2,controls.maxDistance/distance);
+        position.sub(target).multiplyScalar(factor).add(target);
+      }
+      if(instant || reducedMotion) {camera.position.copy(position);controls.target.copy(target);cameraTransition=null;}
+      else cameraTransition={elapsed:0,from:camera.position.clone(),fromTarget:controls.target.clone(),position,target};
+      document.querySelectorAll('[data-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.view===name)));
+      $('#scene-tag').textContent=preset.tag;$('#scene-title').textContent=preset.title;$('#scene-description').textContent=preset.description;
+      if(innerWidth<=700) setPanelOpen(false);
+    }
+    controls.addEventListener('start',()=>{cameraTransition=null;});
+    document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>view(button.dataset.view)));
+    $('#reset').addEventListener('click',()=>view('temple'));
+    addEventListener('keydown',event=>{
+      if(event.target instanceof HTMLButtonElement || event.target instanceof HTMLInputElement || event.ctrlKey || event.metaKey || event.altKey) return;
+      if('12345'.includes(event.key)) view(Object.keys(presets)[Number(event.key)-1]);
+      if(event.key.toLowerCase()==='r') view('temple');
+      if(event.key==='Escape') setPanelOpen(false);
+    });
+    $('#mobile-panel').addEventListener('click',()=>{
+      setPanelOpen(!$('#settings').classList.contains('open'));
+    });
+    let living=!reducedMotion;
+    $('#motion').setAttribute('aria-checked',String(living));
+    $('#motion').addEventListener('click',()=>{living=!living;$('#motion').setAttribute('aria-checked',String(living));});
+    $('#fullscreen').addEventListener('click',async()=>{
+      try {
+        if(document.fullscreenElement) await document.exitFullscreen();
+        else if(document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+        else toast('Fullscreen is not supported by this browser.');
+      } catch(error) {console.error('Fullscreen request failed:',error);toast('Fullscreen is unavailable in this preview.');}
+    });
+    document.addEventListener('fullscreenchange',()=>$('#fullscreen').setAttribute('aria-label',document.fullscreenElement?'Exit fullscreen':'Enter fullscreen'));
+
+    // All ambient sound is synthesized locally and starts only after a user gesture.
+    let audioContext=null, audioMaster=null, audioOn=false, chimeTimer=null, audioBusy=false;
+    function initAudio() {
+      const AudioContextClass=window.AudioContext || window.webkitAudioContext;
+      if(!AudioContextClass) throw new Error('Web Audio is unavailable in this browser.');
+      audioContext=new AudioContextClass();
+      audioMaster=audioContext.createGain();audioMaster.gain.value=0;audioMaster.connect(audioContext.destination);
+      const buffer=audioContext.createBuffer(1,audioContext.sampleRate*4,audioContext.sampleRate);
+      const data=buffer.getChannelData(0);
+      let brown=0;
+      for(let i=0;i<data.length;i++) {brown=(brown+(Math.random()*2-1)*.018)/1.02;data[i]=brown*3.5;}
+      const noise=audioContext.createBufferSource();noise.buffer=buffer;noise.loop=true;
+      const filter=audioContext.createBiquadFilter();filter.type='lowpass';filter.frequency.value=650;
+      const windGain=audioContext.createGain();windGain.gain.value=.22;
+      noise.connect(filter);filter.connect(windGain);windGain.connect(audioMaster);noise.start();
+      const breeze=audioContext.createOscillator(),breezeGain=audioContext.createGain();
+      breeze.frequency.value=.085;breezeGain.gain.value=.07;breeze.connect(breezeGain);breezeGain.connect(windGain.gain);breeze.start();
+    }
+    function scheduleChime() {
+      clearTimeout(chimeTimer);
+      chimeTimer=setTimeout(()=>{
+        if(!audioOn || document.hidden) {if(audioOn) scheduleChime();return;}
+        const root=[523.25,587.33,659.25,783.99,880][Math.floor(Math.random()*5)];
+        for(const [ratio,volume] of [[1,.08],[2.76,.02],[4.07,.008]]) {
+          const oscillator=audioContext.createOscillator(),gain=audioContext.createGain(),now=audioContext.currentTime;
+          oscillator.type='sine';oscillator.frequency.value=root*ratio;
+          gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(volume,now+.012);gain.gain.exponentialRampToValueAtTime(.0001,now+4.5);
+          oscillator.connect(gain);gain.connect(audioMaster);oscillator.start(now);oscillator.stop(now+4.7);
+          oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
+        }
+        scheduleChime();
+      },range(3800,8500));
+    }
+    $('#sound').addEventListener('click',async()=>{
+      if(audioBusy) return;
+      audioBusy=true;
+      try {
+        if(!audioContext) initAudio();
+        await audioContext.resume();audioOn=!audioOn;
+        audioMaster.gain.cancelScheduledValues(audioContext.currentTime);
+        audioMaster.gain.setTargetAtTime(audioOn?.65:0,audioContext.currentTime,.5);
+        $('#sound').setAttribute('aria-pressed',String(audioOn));
+        $('#sound').setAttribute('aria-label',audioOn?'Disable ambient wind and chimes':'Enable ambient wind and chimes');
+        $('.sound-text').textContent=audioOn?'Sound on':'Sound off';
+        if(audioOn) scheduleChime();else clearTimeout(chimeTimer);
+      } catch(error) {console.error('Ambient audio failed:',error);toast('Ambient audio is unavailable. Please try again in a supported browser.');}
+      finally {audioBusy=false;}
+    });
+    document.addEventListener('visibilitychange',()=>{
+      if(!audioContext) return;
+      audioMaster.gain.setTargetAtTime(audioOn&&!document.hidden?.65:0,audioContext.currentTime,.3);
+    });
+
+    const color=new THREE.Color(), clock=new THREE.Clock();
+    let worldTime=0, firstFrame=true;
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt=Math.min(clock.getDelta(),.05);
+      if(living) worldTime+=dt;
+      const t=worldTime;
+      if(modeTransition) {
+        const tr=modeTransition;tr.elapsed+=dt;
+        const alpha=Math.min(tr.elapsed/1.6,1),v=alpha*alpha*(3-2*alpha),s=tr.start,m=tr.target;
+        scene.background.copy(s.sky).lerp(color.set(m.sky),v);
+        scene.fog.color.copy(s.fog).lerp(color.set(m.fog),v);
+        sun.color.copy(s.sun).lerp(color.set(m.sun),v);
+        hemisphere.color.copy(s.skyLight).lerp(color.set(m.skyLight),v);
+        hemisphere.groundColor.copy(s.ground).lerp(color.set(m.ground),v);
+        sun.intensity=THREE.MathUtils.lerp(s.intensity,m.intensity,v);
+        hemisphere.intensity=THREE.MathUtils.lerp(s.ambient,m.ambient,v);
+        renderer.toneMappingExposure=THREE.MathUtils.lerp(s.exposure,m.exposure,v);
+        sun.position.copy(s.position).lerp(vec.set(...m.position),v);
+        celestial.position.copy(s.celestial).lerp(vec.set(...m.celestial),v);
+        celestial.material.color.copy(s.celestialColor).lerp(color.set(m.celestialColor),v);
+        materials.lantern.emissiveIntensity=THREE.MathUtils.lerp(s.lantern,m.lantern,v);
+        materials.paper.emissiveIntensity=THREE.MathUtils.lerp(s.paper,m.paper,v);
+        stars.material.opacity=THREE.MathUtils.lerp(s.stars,timeMode==='night'?.85:0,v);
+        for(const light of lanternLights) light.intensity=materials.lantern.emissiveIntensity*(light===innerLight?3:1.5);
+        if(alpha===1) modeTransition=null;
+      }
+      if(cameraTransition) {
+        const tr=cameraTransition;tr.elapsed+=dt;
+        const a=Math.min(tr.elapsed/1.8,1),v=a*a*(3-2*a);
+        camera.position.lerpVectors(tr.from,tr.position,v);
+        controls.target.lerpVectors(tr.fromTarget,tr.target,v);
+        if(a===1) cameraTransition=null;
+      }
+      guardians.forEach(({group,baseY,phase})=>{group.position.y=baseY+Math.sin(t*1.6+phase)*.022;group.rotation.z=Math.sin(t*.8+phase)*.005;});
+      animals.forEach(a=>{
+        const walking=Math.sin(t*.3+a.phase)>.1;
+        a.travel=(a.travel||0)+(living&&walking?dt*a.speed:0);
+        const angle=a.travel+a.phase;
+        const radius=1.4;
+        a.group.position.x=a.center.x+Math.sin(angle)*radius;
+        a.group.position.z=a.center.z+Math.cos(angle)*radius;
+        a.group.rotation.y=angle+Math.PI/2;
+        a.body.position.y=Math.sin(t*3+a.phase)*(walking?.025:.008);
+        a.head.rotation.x=walking?Math.sin(t*.7+a.phase)*.08:.35+Math.sin(t*2+a.phase)*.12;
+        a.legs.forEach((leg,i)=>{leg.rotation.x=walking?Math.sin(t*3+a.phase+(i%2)*Math.PI)*.18:0;});
+      });
+      birds.forEach(b=>{
+        const angle=t*b.speed+b.phase;
+        b.group.position.set(Math.cos(angle)*b.radius, b.height+Math.sin(angle*3)*1.2, Math.sin(angle)*b.radius-10);
+        b.group.rotation.y=-angle;
+        b.wings.forEach((wing,i)=>wing.rotation.z=Math.sin(t*6+b.phase)*.5*(i===0?1:-1));
+      });
+      clouds.forEach(c=>c.group.position.x=((c.x+t*c.speed+100)%200)-100);
+      for(let i=0;i<petalCount;i++) {
+        const p=petalData[i],h=p.tree.h+2;
+        petalPositions[i*3]=p.tree.x+p.x+Math.sin(t*.45+p.phase)*.8;
+        petalPositions[i*3+1]=.3+((p.height-t*p.speed)%h+h)%h;
+        petalPositions[i*3+2]=p.tree.z+p.z+Math.cos(t*.3+p.phase)*.7;
+      }
+      petalGeometry.attributes.position.needsUpdate=true;
+      ripples.forEach(({mesh,phase})=>{const v=(t*.22+phase)%1;mesh.scale.setScalar(.3+v*1.6);mesh.material.opacity=(1-v)*.3;});
+      koi.forEach(k=>{const a=t*k.speed+k.phase;k.group.position.set(12+Math.cos(a)*k.radius,-.025,8+Math.sin(a)*k.radius*.7);k.group.rotation.y=-a+Math.PI/2;});
+      celestial.lookAt(camera.position);halo.position.copy(celestial.position);halo.lookAt(camera.position);
+      controls.update();
+      renderer.render(scene,camera);
+      if(firstFrame) {
+        firstFrame=false;
+        $('#loading').classList.add('hidden');
+        setTimeout(()=>$('#loading').remove(),800);
+      }
+    }
+    let mobileLayout=innerWidth<=700;
+    function resize() {
+      camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth,innerHeight);
+      const nextMobile=innerWidth<=700;
+      if(nextMobile!==mobileLayout) {mobileLayout=nextMobile;view(currentView,true);}
+      if(innerWidth<=700) {$('#orbit-tip').textContent='Drag to orbit';$('#zoom-tip').textContent='Pinch to zoom';}
+      else {$('#orbit-tip').textContent='Drag to orbit';$('#zoom-tip').textContent='Scroll to zoom';}
+    }
+    addEventListener('resize',resize);
+    renderer.domElement.addEventListener('webglcontextlost',event=>{
+      event.preventDefault();toast('The 3D graphics context was interrupted. Reload to restore the sanctuary.');
+    });
+    // Read-only diagnostics make the standalone scene easy to verify without a build tool.
+    window.sanctuary={get state(){return {
+      timeMode,currentView,living,audioOn,worldTime,
+      transitioning:!!(cameraTransition||modeTransition),
+      cameraPosition:camera.position.toArray(),cameraTarget:controls.target.toArray(),
+      celestialScreenPosition:celestial.position.clone().project(camera).toArray(),
+      lighting:{sky:scene.background.getHexString(),sunIntensity:sun.intensity,lanternIntensity:materials.lantern.emissiveIntensity,stars:stars.material.opacity},
+      animals:animals.length,guardians:guardians.length,birds:birds.length,clouds:clouds.length,petals:petalCount,
+      textureSize:materials.grass.map.image.width,nearestFiltering:materials.grass.map.magFilter===THREE.NearestFilter,
+      drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles
+    };}};
+    resize();view('temple',true);animate();
+  </script>
+  <script>
+    window.addEventListener('error', event => {
+      const loading = document.getElementById('loading');
+      if (loading && (event.message || event.target?.tagName === 'SCRIPT')) {
+        loading.innerHTML = '<div class="brand-name">A moment of interruption.</div><p>Unable to load the sanctuary. Check your connection and reload.</p>';
+        console.error('Sanctuary loading error:', event.message || event.target.src);
+      }
+    }, true);
+  </script>
+</body>
+</html>

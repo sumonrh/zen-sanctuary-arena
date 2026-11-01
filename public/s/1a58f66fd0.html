@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#dce8df">
+  <title>Zen Sanctuary</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; overflow: hidden; background: #d7e8e4; color: #233d35; }
+    canvas { display: block; }
+    #scene { position: fixed; inset: 0; }
+    .glass { background: rgba(251, 252, 245, .76); border: 1px solid rgba(255,255,255,.82); box-shadow: 0 8px 32px rgba(37, 62, 52, .08); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+    .serif { font-family: Georgia, 'Times New Roman', serif; }
+    .caps { letter-spacing: .16em; text-transform: uppercase; }
+    .control { transition: background .2s, color .2s, box-shadow .2s, transform .2s; }
+    .control:hover { background: rgba(255,255,255,.85); }
+    .control:focus-visible { outline: 2px solid #547961; outline-offset: 3px; }
+    .time-button.active { background: #476d57; color: white; box-shadow: 0 3px 8px rgba(42,72,52,.2); }
+    .preset.active { background: #e4ede3; color: #2e5740; }
+    .preset:hover { transform: translateX(2px); }
+    .icon { width: 16px; height: 16px; flex: none; }
+    .top-title::before { content: ''; position: absolute; z-index: -1; inset: -18px -35px; background: radial-gradient(ellipse at 30% 35%, rgba(231,241,231,.85), rgba(231,241,231,0) 72%); filter: blur(8px); }
+    body.night .top-title::before { background: radial-gradient(ellipse at 30% 35%, rgba(31,49,49,.8), rgba(31,49,49,0) 72%); }
+    body.night .top-title { filter: drop-shadow(0 1px 5px rgba(0,0,0,.7)); }
+    body.night .top-title h1, body.night .top-title div, body.night .top-title p { color: #eef4e8; }
+    .loading { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: #e3ebe1; transition: opacity .6s; }
+    .loading.hidden { opacity: 0; pointer-events: none; }
+    .loading-dot { animation: pulse 1.2s ease-in-out infinite alternate; }
+    @keyframes pulse { to { opacity: .25; transform: scale(.8); } }
+    @media (max-width: 700px) {
+      .desktop-copy { display: none; }
+      .top-title { top: 16px !important; left: 16px !important; }
+      .time-panel { top: 16px !important; right: 16px !important; }
+      .explore-panel { left: 16px !important; bottom: 76px !important; width: 176px !important; padding: 12px !important; }
+      .explore-panel .preset { padding: 7px 8px; font-size: 11px; }
+      .bottom-panel { left: 16px !important; right: 16px !important; bottom: 16px !important; }
+      .mobile-hide { display: none; }
+      .time-button { padding: 8px !important; }
+      .time-label { display: none; }
+    }
+    @media (max-height: 580px) { .desktop-copy, .panel-caption, .bottom-description { display: none; } .explore-panel { bottom: 76px !important; } .preset { padding-top: 5px !important; padding-bottom: 5px !important; } }
+  </style>
+</head>
+<body>
+  <div id="scene" aria-label="Interactive voxel landscape of a Japanese sanctuary"></div>
+  <div id="loading" class="loading" role="status"><div class="text-center"><div class="loading-dot text-3xl text-[#63856d]">✳</div><p class="caps text-[10px] font-semibold mt-3 text-[#64806e]">Preparing your sanctuary</p></div></div>
+
+  <header class="top-title absolute top-7 left-8 pointer-events-none">
+    <div class="flex items-center gap-2 text-[#486a56]"><span class="text-lg leading-none">✳</span><span class="caps text-[10px] font-bold">A little world to wander</span></div>
+    <h1 class="serif text-[35px] sm:text-[43px] leading-none tracking-[-.04em] mt-2 text-[#29483a]">Komorebi<span class="text-[#bd795f]">.</span></h1>
+    <p class="desktop-copy text-[12px] text-[#627a6d] mt-2 tracking-wide">A quiet moment, somewhere in Japan.</p>
+  </header>
+
+  <section class="time-panel absolute top-7 right-8 glass rounded-2xl p-1.5 flex items-center gap-1" aria-label="Time of day">
+    <button class="time-button control active rounded-xl px-3 py-2 flex items-center gap-2 text-[11px] font-semibold" data-time="morning" aria-label="Morning Sun" aria-pressed="true" title="Morning Sun"><span class="text-base leading-none">☼</span><span class="time-label">Morning</span></button>
+    <button class="time-button control rounded-xl px-3 py-2 flex items-center gap-2 text-[11px] font-semibold text-[#667d70]" data-time="sunset" aria-label="Sunset" aria-pressed="false" title="Sunset"><span class="text-base leading-none">◒</span><span class="time-label">Sunset</span></button>
+    <button class="time-button control rounded-xl px-3 py-2 flex items-center gap-2 text-[11px] font-semibold text-[#667d70]" data-time="night" aria-label="Night" aria-pressed="false" title="Night"><span class="text-base leading-none">☾</span><span class="time-label">Night</span></button>
+  </section>
+
+  <aside class="explore-panel absolute left-8 bottom-[104px] w-[216px] glass rounded-[20px] p-4">
+    <div class="flex items-center justify-between px-1"><span class="caps text-[9px] font-bold text-[#789083]">Find your view</span><span class="text-[#91a99a] text-xs">✧</span></div>
+    <h2 class="serif text-[21px] leading-tight mt-2 px-1 text-[#31513f]">Explore the scene</h2>
+    <p class="panel-caption text-[10px] text-[#879b8c] px-1 mt-1 mb-3">Take the scenic route.</p>
+    <nav class="mt-2 space-y-0.5" aria-label="Camera views">
+      <button class="preset control active w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-2.5 text-[11px] font-semibold" data-view="pagoda"><span class="text-[#86a08b] w-4 text-center">⌂</span> Pagoda Front <span class="ml-auto opacity-50">↗</span></button>
+      <button class="preset control w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-2.5 text-[11px] font-semibold text-[#71877a]" data-view="samurai"><span class="text-[#a0b0a2] w-4 text-center">♙</span> Samurai Closeup <span class="ml-auto opacity-50">↗</span></button>
+      <button class="preset control w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-2.5 text-[11px] font-semibold text-[#71877a]" data-view="meadow"><span class="text-[#a0b0a2] w-4 text-center">✿</span> Pastoral Meadow <span class="ml-auto opacity-50">↗</span></button>
+      <button class="preset control w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-2.5 text-[11px] font-semibold text-[#71877a]" data-view="mountain"><span class="text-[#a0b0a2] w-4 text-center">△</span> Mountain Vista <span class="ml-auto opacity-50">↗</span></button>
+      <button class="preset control w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-2.5 text-[11px] font-semibold text-[#71877a]" data-view="aerial"><span class="text-[#a0b0a2] w-4 text-center">◇</span> Bird's Eye <span class="ml-auto opacity-50">↗</span></button>
+    </nav>
+  </aside>
+
+  <div class="bottom-panel absolute bottom-7 left-8 right-8 flex items-end justify-between pointer-events-none">
+    <div class="glass rounded-2xl px-4 py-3 flex items-center gap-3 pointer-events-auto">
+      <div class="w-9 h-9 rounded-xl bg-[#e6eee2] flex items-center justify-center text-[#668770] text-lg">⌁</div>
+      <div><p class="text-[11px] font-bold text-[#3d5d49]">A moment of stillness</p><p class="bottom-description text-[10px] text-[#8a9e90] mt-0.5">Drag to explore · Scroll to zoom</p></div>
+    </div>
+    <div class="flex items-center gap-3 pointer-events-auto">
+      <span class="mobile-hide text-[10px] font-medium text-[#718a7a]">Soundscape <span id="sound-status">off</span></span>
+      <button id="sound-toggle" class="control glass w-11 h-11 rounded-full flex items-center justify-center text-[#4c7059]" aria-label="Turn soundscape on" aria-pressed="false" title="Toggle soundscape">
+        <svg id="sound-icon" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m16 9 5 6m0-6-5 6"/></svg>
+      </button>
+    </div>
+  </div>
+  <div id="error" class="hidden absolute top-24 right-8 glass rounded-xl px-4 py-3 text-sm text-red-800" role="alert"></div>
+
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#d8e9e5');
+    scene.fog = new THREE.Fog('#d8e9e5', 115, 245);
+    const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 400);
+    camera.position.set(45, 37, 72);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    document.getElementById('scene').appendChild(renderer.domElement);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.055;
+    controls.target.set(0, 9, 0);
+    controls.minDistance = 8;
+    controls.maxDistance = 170;
+    controls.maxPolarAngle = Math.PI / 2.02;
+    controls.update();
+
+    let seed = 918273;
+    function random() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+    function range(a, b) { return a + random() * (b - a); }
+    function texture(base, variation = 15) {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 16;
+      const ctx = canvas.getContext('2d');
+      const color = new THREE.Color(base);
+      for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+        const n = Math.floor(range(-variation, variation));
+        ctx.fillStyle = `rgb(${Math.max(0, Math.min(255, color.r * 255 + n))},${Math.max(0, Math.min(255, color.g * 255 + n))},${Math.max(0, Math.min(255, color.b * 255 + n))})`;
+        ctx.fillRect(x, y, 1, 1);
+      }
+      const map = new THREE.CanvasTexture(canvas);
+      map.magFilter = THREE.NearestFilter;
+      map.minFilter = THREE.NearestFilter;
+      map.colorSpace = THREE.SRGBColorSpace;
+      return map;
+    }
+    const materials = {};
+    function material(name, color, options = {}) {
+      materials[name] = new THREE.MeshStandardMaterial({ color: 0xffffff, map: texture(color, options.variation ?? 12), roughness: options.roughness ?? 1, emissive: options.emissive || 0x000000, emissiveIntensity: options.emissiveIntensity || 0, transparent: options.transparent || false, opacity: options.opacity ?? 1 });
+      return materials[name];
+    }
+    material('grass', '#799d65'); material('grassLight', '#92ad75'); material('earth', '#817764');
+    material('stone', '#a8ad9e'); material('stoneDark', '#78857d'); material('snow', '#f4f4e8', { variation: 5 });
+    material('wood', '#503e32'); material('woodLight', '#806047'); material('roof', '#394b4b'); material('roofEdge', '#536561');
+    material('red', '#b9523c'); material('redDark', '#813e31'); material('gold', '#d4ae53');
+    material('paper', '#f5dca0', { emissive: 0xffc66b, emissiveIntensity: .28 });
+    material('water', '#72b6b1', { roughness: .48 }); material('waterLight', '#a9d8c8', { variation: 4 });
+    material('leaf', '#557c55'); material('leafLight', '#76995e'); material('bamboo', '#73994d'); material('bambooDark', '#526e3e');
+    material('pink', '#eeb6bb'); material('pinkLight', '#f8d3d0'); material('pinkDark', '#d98e9a');
+    material('white', '#f3eddf'); material('skin', '#d5a77f'); material('black', '#333f3a'); material('armor', '#465750'); material('armorRed', '#88483e');
+    material('cloud', '#f7f8ee', { variation: 3 }); material('lily', '#6d9d6d'); material('flower', '#f6dfc7');
+
+    const unitBox = new THREE.BoxGeometry(1, 1, 1);
+    const batches = new Map();
+    const matrix = new THREE.Matrix4();
+    const quat = new THREE.Quaternion();
+    const vec = new THREE.Vector3();
+    function box(x, y, z, w, h, d, mat) {
+      if (!batches.has(mat)) batches.set(mat, []);
+      matrix.compose(vec.set(x, y, z), quat, new THREE.Vector3(w, h, d));
+      batches.get(mat).push(matrix.clone());
+    }
+    function meshBox(parent, x, y, z, w, h, d, mat) {
+      const mesh = new THREE.Mesh(unitBox, materials[mat]);
+      mesh.position.set(x, y, z); mesh.scale.set(w, h, d);
+      mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh);
+      return mesh;
+    }
+    function finishBatches() {
+      for (const [name, matrices] of batches) {
+        const mesh = new THREE.InstancedMesh(unitBox, materials[name], matrices.length);
+        matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
+        mesh.castShadow = true; mesh.receiveShadow = true;
+        mesh.instanceMatrix.needsUpdate = true;
+        scene.add(mesh);
+      }
+    }
+    const hemi = new THREE.HemisphereLight(0xe4f3e8, 0x77836a, 2.0); scene.add(hemi);
+    const sun = new THREE.DirectionalLight(0xffefd7, 2.3);
+    sun.position.set(-45, 70, 30); sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -80; sun.shadow.camera.right = 80; sun.shadow.camera.top = 80; sun.shadow.camera.bottom = -80;
+    sun.shadow.camera.near = 1; sun.shadow.camera.far = 220; sun.shadow.bias = -0.0003;
+    scene.add(sun); scene.add(sun.target);
+    const celestial = new THREE.Mesh(new THREE.BoxGeometry(7, 7, 2), new THREE.MeshBasicMaterial({ color: 0xfff3cf }));
+    celestial.position.set(-70, 72, -110); scene.add(celestial);
+
+    // The island and its terraced mountain backdrop use larger voxels.
+    box(0, -4.5, 0, 164, 8, 130, 'earth');
+    box(0, -.35, 0, 164, .7, 130, 'grass');
+    for (let i = 0; i < 260; i++) {
+      const x = range(-79, 79), z = range(-62, 62);
+      if (Math.abs(x) < 22 && z > -26 && z < 44) continue;
+      box(x, .025, z, range(1, 4), .08, range(1, 4), random() > .5 ? 'grassLight' : 'grass');
+    }
+    const peaks = [
+      [-70, -58, 40, 30], [-43, -66, 31, 25], [-12, -72, 43, 34],
+      [24, -70, 34, 28], [54, -65, 48, 34], [83, -60, 33, 25]
+    ];
+    for (const [cx, cz, height, radius] of peaks) {
+      for (let x = -radius; x <= radius; x += 4) for (let z = -radius; z <= radius; z += 4) {
+        const dist = Math.sqrt((x / radius) ** 2 + (z / (radius * .8)) ** 2);
+        const h = Math.floor(Math.max(0, height * (1 - dist) + range(-2, 2)) / 4) * 4;
+        if (h < 4) continue;
+        for (let y = 2; y <= h; y += 4) box(cx + x, y, cz + z, 4, 4, 4, y > height * .65 ? 'snow' : (y > height * .38 ? 'stone' : 'stoneDark'));
+      }
+    }
+
+    // Pond, ripples and lily pads.
+    box(3, .08, 20, 32, .16, 20, 'water');
+    for (let i = 0; i < 42; i++) {
+      const x = range(-12, 18), z = range(11, 29);
+      if (Math.abs(x - 3) < 3) continue;
+      box(x, .18, z, range(.6, 2.3), .05, .12, 'waterLight');
+    }
+    for (let i = 0; i < 15; i++) {
+      const x = range(-11, 17), z = range(12, 28);
+      if (Math.abs(x - 3) < 3) continue;
+      box(x, .2, z, 1.1, .12, .8, 'lily');
+      if (random() > .55) box(x, .35, z, .35, .18, .35, 'pinkLight');
+    }
+    // Stepping stones lead from the gate to the bridge and temple.
+    for (let z = 32; z < 54; z += 3.2) box(3 + range(-.5, .5), .12, z, 2.6, .25, 1.8, 'stone');
+    for (let z = -1; z < 10; z += 2.6) box(3 + range(-.4, .4), .12, z, 2.6, .25, 1.7, 'stone');
+
+    function torii(x, z) {
+      for (const dx of [-5, 5]) {
+        box(x + dx, 5.3, z, 1.25, 10.6, 1.3, 'red');
+        box(x + dx, .35, z, 1.7, .7, 1.7, 'stoneDark');
+        box(x + dx, 8.6, z, 1.45, .55, 1.5, 'redDark');
+      }
+      box(x, 8.1, z, 12, .75, .9, 'red');
+      box(x, 10.3, z, 14, 1.1, 1.6, 'redDark');
+      box(x, 11, z, 15.5, .5, 1.8, 'red');
+      box(x - 7.6, 11.25, z, 1, .65, 1.9, 'redDark');
+      box(x + 7.6, 11.25, z, 1, .65, 1.9, 'redDark');
+      box(x, 8.9, z, 1.3, 1.7, .9, 'redDark');
+    }
+    torii(3, 40);
+    // The bridge is stepped into a gentle arch, with matching handrails.
+    for (let z = 9; z <= 31; z += 1) {
+      const arch = Math.max(0, 2.8 * (1 - ((z - 20) / 11) ** 2));
+      box(3, .45 + arch, z, 5.4, .6, 1.03, 'redDark');
+      box(3, .79 + arch, z, 5.3, .1, .9, 'woodLight');
+      for (const dx of [-2.7, 2.7]) {
+        box(3 + dx, 2.2 + arch, z, .3, .3, 1.05, 'red');
+        if (z % 3 === 0) box(3 + dx, 1.5 + arch, z, .35, 1.5, .35, 'red');
+      }
+    }
+
+    // Four pagoda storeys with layered, upturned eaves.
+    const templeZ = -13;
+    box(0, .5, templeZ, 22, 1, 20, 'stoneDark');
+    box(0, 1.1, templeZ, 20, .5, 18, 'stone');
+    const tiers = [{size: 17, y: 1.35, h: 5.2}, {size: 14, y: 8.3, h: 4.7}, {size: 11, y: 14.6, h: 4.2}, {size: 8, y: 20.3, h: 3.8}];
+    for (const tier of tiers) {
+      const {size, y, h} = tier;
+      box(0, y + h / 2, templeZ, size, h, size - 1, 'woodLight');
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(sx * (size / 2 - .5), y + h / 2, templeZ + sz * (size / 2 - 1), .8, h, .8, 'wood');
+      box(0, y + .25, templeZ, size + .4, .5, size, 'wood');
+      box(0, y + h - .3, templeZ, size + .5, .5, size, 'wood');
+      // Shoji windows on the front and sides.
+      for (let x = -size / 2 + 2; x < size / 2 - 1; x += 2.5) {
+        box(x, y + h * .53, templeZ + size / 2 - .48, 1.8, h * .62, .12, 'paper');
+        box(x, y + h * .53, templeZ + size / 2 - .38, .13, h * .62, .12, 'wood');
+        box(x, y + h * .53, templeZ + size / 2 - .37, 1.8, .13, .12, 'wood');
+      }
+      for (let z = -size / 2 + 2; z < size / 2 - 1; z += 2.5) {
+        for (const side of [-1, 1]) {
+          box(side * (size / 2 + .02), y + h * .53, templeZ + z, .12, h * .62, 1.8, 'paper');
+          box(side * (size / 2 + .1), y + h * .53, templeZ + z, .12, .13, 1.8, 'wood');
+        }
+      }
+      const roofY = y + h;
+      for (let layer = 0; layer < 4; layer++) box(0, roofY + layer * .45, templeZ, size + 4 - layer * 1.5, .5, size + 3 - layer * 1.5, layer === 0 ? 'roofEdge' : 'roof');
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+        box(sx * (size / 2 + 1.6), roofY + .45, templeZ + sz * (size / 2 + 1.1), 1.5, .55, 1.5, 'roof');
+        box(sx * (size / 2 + 2), roofY + .8, templeZ + sz * (size / 2 + 1.5), .8, .5, .8, 'roofEdge');
+      }
+    }
+    box(0, 26.4, templeZ, .55, 4.8, .55, 'gold');
+    for (let y = 25; y < 28.5; y += .65) box(0, y, templeZ, 1.6, .18, 1.6, 'gold');
+    box(0, 29, templeZ, .75, .75, .75, 'gold');
+    // Entrance steps.
+    for (let i = 0; i < 3; i++) box(0, .2 + i * .25, -2.2 - i * .65, 6 - i * .6, .4 + i * .5, 1.5, 'stone');
+
+    const lanternLights = [];
+    function lightAt(x, y, z, intensity, distance) {
+      const light = new THREE.PointLight(0xffb65d, intensity, distance, 2); light.position.set(x, y, z); scene.add(light); lanternLights.push({ light, intensity });
+    }
+    function stoneLantern(x, z) {
+      box(x, .25, z, 2.2, .5, 2.2, 'stoneDark');
+      box(x, 1.35, z, .8, 1.8, .8, 'stone');
+      box(x, 2.35, z, 1.7, .35, 1.7, 'stoneDark');
+      box(x, 3.05, z, 1.25, 1.2, 1.25, 'paper');
+      for (const dx of [-.65, .65]) for (const dz of [-.65, .65]) box(x + dx, 3.05, z + dz, .16, 1.25, .16, 'stoneDark');
+      box(x, 3.8, z, 2.1, .35, 2.1, 'stoneDark');
+      box(x, 4.15, z, 1.35, .35, 1.35, 'stone');
+      box(x, 4.45, z, .5, .35, .5, 'stoneDark');
+      lightAt(x, 3.1, z, 12, 14);
+    }
+    for (const [x, z] of [[-8, 5], [14, 5], [-7, 33], [13, 33], [-14, -3], [14, -3]]) stoneLantern(x, z);
+    for (const x of [-6.5, 6.5]) {
+      box(x, 6.9, -3.4, .2, 1.3, .2, 'wood');
+      box(x, 6.1, -3.4, .9, 1.2, .9, 'paper');
+      box(x, 6.75, -3.4, 1.1, .18, 1.1, 'redDark');
+      box(x, 5.45, -3.4, 1.1, .18, 1.1, 'redDark');
+      lightAt(x, 6.1, -3, 10, 12);
+    }
+
+    function tree(x, z, scale = 1) {
+      const h = 5 * scale;
+      box(x, h / 2, z, 1.25 * scale, h, 1.25 * scale, 'wood');
+      box(x - 1.2 * scale, h * .8, z, 2.8 * scale, .7 * scale, .7 * scale, 'wood');
+      box(x + 1.1 * scale, h * .9, z, 2.6 * scale, .7 * scale, .7 * scale, 'wood');
+      for (let i = 0; i < 20; i++) {
+        const dx = range(-3.4, 3.4) * scale, dz = range(-2.8, 2.8) * scale;
+        const dy = range(4.5, 7.5) * scale;
+        if ((dx / scale) ** 2 + (dz / scale) ** 2 > 13) continue;
+        box(x + dx, dy, z + dz, range(1.7, 3) * scale, range(1.2, 2.1) * scale, range(1.7, 3) * scale, ['pink', 'pinkLight', 'pinkDark'][Math.floor(random() * 3)]);
+      }
+    }
+    for (const [x, z, s] of [[-24,-13,1.3], [23,-20,1.25], [-27,13,1.1], [27,18,1.2], [-33,35,1], [37,-2,1.05], [17,-38,1]]) tree(x,z,s);
+    function bamboo(x, z, h) {
+      box(x, h / 2, z, .45, h, .45, 'bamboo');
+      for (let y = 1.5; y < h; y += 1.5) box(x, y, z, .58, .12, .58, 'bambooDark');
+      for (let i = 0; i < 3; i++) {
+        const side = i % 2 ? -1 : 1, y = h * (.55 + i * .16);
+        box(x + side * .8, y, z, 1.6, .18, .18, 'bambooDark');
+        box(x + side * 1.4, y + .25, z, 1.3, .55, .4, 'leafLight');
+      }
+    }
+    for (let i = 0; i < 46; i++) {
+      const x = (i < 25 ? -1 : 1) * range(36, 54), z = range(-28, 22);
+      bamboo(x, z, range(6, 12));
+    }
+    for (let i = 0; i < 38; i++) {
+      const x = range(-70, 70), z = range(-40, 55);
+      if (Math.abs(x) < 20 && z > -25 && z < 45) continue;
+      box(x, .55, z, range(1.5, 3), 1.1, range(1.5, 3), random() > .5 ? 'leaf' : 'leafLight');
+      if (random() > .55) box(x + .4, 1.2, z, .3, .3, .3, 'flower');
+    }
+    finishBatches();
+
+    function samurai(x, z, facing = 0) {
+      const root = new THREE.Group(); root.position.set(x, 0, z); root.rotation.y = facing; scene.add(root);
+      const body = new THREE.Group(); body.position.y = 2; root.add(body);
+      meshBox(body, 0, .25, 0, 1.5, 1.75, .85, 'armor');
+      for (let y = -.35; y < .9; y += .35) meshBox(body, 0, y, .46, 1.45, .12, .08, 'armorRed');
+      meshBox(body, 0, -.95, 0, 1.75, .65, 1, 'armorRed');
+      for (const side of [-1, 1]) {
+        meshBox(root, side * .42, .65, 0, .6, 1.3, .65, 'armor');
+        meshBox(root, side * .42, .16, .15, .65, .3, .9, 'black');
+        meshBox(body, side * 1.05, .45, 0, .65, 1.05, .95, 'armorRed');
+        meshBox(body, side * 1.05, -.2, 0, .45, .85, .55, 'armor');
+        meshBox(body, side * 1.05, -.68, .03, .4, .35, .45, 'skin');
+        for (let y = .2; y < .85; y += .3) meshBox(body, side * 1.05, y, .5, .7, .1, .08, 'gold');
+      }
+      meshBox(body, 0, 1.57, .05, .85, .8, .75, 'skin');
+      meshBox(body, 0, 1.37, .44, .75, .24, .12, 'black');
+      meshBox(body, 0, 2.03, 0, 1.15, .45, 1, 'black');
+      meshBox(body, 0, 2.3, 0, .9, .25, .85, 'armorRed');
+      meshBox(body, 0, 1.85, .58, 1.35, .15, .3, 'black');
+      meshBox(body, 0, 2.52, .58, .18, .6, .15, 'gold');
+      meshBox(body, -.35, 2.7, .58, .18, .42, .15, 'gold');
+      meshBox(body, .35, 2.7, .58, .18, .42, .15, 'gold');
+      meshBox(body, 0, 2.83, .58, .55, .15, .15, 'gold');
+      const sword = meshBox(root, -1.05, 1.35, -.45, .2, 2.4, .25, 'black'); sword.rotation.z = -.45;
+      const handle = meshBox(root, -.55, 2.48, -.45, .18, .65, .22, 'wood'); handle.rotation.z = -.45;
+      meshBox(root, -.72, 2.18, -.45, .48, .12, .3, 'gold');
+      return { root, body, phase: range(0, 6) };
+    }
+    const samurais = [samurai(-6, 1, -.1), samurai(9, 1, .1)];
+
+    function animal(type, x, z) {
+      const root = new THREE.Group(); scene.add(root);
+      const body = new THREE.Group(); root.add(body);
+      const alpaca = type === 'alpaca';
+      meshBox(body, 0, 1.15, 0, alpaca ? 1.3 : 1.5, 1.2, 2.1, 'white');
+      if (!alpaca) for (let i = 0; i < 12; i++) meshBox(body, range(-.75, .75), range(.8, 1.9), range(-1, 1), .55, .55, .55, 'snow');
+      for (const dx of [-.45, .45]) for (const dz of [-.7, .7]) meshBox(body, dx, .4, dz, .32, .8, .35, alpaca ? 'white' : 'stoneDark');
+      const head = new THREE.Group(); head.position.set(0, alpaca ? 1.8 : 1.45, .95); body.add(head);
+      if (alpaca) meshBox(head, 0, .35, 0, .7, 1.5, .7, 'white');
+      meshBox(head, 0, alpaca ? 1.05 : .25, .25, .8, .7, .8, alpaca ? 'white' : 'skin');
+      for (const dx of [-.28, .28]) {
+        meshBox(head, dx, alpaca ? 1.68 : .67, .18, .17, alpaca ? .55 : .25, .2, 'white');
+        meshBox(head, dx, alpaca ? 1.1 : .3, .67, .1, .1, .08, 'black');
+      }
+      return { root, body, head, x, z, phase: range(0, 6), speed: range(.15, .3), alpaca };
+    }
+    const animals = [animal('sheep', -37, 23), animal('sheep', -43, 31), animal('sheep', -32, 34), animal('alpaca', -48, 18), animal('alpaca', -38, 12), animal('sheep', 35, 31)];
+    const birds = [];
+    for (let i = 0; i < 11; i++) {
+      const root = new THREE.Group(); scene.add(root);
+      meshBox(root, 0, 0, 0, .65, .3, 1, 'black');
+      const left = meshBox(root, -.6, 0, 0, 1, .13, .4, 'black');
+      const right = meshBox(root, .6, 0, 0, 1, .13, .4, 'black');
+      birds.push({root, left, right, phase: i * .7, radius: 25 + i * 1.2, height: 38 + i * .6});
+    }
+    const clouds = [];
+    for (let i = 0; i < 8; i++) {
+      const cloud = new THREE.Group();
+      const count = 4 + Math.floor(random() * 4);
+      for (let j = 0; j < count; j++) meshBox(cloud, j * 2.5, range(-.3, .6), range(-1, 1), range(3, 5), range(1.4, 2.5), range(2.5, 4), 'cloud');
+      cloud.position.set(range(-85, 85), range(43, 61), range(-85, -35));
+      scene.add(cloud); clouds.push({ mesh: cloud, speed: range(.35, .8) });
+    }
+    const petalGeometry = new THREE.BoxGeometry(.22, .08, .22);
+    const petals = new THREE.InstancedMesh(petalGeometry, materials.pinkLight, 120);
+    const petalData = Array.from({length: 120}, () => ({ x: range(-37, 37), y: range(.5, 15), z: range(-25, 38), speed: range(.4, 1), phase: range(0, 6) }));
+    scene.add(petals);
+
+    const views = {
+      pagoda: { position: [45, 37, 72], target: [0, 9, 0] },
+      samurai: { position: [-2, 6, 11], target: [-6, 2.4, 1] },
+      meadow: { position: [-50, 12, 46], target: [-38, 2, 22] },
+      mountain: { position: [65, 44, 75], target: [0, 20, -35] },
+      aerial: { position: [3, 105, 35], target: [0, 0, 0] }
+    };
+    let destination = null;
+    document.querySelectorAll('.preset').forEach(button => button.addEventListener('click', () => {
+      const view = views[button.dataset.view];
+      destination = { position: new THREE.Vector3(...view.position), target: new THREE.Vector3(...view.target) };
+      document.querySelectorAll('.preset').forEach(b => b.classList.toggle('active', b === button));
+    }));
+    controls.addEventListener('start', () => { destination = null; });
+
+    const modes = {
+      morning: { sky: '#d8e9e5', sun: '#ffefd7', hemi: '#e4f3e8', intensity: 2.3, ambient: 2, position: [-45,70,30], celestial: '#fff3cf', lantern: .35, exposure: 1.1 },
+      sunset: { sky: '#e9b5a0', sun: '#ffae79', hemi: '#f5c5a5', intensity: 2, ambient: 1.3, position: [-70,30,10], celestial: '#ffd0a1', lantern: .8, exposure: 1 },
+      night: { sky: '#253949', sun: '#a4bfda', hemi: '#9ab5cb', intensity: .65, ambient: .65, position: [-45,60,10], celestial: '#e1eff0', lantern: 3, exposure: .85 }
+    };
+    function setTime(name) {
+      const mode = modes[name];
+      document.body.classList.toggle('night', name === 'night');
+      scene.background.set(mode.sky); scene.fog.color.set(mode.sky);
+      sun.color.set(mode.sun); sun.intensity = mode.intensity; sun.position.set(...mode.position);
+      hemi.color.set(mode.hemi); hemi.intensity = mode.ambient;
+      celestial.material.color.set(mode.celestial);
+      celestial.position.set(mode.position[0] * 1.5, mode.position[1] * 1.1, -110);
+      materials.paper.emissiveIntensity = name === 'night' ? 1.2 : name === 'sunset' ? .65 : .28;
+      lanternLights.forEach(({light, intensity}) => { light.intensity = intensity * mode.lantern; });
+      renderer.toneMappingExposure = mode.exposure;
+      document.querySelectorAll('.time-button').forEach(button => {
+        const active = button.dataset.time === name;
+        button.classList.toggle('active', active); button.setAttribute('aria-pressed', String(active));
+      });
+    }
+    document.querySelectorAll('.time-button').forEach(button => button.addEventListener('click', () => setTime(button.dataset.time)));
+    setTime('morning');
+
+    let audioContext, windGain, chimeTimer;
+    const soundButton = document.getElementById('sound-toggle');
+    function chime() {
+      if (!audioContext || audioContext.state !== 'running') return;
+      const now = audioContext.currentTime;
+      const frequency = [523.25, 659.25, 783.99, 880, 1046.5][Math.floor(Math.random() * 5)];
+      const oscillator = audioContext.createOscillator(), gain = audioContext.createGain();
+      oscillator.type = 'sine'; oscillator.frequency.value = frequency;
+      gain.gain.setValueAtTime(.0001, now); gain.gain.exponentialRampToValueAtTime(.025, now + .03); gain.gain.exponentialRampToValueAtTime(.0001, now + 3);
+      oscillator.connect(gain).connect(audioContext.destination); oscillator.start(now); oscillator.stop(now + 3.1);
+      chimeTimer = setTimeout(chime, 4500 + Math.random() * 9000);
+    }
+    async function toggleSound() {
+      try {
+        if (!audioContext) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContext) throw new Error('Your browser does not support Web Audio.');
+          audioContext = new AudioContext();
+          const buffer = audioContext.createBuffer(1, audioContext.sampleRate * 3, audioContext.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+          const noise = audioContext.createBufferSource(); noise.buffer = buffer; noise.loop = true;
+          const filter = audioContext.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 350;
+          windGain = audioContext.createGain(); windGain.gain.value = .025;
+          noise.connect(filter).connect(windGain).connect(audioContext.destination); noise.start();
+        }
+        if (audioContext.state === 'running' && soundButton.getAttribute('aria-pressed') === 'true') {
+          await audioContext.suspend(); clearTimeout(chimeTimer);
+          soundButton.setAttribute('aria-pressed', 'false'); soundButton.setAttribute('aria-label', 'Turn soundscape on');
+          document.getElementById('sound-status').textContent = 'off';
+          document.getElementById('sound-icon').innerHTML = '<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m16 9 5 6m0-6-5 6"/>';
+        } else {
+          await audioContext.resume(); chime();
+          soundButton.setAttribute('aria-pressed', 'true'); soundButton.setAttribute('aria-label', 'Turn soundscape off');
+          document.getElementById('sound-status').textContent = 'on';
+          document.getElementById('sound-icon').innerHTML = '<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15 9a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/>';
+        }
+      } catch (error) {
+        const notice = document.getElementById('error'); notice.textContent = `Soundscape unavailable: ${error.message}`; notice.classList.remove('hidden');
+      }
+    }
+    soundButton.addEventListener('click', toggleSound);
+
+    window.addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+    });
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = Math.min(clock.getDelta(), .05), t = clock.elapsedTime;
+      if (destination) {
+        const amount = 1 - Math.exp(-3 * delta);
+        camera.position.lerp(destination.position, amount); controls.target.lerp(destination.target, amount);
+        if (camera.position.distanceTo(destination.position) < .05 && controls.target.distanceTo(destination.target) < .05) destination = null;
+      }
+      controls.update();
+      samurais.forEach(s => { s.body.scale.y = 1 + Math.sin(t * 1.4 + s.phase) * .015; });
+      animals.forEach(a => {
+        const angle = t * a.speed + a.phase;
+        a.root.position.set(a.x + Math.sin(angle) * 3, 0, a.z + Math.cos(angle * .8) * 2);
+        a.root.rotation.y = Math.atan2(Math.cos(angle) * 3, -Math.sin(angle * .8) * 1.6);
+        a.body.position.y = Math.abs(Math.sin(t * 3 + a.phase)) * .06;
+        a.head.rotation.x = Math.max(0, Math.sin(t * .55 + a.phase)) * (a.alpaca ? .22 : .5);
+      });
+      birds.forEach(b => {
+        const angle = t * .12 + b.phase;
+        b.root.position.set(Math.cos(angle) * b.radius, b.height + Math.sin(t + b.phase) * .6, -25 + Math.sin(angle) * b.radius * .55);
+        b.root.rotation.y = -angle;
+        b.left.rotation.z = Math.sin(t * 7 + b.phase) * .5; b.right.rotation.z = -b.left.rotation.z;
+      });
+      clouds.forEach(c => { c.mesh.position.x += c.speed * delta; if (c.mesh.position.x > 110) c.mesh.position.x = -110; });
+      petalData.forEach((p, i) => {
+        p.y -= p.speed * delta; if (p.y < .1) p.y = 14;
+        matrix.makeTranslation(p.x + Math.sin(t * .8 + p.phase) * 1.5, p.y, p.z + Math.cos(t * .5 + p.phase));
+        petals.setMatrixAt(i, matrix);
+      });
+      petals.instanceMatrix.needsUpdate = true;
+      renderer.render(scene, camera);
+    }
+    animate();
+    document.getElementById('loading').classList.add('hidden');
+  </script>
+  <script>
+    window.addEventListener('error', function (event) {
+      const loading = document.getElementById('loading');
+      if (loading && !loading.classList.contains('hidden')) {
+        loading.innerHTML = '<div class="text-center px-6"><p class="serif text-2xl">The sanctuary could not load.</p><p class="text-sm mt-2">Please check your connection and WebGL support, then refresh.</p></div>';
+      }
+    });
+  </script>
+</body>
+</html>

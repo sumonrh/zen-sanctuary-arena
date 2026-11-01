@@ -1,0 +1,5 @@
+private/
+*.xlsx
+firebase-debug.log
+.firebase/
+node_modules/

@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#142b28">
+  <title>Komorebi — A Voxel Sanctuary</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+    *{box-sizing:border-box}body{margin:0;background:#adc5bc;font-family:'DM Sans',sans-serif;color:#fff;overflow:hidden}canvas{display:block}button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid #e6c68a;outline-offset:4px}.glass{background:rgba(19,39,35,.76);border:1px solid #ffffff21;backdrop-filter:blur(20px);box-shadow:0 8px 36px #10282118}.label{font-size:10px;letter-spacing:2.3px;text-transform:uppercase;color:#b7c8be}.serif{font-family:Georgia,serif}.icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.mode,.view{border:1px solid transparent;transition:all .2s}.mode:hover,.view:hover{background:#ffffff10}.mode.active{background:#e4c48c;color:#223831;box-shadow:0 3px 12px #0002}.view.active{background:#ffffff0d;border-color:#e4c48c66;color:#edcf96}.view.active .dot{background:#e4c48c;box-shadow:0 0 10px #e4c48c44}.dot{width:5px;height:5px;border-radius:50%;background:#728c7e}.separator{height:1px;background:#ffffff14}#scene{position:absolute;inset:0}#loading{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:#182f29;transition:opacity .6s}#loading.hidden{opacity:0;pointer-events:none}.range{accent-color:#e4c48c;width:100%}#toast{opacity:0;transition:opacity .3s;pointer-events:none}#toast.show{opacity:1}#panel{transition:opacity .25s,transform .25s}body.clean #panel,body.clean #header,body.clean #footer{opacity:0;pointer-events:none}#restore{display:none}body.clean #restore{display:block}@media(max-width:640px){#panel{width:calc(100% - 32px);bottom:70px;top:auto;right:16px;padding:16px}#views{display:grid;grid-template-columns:repeat(2,1fr);gap:2px}#panel .desktop-only{display:none}#header{top:22px;left:22px}#intro{display:none}#footer{left:20px;right:20px;bottom:22px}.view{padding:7px!important;font-size:11px!important}#panel h2{font-size:16px}#panel .section-gap{margin-top:16px}#audio-section{margin-top:14px}#header h1{font-size:23px}}
+  </style>
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+</head>
+<body>
+  <div id="scene" aria-label="Interactive 3D Japanese voxel sanctuary"></div>
+  <div id="loading"><div class="text-center"><div class="serif text-5xl text-[#e4c48c] mb-5">木漏れ日</div><div class="label">Growing your sanctuary</div><div id="load-message" class="text-xs text-white/40 mt-4">A quiet moment is on its way…</div></div></div>
+  <header id="header" class="absolute left-9 top-8 pointer-events-none">
+    <div class="flex items-center gap-3 mb-4"><span class="w-8 h-8 border border-white/40 rounded-full flex items-center justify-center serif text-lg">木</span><span class="label !text-white/80 !tracking-[3px]">A little world, a little peace</span></div>
+    <h1 class="text-[32px] tracking-[-1px] font-semibold leading-none" style="font-family:Manrope">komorebi<span class="text-[#e4c48c]">.</span></h1>
+    <p class="text-xs text-white/70 mt-3 tracking-wide">The sanctuary in the mountains</p>
+  </header>
+  <div id="intro" class="absolute left-9 bottom-28 pointer-events-none">
+    <div class="label !text-white/70 mb-3 flex items-center gap-2"><span class="w-5 h-px bg-[#e4c48c]"></span> Find your stillness</div>
+    <p class="serif text-[34px] leading-[1.22] text-white/95">Where the world<br>slows down.</p>
+    <p class="text-xs text-white/60 mt-4 leading-relaxed">Wander among blossoms. Listen to the wind.<br>Stay for a little while.</p>
+  </div>
+  <aside id="panel" class="glass rounded-2xl absolute right-7 top-7 w-[272px] p-6">
+    <div class="flex justify-between items-start"><div><div class="label mb-2">Your sanctuary</div><h2 class="text-lg font-medium tracking-tight">Make this moment yours</h2></div><span class="text-[#e4c48c] text-xl">✧</span></div>
+    <div class="separator mt-5 desktop-only"></div>
+    <section class="section-gap mt-5">
+      <div class="label mb-3">Time of day</div>
+      <div class="flex bg-black/15 rounded-lg p-1 gap-1">
+        <button data-mode="morning" class="mode active flex-1 rounded-md py-2 text-[11px]">☀ Morning</button>
+        <button data-mode="sunset" class="mode flex-1 rounded-md py-2 text-[11px]">◒ Sunset</button>
+        <button data-mode="night" class="mode flex-1 rounded-md py-2 text-[11px]">☾ Night</button>
+      </div>
+    </section>
+    <section class="section-gap mt-6">
+      <div class="label mb-3">A different perspective</div>
+      <div id="views" class="space-y-1">
+        <button data-view="front" class="view active w-full flex items-center gap-3 text-xs text-white/70 rounded-lg px-3 py-3"><span class="dot"></span>Pagoda front<span class="ml-auto text-[10px] opacity-40">01</span></button>
+        <button data-view="samurai" class="view w-full flex items-center gap-3 text-xs text-white/70 rounded-lg px-3 py-3"><span class="dot"></span>Samurai closeup<span class="ml-auto text-[10px] opacity-40">02</span></button>
+        <button data-view="meadow" class="view w-full flex items-center gap-3 text-xs text-white/70 rounded-lg px-3 py-3"><span class="dot"></span>Pastoral meadow<span class="ml-auto text-[10px] opacity-40">03</span></button>
+        <button data-view="mountain" class="view w-full flex items-center gap-3 text-xs text-white/70 rounded-lg px-3 py-3"><span class="dot"></span>Mountain vista<span class="ml-auto text-[10px] opacity-40">04</span></button>
+        <button data-view="aerial" class="view w-full flex items-center gap-3 text-xs text-white/70 rounded-lg px-3 py-3"><span class="dot"></span>Bird’s eye<span class="ml-auto text-[10px] opacity-40">05</span></button>
+      </div>
+    </section>
+    <div class="separator mt-5 desktop-only"></div>
+    <section id="audio-section" class="mt-5">
+      <div class="flex items-center justify-between"><div class="flex gap-3 items-center"><svg class="icon text-[#e4c48c]" viewBox="0 0 24 24"><path d="M11 4 5 9H2v6h3l6 5Z M15 8q5 4 0 8 M18 5q8 7 0 14"/></svg><div><div class="text-xs">Sounds of stillness</div><div class="text-[10px] text-white/40 mt-1">Wind & gentle chimes</div></div></div><button id="audio" role="switch" aria-checked="false" aria-label="Toggle ambient audio" class="w-9 h-5 rounded-full bg-white/15 p-[3px] transition-colors"><span id="audio-dot" class="block w-[14px] h-[14px] rounded-full bg-white/70 transition-transform"></span></button></div>
+      <div id="volume-wrap" class="hidden mt-3"><label class="label !text-[8px]" for="volume">Ambient volume</label><input id="volume" class="range" type="range" min="0" max="100" value="35"></div>
+    </section>
+    <button id="hide-ui" class="desktop-only w-full mt-6 text-[10px] text-white/40 hover:text-white/80 flex gap-2 items-center justify-center"><svg class="icon !w-3 !h-3" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg>Hide interface · H</button>
+  </aside>
+  <footer id="footer" class="absolute left-9 right-9 bottom-7 flex items-center justify-between text-[10px] text-white/65">
+    <div class="flex items-center gap-5"><span class="flex items-center gap-2"><svg class="icon !w-3.5 !h-3.5" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="6"/><path d="M12 3v6"/></svg>Drag to explore</span><span class="flex items-center gap-2"><span class="text-base">↕</span>Scroll to wander</span></div>
+    <div class="flex gap-2 items-center"><span class="w-1.5 h-1.5 rounded-full bg-[#d0dca6]"></span><span id="time-label">Morning calm</span><span class="desktop-only ml-3 text-white/30">35° 00′ N · 135° 46′ E</span></div>
+  </footer>
+  <button id="restore" class="glass absolute top-5 right-5 rounded-lg px-4 py-2 text-xs">Show interface · H</button>
+  <div id="toast" role="status" class="glass absolute bottom-20 left-1/2 -translate-x-1/2 rounded-lg px-5 py-3 text-xs"></div>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const scene=new THREE.Scene();
+    const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+    renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
+    renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
+    document.querySelector('#scene').appendChild(renderer.domElement);
+    const camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.1,550);
+    const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.055;controls.maxPolarAngle=Math.PI*.475;controls.minDistance=5;controls.maxDistance=220;controls.target.set(0,9,0);
+    const geometry=new THREE.BoxGeometry(1,1,1), materials={}, batches=new Map();
+    let seed=8321;function random(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}function rand(a,b){return a+random()*(b-a)}
+    function material(name,color,emissive=false){
+      const canvas=document.createElement('canvas');canvas.width=canvas.height=16;const ctx=canvas.getContext('2d');const base=new THREE.Color(color);
+      for(let y=0;y<16;y++)for(let x=0;x<16;x++){const c=base.clone().multiplyScalar(rand(.84,1.13));ctx.fillStyle='#'+c.getHexString();ctx.fillRect(x,y,1,1)}
+      const tex=new THREE.CanvasTexture(canvas);tex.magFilter=tex.minFilter=THREE.NearestFilter;tex.colorSpace=THREE.SRGBColorSpace;
+      materials[name]=new THREE.MeshStandardMaterial({map:tex,roughness:.95,...(emissive?{emissive:color,emissiveIntensity:.7}:{})});return name;
+    }
+    [['grass','#759658'],['grass2','#859d60'],['earth','#6c6650'],['rock','#84918b'],['snow','#e2e9db'],['wood','#463b32'],['red','#b74836'],['roof','#344c48'],['gold','#c8a357'],['paper','#f7cd80',true],['stone','#a4a99a'],['pink','#e3a8b3'],['pink2','#efc5c6'],['bamboo','#6e944e'],['leaf','#477653'],['wool','#eee9d6'],['skin','#d7ae84'],['armor','#35484d'],['black','#282e2b'],['water','#74afaa'],['lily','#4b8860']].forEach(x=>material(...x));
+    function block(type,x,y,z,sx=1,sy=1,sz=1,parent=null){
+      if(parent){const m=new THREE.Mesh(geometry,materials[type]);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
+      if(!batches.has(type))batches.set(type,[]);batches.get(type).push([x,y,z,sx,sy,sz]);
+    }
+    const ambient=new THREE.HemisphereLight(0xe2efe1,0x74875e,2.3);scene.add(ambient);
+    const sun=new THREE.DirectionalLight(0xffe5bb,3.2);sun.position.set(-55,85,40);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-65,right:65,top:65,bottom:-65,near:1,far:220});sun.shadow.normalBias=.06;sun.shadow.bias=-.00015;scene.add(sun);
+    const celestial=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:0xffecc2}));celestial.scale.set(9,9,3);scene.add(celestial);
+    const lights=[];function lantern(x,y,z,hanging=false){
+      block('stone',x,.25,z,1.2,.5,1.2);if(!hanging){block('stone',x,y/2,z,.45,y,.45);block('stone',x,y-.3,z,1.3,.25,1.3)}
+      block('paper',x,y+.3,z,.7,.85,.7);block(hanging?'wood':'roof',x,y+.9,z,1.3,.25,1.3);block('wood',x,y+.3,z,.12,1,.85);block('wood',x,y+.3,z,.85,1,.12);
+      const l=new THREE.PointLight(0xffb85b,.7,12,2);l.position.set(x,y+.4,z);scene.add(l);lights.push(l);
+    }
+    // Coarse terrain transitions into one-unit architecture and quarter-unit details.
+    for(let x=-58;x<=58;x+=2)for(let z=-48;z<=48;z+=2){const edge=Math.max(Math.abs(x)/59,Math.abs(z)/49);const h=edge>.87?rand(1,3):.5;block(random()>.4?'grass':'grass2',x,-h/2,z,2,h,2);if(edge>.93)block('earth',x,-3,z,2,5,2)}
+    for(let i=0;i<13;i++){const mx=-91+i*15,mz=-68-rand(0,21),height=rand(27,57),radius=rand(16,26);
+      for(let x=-radius;x<=radius;x+=4)for(let z=-radius;z<=radius;z+=4){const d=Math.sqrt(x*x+z*z*.8);const h=Math.floor((height*(1-d/radius)+rand(-3,3))/4)*4;if(h>0){for(let y=2;y<=h;y+=4)block(y>height*.67?'snow':'rock',mx+x,y-2,mz+z,4,4,4)}}
+    }
+    // Terrace and ceremonial approach.
+    block('stone',0,.6,-6,22,1.2,20);block('stone',0,1.3,-6,20,.25,18);
+    for(let s=0;s<4;s++)block('stone',0,.2+s*.28,5+s*.8,8,.35,1);
+    for(let z=10;z<43;z+=2)for(let x=-2;x<=2;x+=2)block('stone',x,.13,z,1.8,.25,1.7);
+    for(let i=0;i<19;i++)block('stone',13+i*1.8,.14,12+Math.sin(i*.6)*3,1.35,.28,1.1);
+    // Pagoda: structural beams, latticed shoji, stepped tiled roofs with lifted corners.
+    function roof(y,width,depth){
+      for(let layer=0;layer<5;layer++){const w=width-layer*2,d=depth-layer*2;block('roof',0,y+layer*.55,-6,w,.65,d);block('wood',0,y+layer*.55-.3,-6,w,.16,d)}
+      for(const sx of [-1,1])for(const sz of [-1,1])for(let k=0;k<3;k++)block('roof',sx*(width/2-.7+k*.3),y+.25+k*.4,-6+sz*(depth/2-.7+k*.3),1.4,.45,1.4);
+      for(let x=-width/2+.5;x<width/2;x++)block('roof',x,y+.4,-6+depth/2-.15,.12,.2,.5);
+    }
+    for(let tier=0;tier<3;tier++){const w=14-tier*3,d=12-tier*2,y=1.5+tier*6;
+      block('wood',0,y,-6,w+1,.6,d+1);
+      for(const x of [-w/2,w/2])for(const z of [-6-d/2,-6+d/2])block('wood',x,y+2.5,z,.65,5,.65);
+      for(const z of [-6-d/2,-6+d/2]){block('wood',0,y+4.6,z,w,.6,.5);for(let x=-w/2+1;x<w/2;x+=2){if(tier===0&&Math.abs(x)<2&&z>-6)continue;block('paper',x,y+2.3,z,1.65,3.5,.2);for(let q=0;q<4;q++)block('wood',x-.8+q*.5,y+2.3,z+.13,.07,3.5,.08);for(let q=0;q<5;q++)block('wood',x,y+.6+q*.8,z+.14,1.65,.07,.08)}}
+      for(const x of [-w/2,w/2]){block('paper',x,y+2.3,-6,.2,3.5,d-1);for(let z=-6-d/2;z<=-6+d/2;z++)block('wood',x+.13,y+2.3,z,.08,3.5,.08)}
+      if(tier>0){for(const z of [-6-d/2-.7,-6+d/2+.7]){block('red',0,y+.9,z,w+2,.18,.2);for(let x=-w/2;x<=w/2;x++)block('wood',x,y+.5,z,.14,1,.14)}}
+      roof(y+5, w+5,d+5);
+    }
+    block('gold',0,23,-6,.45,5,.45);for(let i=0;i<7;i++)block('gold',0,21+i*.55,-6,1.8-i*.17,.15,1.8-i*.17);block('gold',0,25.6,-6,.6,.6,.6);
+    lantern(-5,4,1,true);lantern(5,4,1,true);
+    // Torii gate.
+    for(const x of [-5,5]){block('stone',x,.4,31,1.8,.8,1.8);block('red',x,4.8,31,1,9,1);block('black',x,1.1,31,1.1,1.2,1.1)}
+    block('red',0,7.4,31,13,.65,.8);block('red',0,9.2,31,15,1,1.3);block('black',0,9.8,31,16,.35,1.5);
+    for(const x of [-1,1]){block('red',x*7.7,9.6,31,1.8,.5,1.3);block('black',x*8.1,10,31,1.4,.35,1.5)}
+    block('wood',0,8.1,31,1.2,1.5,.4);block('gold',0,8.1,31.25,.6,.85,.1);
+    // Pond and arched red bridge.
+    for(let x=-31;x<-9;x++)for(let z=6;z<24;z++){if(((x+20)/11)**2+((z-15)/9)**2<1){block('water',x,.12,z,1,.2,1);if(random()<.055)block('lily',x,.26,z,.75,.1,.75)}}
+    for(let i=0;i<38;i++){const a=i/38*Math.PI*2;block('stone',-20+11.5*Math.cos(a),.3,15+9.5*Math.sin(a),rand(.8,1.8),rand(.5,1),rand(.8,1.5))}
+    for(let i=0;i<15;i++){const x=-27+i,y=.55+Math.sin(i/14*Math.PI)*2.8;block('wood',x,y,15,1,.35,3.6);for(const z of [13,17]){block('red',x,y+1,z,.18,1.9,.18);block('red',x,y+1.8,z,1.15,.22,.22);block('red',x,y+.8,z,1.1,.15,.18)}}
+    for(const p of [[-7,12],[7,12],[-7,24],[7,24],[-29,5],[-10,22],[16,-12]])lantern(p[0],2.5,p[1]);
+    // Cherry blossom groves.
+    const petalsOrigins=[];
+    function tree(x,z,s=1){const y=rand(5,7)*s;block('wood',x,y/2,z,.8*s,y,.8*s);block('wood',x-1*s,y*.75,z,2.5*s,.65*s,.7*s);block('wood',x+1*s,y*.85,z+.6*s,2.8*s,.6*s,.7*s);
+      for(let i=0;i<32;i++){const dx=rand(-3.7,3.7)*s,dz=rand(-3,3)*s;if(dx*dx+dz*dz<16*s*s)block(random()>.4?'pink':'pink2',x+dx,y+rand(-.4,2)*s,z+dz,rand(1.5,2.7)*s,rand(1,1.8)*s,rand(1.5,2.5)*s)}petalsOrigins.push([x,y,z]);
+    }
+    [[-13,28,1.3],[13,28,1.15],[-31,-8,1.25],[22,-17,1.3],[-16,-22,1],[30,12,1],[-39,24,1.2],[36,-25,1.1],[13,4,.85]].forEach(p=>tree(...p));
+    for(let i=0;i<70;i++){const x=rand(27,46),z=rand(-22,0),h=rand(6,13);block('bamboo',x,h/2,z,.3,h,.3);for(let y=1;y<h;y+=1.5){block('leaf',x,y,z,.36,.13,.36);if(y>h*.55){block('leaf',x+.7,y,z,1.6,.18,.65);block('leaf',x-.5,y+.3,z+.4,1,.2,.7)}}}
+    for(let i=0;i<90;i++){const x=rand(-48,48),z=rand(-37,40);if(Math.abs(x)<10||((x+20)/14)**2+((z-15)/12)**2<1)continue;block('leaf',x,.5,z,rand(.7,1.8),rand(.5,1.4),rand(.7,1.5));}
+    // Small armor plates and individually built crests.
+    const guardians=[];function samurai(x,z){
+      const g=new THREE.Group();g.position.set(x,.3,z);scene.add(g);
+      for(const side of [-1,1]){block('black',side*.28,.5,0,.4,1,.45,g);block('armor',side*.28,1.05,0,.5,.55,.6,g);block('black',side*.28,.15,.15,.45,.25,.7,g);block('armor',side*.8,1.9,0,.45,.85,.75,g);block('skin',side*.82,1.25,.02,.25,.3,.3,g);for(let i=0;i<4;i++){block('red',side*.8,1.6+i*.2,.41,.45,.07,.07,g);block('gold',side*.28,1+i*.17,.33,.4,.04,.06,g)}}
+      block('armor',0,1.7,0,1.1,1.25,.65,g);for(let y=1.25;y<2.3;y+=.25)block('red',0,y,.35,1.05,.075,.08,g);
+      block('skin',0,2.65,0,.65,.65,.6,g);block('black',0,2.62,.32,.65,.15,.08,g);block('armor',0,3.05,0,.95,.4,.8,g);block('armor',0,2.82,-.25,1,.6,.35,g);block('armor',0,3.2,0,.6,.2,.6,g);
+      for(const side of [-1,1])for(let i=0;i<4;i++)block('gold',side*(.2+i*.12),3.25+i*.13,.43,.18,.2,.12,g);
+      block('gold',0,2.25,.4,.3,.25,.1,g);const sword=block('black',-.85,1.1,-.15,.15,1.8,.18,g);sword.rotation.z=-.45;block('gold',-1.15,1.9,-.15,.38,.12,.3,g);
+      guardians.push({g,y:g.position.y,phase:rand(0,6)});
+    }samurai(-4,10);samurai(4,10);
+    const animals=[];function animal(x,z,alpaca=false){
+      const g=new THREE.Group();g.position.set(x,.15,z);scene.add(g);
+      for(const a of [-.45,.45])for(const b of [-.65,.65]){block('skin',a,.5,b,.25,1,.25,g);block('black',a,.12,b,.28,.2,.28,g)}
+      block('wool',0,1.2,0,1.2,1,1.8,g);
+      for(let i=0;i<18;i++)block('wool',rand(-.6,.6),rand(.9,1.6),rand(-.85,.85),.4,.4,.4,g);
+      const head=new THREE.Group();head.position.set(0,1.35,.9);g.add(head);
+      if(alpaca)block('wool',0,.6,0,.45,1.6,.5,head);const hy=alpaca?1.4:.15;
+      block('wool',0,hy,.18,.6,.55,.7,head);block('skin',0,hy-.12,.55,.45,.25,.25,head);
+      for(const s of [-1,1]){block('wool',s*.26,hy+.42,.13,.16,alpaca?.65:.2,.2,head);block('black',s*.305,hy+.05,.37,.07,.08,.09,head)}
+      animals.push({g,head,base:head.position.y,cx:x,cz:z,phase:rand(0,6),speed:rand(.08,.15)});
+    }
+    [[19,21],[26,26],[33,21],[20,32],[38,31],[27,15]].forEach((p,i)=>animal(...p,i%3===0));
+    const birds=[];for(let i=0;i<14;i++){const g=new THREE.Group();scene.add(g);block('black',0,0,0,.3,.25,.7,g);const wings=[];for(const s of [-1,1]){const w=block('black',s*.55,0,0,.9,.12,.4,g);wings.push(w)}birds.push({g,wings,phase:rand(0,6),radius:rand(20,48),y:rand(25,40)})}
+    const clouds=[];for(let i=0;i<12;i++){const g=new THREE.Group();g.position.set(rand(-110,110),rand(48,66),rand(-100,0));scene.add(g);for(let k=0;k<8;k++)block('snow',rand(-8,8),rand(-1,1),rand(-3,3),rand(4,9),rand(2,4),rand(3,6),g);clouds.push(g)}
+    const petalGeometry=new THREE.BufferGeometry(),petalCount=240,petalPositions=new Float32Array(petalCount*3),petalData=[];
+    for(let i=0;i<petalCount;i++){const origin=petalsOrigins[i%petalsOrigins.length];petalData.push({origin,speed:rand(.3,.8),phase:rand(0,6)});petalPositions.set([origin[0]+rand(-4,4),rand(.3,origin[1]+2),origin[2]+rand(-4,4)],i*3)}
+    petalGeometry.setAttribute('position',new THREE.BufferAttribute(petalPositions,3));const petals=new THREE.Points(petalGeometry,new THREE.PointsMaterial({color:0xf9ced4,size:.16,sizeAttenuation:true}));scene.add(petals);
+    // Batch static blocks to keep the expansive scene efficient.
+    const matrix=new THREE.Matrix4(),pos=new THREE.Vector3(),scale=new THREE.Vector3(),quaternion=new THREE.Quaternion();
+    for(const [type,items] of batches){const mesh=new THREE.InstancedMesh(geometry,materials[type],items.length);items.forEach((v,i)=>{pos.set(...v.slice(0,3));scale.set(...v.slice(3));matrix.compose(pos,quaternion,scale);mesh.setMatrixAt(i,matrix)});mesh.castShadow=type!=='water'&&type!=='grass';mesh.receiveShadow=true;scene.add(mesh)}
+    const presets={front:{p:[58,39,72],t:[0,8,0]},samurai:{p:[-10,5,21],t:[-4,1.8,10]},meadow:{p:[46,14,46],t:[26,2,23]},mountain:{p:[70,48,60],t:[0,19,-34]},aerial:{p:[49,90,64],t:[0,0,0]}};
+    let transition=null;function selectView(name,instant=false){const v=presets[name],p=new THREE.Vector3(...v.p),t=new THREE.Vector3(...v.t);if(innerWidth<640&&name==='front')p.multiplyScalar(1.2);if(instant){camera.position.copy(p);controls.target.copy(t)}else transition={from:camera.position.clone(),target:controls.target.clone(),p,t,start:performance.now()};document.querySelectorAll('[data-view]').forEach(b=>{b.classList.toggle('active',b.dataset.view===name);b.setAttribute('aria-pressed',b.dataset.view===name)})}
+    selectView('front',true);controls.addEventListener('start',()=>{transition=null});
+    const modes={morning:{sky:0xb3cec8,fog:0xb3cec8,sun:0xffe6bd,intensity:3.2,ambient:2.3,p:[-55,85,40],glow:.7,label:'Morning calm'},sunset:{sky:0xc89787,fog:0xc89787,sun:0xffaf70,intensity:2.6,ambient:1.5,p:[-75,28,0],glow:1.8,label:'Golden hour'},night:{sky:0x172e40,fog:0x172e40,sun:0xb9d1f6,intensity:1.1,ambient:.65,p:[-40,80,-45],glow:3.5,label:'Moonlit stillness'}};
+    function setMode(name){const m=modes[name];scene.background=new THREE.Color(m.sky);scene.fog=new THREE.Fog(m.fog,100,270);sun.color.set(m.sun);sun.intensity=m.intensity;sun.position.set(...m.p);ambient.intensity=m.ambient;celestial.position.copy(sun.position).multiplyScalar(1.8);celestial.material.color.set(name==='night'?0xdbe7ed:0xffe3a2);materials.paper.emissiveIntensity=m.glow;lights.forEach(l=>l.intensity=name==='night'?15:name==='sunset'?7:.7);document.querySelector('#time-label').textContent=m.label;document.querySelectorAll('[data-mode]').forEach(b=>{b.classList.toggle('active',b.dataset.mode===name);b.setAttribute('aria-pressed',b.dataset.mode===name)})}
+    setMode('morning');document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>selectView(b.dataset.view));
+    function toggleUI(){document.body.classList.toggle('clean')}document.querySelector('#hide-ui').onclick=toggleUI;document.querySelector('#restore').onclick=toggleUI;addEventListener('keydown',e=>{if(e.key.toLowerCase()==='h'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName))toggleUI()});
+    function toast(text){const el=document.querySelector('#toast');el.textContent=text;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),4500)}
+    let audioContext,audioMaster,audioOn=false,chimeTimer;
+    function chime(){if(!audioOn)return;const now=audioContext.currentTime;const frequency=[523.25,659.25,783.99,1046.5,1318.5][Math.floor(Math.random()*5)];for(const harmonic of [1,2.76,5.4]){const osc=audioContext.createOscillator(),gain=audioContext.createGain();osc.type='sine';osc.frequency.value=frequency*harmonic;gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(.035/harmonic,now+.015);gain.gain.exponentialRampToValueAtTime(.0001,now+3.5);osc.connect(gain).connect(audioMaster);osc.start(now);osc.stop(now+4)}chimeTimer=setTimeout(chime,3000+Math.random()*6000)}
+    async function toggleAudio(){
+      try{if(!audioContext){audioContext=new(window.AudioContext||window.webkitAudioContext)();audioMaster=audioContext.createGain();audioMaster.gain.value=0;audioMaster.connect(audioContext.destination);const buffer=audioContext.createBuffer(1,audioContext.sampleRate*4,audioContext.sampleRate),data=buffer.getChannelData(0);let previous=0;for(let i=0;i<data.length;i++){previous=(previous+.025*(Math.random()*2-1))/1.025;data[i]=previous*3}const source=audioContext.createBufferSource();source.buffer=buffer;source.loop=true;const filter=audioContext.createBiquadFilter();filter.type='lowpass';filter.frequency.value=450;source.connect(filter).connect(audioMaster);source.start()}
+        await audioContext.resume();audioOn=!audioOn;audioMaster.gain.setTargetAtTime(audioOn?Number(document.querySelector('#volume').value)/100:0,audioContext.currentTime,.4);clearTimeout(chimeTimer);if(audioOn)chime();document.querySelector('#audio').setAttribute('aria-checked',audioOn);document.querySelector('#audio').style.background=audioOn?'#9ba97e':'';document.querySelector('#audio-dot').style.transform=audioOn?'translateX(16px)':'';document.querySelector('#volume-wrap').classList.toggle('hidden',!audioOn);
+      }catch(error){console.error('Ambient audio could not start',error);toast('Audio is unavailable in this browser. Please check your sound permissions.')}
+    }
+    document.querySelector('#audio').onclick=toggleAudio;document.querySelector('#volume').oninput=e=>{if(audioOn)audioMaster.gain.setTargetAtTime(Number(e.target.value)/100,audioContext.currentTime,.1)};
+    const resizeObserver=new ResizeObserver(([entry])=>{const {width,height}=entry.contentRect;if(!width||!height)return;camera.aspect=width/height;camera.updateProjectionMatrix();renderer.setSize(width,height)});
+    resizeObserver.observe(document.querySelector('#scene'));
+    const clock=new THREE.Clock();let elapsed=0;
+    function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.05);elapsed+=dt;
+      if(transition){const progress=Math.min((performance.now()-transition.start)/1500,1),ease=progress*progress*(3-2*progress);camera.position.lerpVectors(transition.from,transition.p,ease);controls.target.lerpVectors(transition.target,transition.t,ease);if(progress===1)transition=null}
+      guardians.forEach(({g,y,phase})=>{g.position.y=y+Math.sin(elapsed*1.7+phase)*.035;g.scale.y=1+Math.sin(elapsed*1.7+phase)*.008});
+      animals.forEach(a=>{const t=elapsed*a.speed+a.phase;a.g.position.x=a.cx+Math.sin(t)*2.5;a.g.position.z=a.cz+Math.cos(t)*2;a.g.rotation.y=Math.atan2(Math.cos(t),-Math.sin(t));a.head.rotation.x=Math.max(0,Math.sin(elapsed*.7+a.phase))*.5;a.g.position.y=.15+Math.sin(elapsed*3+a.phase)*.035});
+      birds.forEach(b=>{const t=elapsed*.07+b.phase;b.g.position.set(Math.cos(t)*b.radius,b.y+Math.sin(t*3)*2,-23+Math.sin(t)*b.radius*.6);b.g.rotation.y=-t; b.wings.forEach((w,i)=>{w.rotation.z=Math.sin(elapsed*7+b.phase)*.55*(i===0?-1:1)})});
+      clouds.forEach(c=>{c.position.x+=dt*.28;if(c.position.x>140)c.position.x=-140});
+      for(let i=0;i<petalCount;i++){const d=petalData[i],o=i*3;petalPositions[o]+=Math.sin(elapsed+d.phase)*dt*.22+dt*.2;petalPositions[o+1]-=dt*d.speed;petalPositions[o+2]+=Math.cos(elapsed*.5+d.phase)*dt*.25;if(petalPositions[o+1]<.25){petalPositions[o]=d.origin[0]+rand(-3,3);petalPositions[o+1]=d.origin[1]+2;petalPositions[o+2]=d.origin[2]+rand(-3,3)}}petalGeometry.attributes.position.needsUpdate=true;
+      controls.update();renderer.render(scene,camera);
+    }
+    renderer.render(scene,camera);document.querySelector('#loading').classList.add('hidden');animate();
+    window.sanctuary={scene,renderer,camera,controls,setMode,selectView,animals,guardians,birds};
+  </script>
+  <script>
+    window.addEventListener('error',function(event){if(document.querySelector('#loading').classList.contains('hidden'))return;document.querySelector('#load-message').textContent='Unable to load the sanctuary. Check your connection and reload.';console.error('Sanctuary loading failed:',event.message)});
+  </script>
+</body>
+</html>

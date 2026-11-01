@@ -1,0 +1,69 @@
+{
+  "hosting": [
+    {
+      "target": "zen-arena",
+      "public": "public",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "headers": [
+        {
+          "source": "/s/**",
+          "headers": [
+            { "key": "Cache-Control", "value": "public, max-age=3600" },
+            { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+            { "key": "Content-Security-Policy", "value": "sandbox allow-scripts allow-pointer-lock allow-downloads" }
+          ]
+        },
+        {
+          "source": "/results.html",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache" },
+            { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+            { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+            { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://www.gstatic.com; connect-src 'self' https://firestore.googleapis.com https://*.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'" }
+          ]
+        },
+        {
+          "source": "/index.html",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache" },
+            { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+            { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://www.gstatic.com; connect-src 'self' https://firestore.googleapis.com https://*.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'" }
+          ]
+        },
+        {
+          "source": "/",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache" },
+            { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+            { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://www.gstatic.com; connect-src 'self' https://firestore.googleapis.com https://*.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; object-src 'none'" }
+          ]
+        },
+        {
+          "source": "/js/**",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache" }
+          ]
+        },
+        {
+          "source": "/css/**",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache" }
+          ]
+        },
+        {
+          "source": "/data/**",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache" }
+          ]
+        }
+      ]
+    }
+  ],
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Voxel Zen Sanctuary & Mountain Landscape</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    canvas {
+      display: block;
+    }
+    #ui-root {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .glass-card {
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+  <!-- UI Overlay -->
+  <div id="ui-root" class="p-4 flex flex-col gap-4 items-start">
+    <!-- Camera Presets -->
+    <div class="glass-card max-w-md bg-white/10 border border-white/30 rounded-xl shadow-lg backdrop-blur-md p-4 text-white">
+      <h2 class="text-sm font-semibold mb-2">Camera Presets</h2>
+      <p class="text-xs mb-3 opacity-80">Explore different views of the sanctuary.</p>
+      <div class="flex flex-wrap gap-2">
+        <button data-preset="pagoda" class="px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs">Pagoda Front</button>
+        <button data-preset="samurai" class="px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs">Samurai Closeup</button>
+        <button data-preset="meadow" class="px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs">Pastoral Meadow</button>
+        <button data-preset="mountain" class="px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs">Mountain Vista</button>
+        <button data-preset="bird" class="px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs">Bird's Eye</button>
+      </div>
+    </div>
+
+    <!-- Time of Day Controls -->
+    <div class="glass-card max-w-md bg-white/10 border border-white/30 rounded-xl shadow-lg backdrop-blur-md p-4 text-white">
+      <h2 class="text-sm font-semibold mb-2">Time of Day</h2>
+      <p class="text-xs mb-3 opacity-80">Switch celestial lighting & lantern glow.</p>
+      <div class="flex flex-wrap gap-2">
+        <button data-mode="morning" class="px-3 py-1 rounded-lg bg-sky-400/40 hover:bg-sky-400/60 text-xs">Morning Sun</button>
+        <button data-mode="sunset" class="px-3 py-1 rounded-lg bg-orange-500/40 hover:bg-orange-500/60 text-xs">Sunset</button>
+        <button data-mode="night" class="px-3 py-1 rounded-lg bg-indigo-700/40 hover:bg-indigo-700/60 text-xs">Night</button>
+      </div>
+    </div>
+
+    <!-- Audio Controls -->
+    <div class="glass-card max-w-md bg-white/10 border border-white/30 rounded-xl shadow-lg backdrop-blur-md p-4 text-white">
+      <h2 class="text-sm font-semibold mb-2">Ambient Audio</h2>
+      <p class="text-xs mb-3 opacity-80">Enable soothing wind and gentle wind chimes.</p>
+      <button id="audio-toggle" class="px-3 py-1 rounded-lg bg-emerald-400/40 hover:bg-emerald-400/60 text-xs">
+        Enable Ambient Audio
+      </button>
+    </div>
+  </div>
+
+  <!-- Three.js Scene -->
+  <script type="importmap">
+    { "imports": { "three": "https://unpkg.com/three@0.158.0/build/three.module.js" } }
+  </script>
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.158.0/examples/jsm/controls/OrbitControls.js';
+
+    // Scene setup
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+
+    const camera = new THREE.PerspectiveCamera(
+      60,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+    camera.position.set(40, 25, 40);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: false });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 5, 0);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.update();
+
+    // Pixelated Canvas textures (16x16, NearestFilter)
+    function createPixelTexture(baseColorHex) {
+      const size = 16;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const base = new THREE.Color(baseColorHex);
+
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const variation = (Math.random() - 0.5) * 0.1;
+          const c = base.clone().multiplyScalar(1 + variation);
+          ctx.fillStyle = '#' + c.getHexString();
+          ctx.fillRect(x, y, 1, 1);
+        }
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.magFilter = THREE.NearestFilter;
+      texture.minFilter = THREE.NearestFilter;
+      texture.generateMipmaps = false;
+      return texture;
+    }
+
+    // Helpers for voxels
+    function makeVoxel(size, material) {
+      const geo = new THREE.BoxGeometry(size, size, size);
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    function makeBox(w, h, d, material) {
+      const geo = new THREE.BoxGeometry(w, h, d);
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    // Ground (grass)
+    const grassTexture = createPixelTexture(0x3c8c3c);
+    const grassMaterial = new THREE.MeshLambertMaterial({ map: grassTexture });
+
+    const groundGeo = new THREE.BoxGeometry(80, 2, 80);
+    const ground = new THREE.Mesh(groundGeo, grassMaterial);
+    ground.position.set(0, -1, 0);
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Lighting: ambient + directional (sun/moon voxel)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    sunLight.position.set(40, 60, 20);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 10;
+    sunLight.shadow.camera.far = 200;
+    sunLight.shadow.camera.left = -80;
+    sunLight.shadow.camera.right = 80;
+    sunLight.shadow.camera.top = 80;
+    sunLight.shadow.camera.bottom = -80;
+    scene.add(sunLight);
+
+    const sunVoxelMat = new THREE.MeshBasicMaterial({ color: 0xfff7c0 });
+    const moonVoxelMat = new THREE.MeshBasicMaterial({ color: 0xdde5ff });
+    const celestialGeo = new THREE.BoxGeometry(4, 4, 4);
+    const sunVoxel = new THREE.Mesh(celestialGeo, sunVoxelMat);
+    sunVoxel.position.copy(sunLight.position);
+    scene.add(sunVoxel);
+
+    // Lantern lights array
+    const lanternLights = [];
+
+    // Materials
+    const darkWoodMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0x3b2a1a)
+    });
+    const roofMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0x151515)
+    });
+    const shojiMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0xfff3d0),
+      emissive: new THREE.Color(0xffe2a0),
+      emissiveIntensity: 0.3
+    });
+    const goldMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0xffd700)
+    });
+
+    // Pagoda Temple (multi-tier)
+    const pagoda = new THREE.Group();
+    pagoda.position.set(0, 0, 0);
+
+    function addPagodaLevel(y, scale) {
+      const base = makeBox(10 * scale, 2, 10 * scale, darkWoodMat);
+      base.position.y = y;
+      pagoda.add(base);
+
+      const window = makeBox(8 * scale, 3, 0.2, shojiMat);
+      window.position.set(0, y + 2, -5 * scale + 0.11);
+      pagoda.add(window);
+
+      const roof = makeBox(12 * scale, 1, 12 * scale, roofMat);
+      roof.position.y = y + 3;
+      pagoda.add(roof);
+
+      const cornerSize = 2 * scale;
+      const corners = [
+        [6 * scale, y + 3, 6 * scale],
+        [-6 * scale, y + 3, 6 * scale],
+        [6 * scale, y + 3, -6 * scale],
+        [-6 * scale, y + 3, -6 * scale]
+      ];
+      corners.forEach((p) => {
+        const c = makeBox(cornerSize, 0.5, cornerSize, roofMat);
+        c.position.set(p[0], p[1], p[2]);
+        pagoda.add(c);
+      });
+    }
+
+    addPagodaLevel(1, 1.0);
+    addPagodaLevel(6, 0.8);
+    addPagodaLevel(11, 0.6);
+    addPagodaLevel(15, 0.4);
+
+    const spire = makeBox(0.5, 6, 0.5, goldMat);
+    spire.position.set(0, 20, 0);
+    pagoda.add(spire);
+    scene.add(pagoda);
+
+    // Lanterns (pagoda & path)
+    function addLantern(x, z) {
+      const lanternGroup = new THREE.Group();
+      lanternGroup.position.set(x, 0, z);
+      const stoneMat = new THREE.MeshLambertMaterial({
+        map: createPixelTexture(0x777777)
+      });
+      const lightMat = new THREE.MeshLambertMaterial({
+        map: createPixelTexture(0xffe8b0),
+        emissive: new THREE.Color(0xffdd99),
+        emissiveIntensity: 0.6
+      });
+
+      const base = makeBox(1, 0.6, 1, stoneMat);
+      base.position.y = 0.3;
+      lanternGroup.add(base);
+
+      const body = makeBox(0.8, 1.2, 0.8, lightMat);
+      body.position.y = 1.4;
+      lanternGroup.add(body);
+
+      const roof = makeBox(1.4, 0.4, 1.4, stoneMat);
+      roof.position.y = 2.2;
+      lanternGroup.add(roof);
+
+      const pointLight = new THREE.PointLight(0xffddaa, 0.0, 15);
+      pointLight.position.set(0, 1.6, 0);
+      lanternGroup.add(pointLight);
+      scene.add(lanternGroup);
+      lanternLights.push(pointLight);
+    }
+
+    [[-6, 6], [-6, -6], [6, 6], [6, -6]].forEach((pos) => addLantern(pos[0], pos[1]));
+    for (let i = -3; i <= 3; i++) {
+      addLantern(-15 + i * 4, 10);
+    }
+
+    // Torii gate
+    const toriiMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0xc53030)
+    });
+    const torii = new THREE.Group();
+    torii.position.set(-20, 0, 0);
+
+    const pillarL = makeBox(1, 6, 1, toriiMat);
+    pillarL.position.set(-2, 3, 0);
+    torii.add(pillarL);
+    const pillarR = makeBox(1, 6, 1, toriiMat);
+    pillarR.position.set(2, 3, 0);
+    torii.add(pillarR);
+    const topBeam = makeBox(8, 1, 1.5, toriiMat);
+    topBeam.position.set(0, 7, 0);
+    torii.add(topBeam);
+    const capBeam = makeBox(10, 0.6, 1.7, toriiMat);
+    capBeam.position.set(0, 8, 0);
+    torii.add(capBeam);
+    scene.add(torii);
+
+    // Pond & Arch Bridge
+    const waterMat = new THREE.MeshPhongMaterial({
+      color: 0x3b7fd6,
+      transparent: true,
+      opacity: 0.8,
+      shininess: 80
+    });
+    const pond = makeBox(20, 0.4, 12, waterMat);
+    pond.position.set(10, -0.8, -15);
+    pond.receiveShadow = true;
+    scene.add(pond);
+
+    const lilyMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0x5fa75f)
+    });
+    for (let i = 0; i < 8; i++) {
+      const pad = makeBox(1.5, 0.2, 1.5, lilyMat);
+      pad.position.set(
+        10 + (Math.random() - 0.5) * 14,
+        -0.4,
+        -15 + (Math.random() - 0.5) * 8
+      );
+      scene.add(pad);
+    }
+
+    const bridgeMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0xc53030)
+    });
+    const bridge = new THREE.Group();
+    bridge.position.set(10, 0, -15);
+    for (let i = -4; i <= 4; i++) {
+      const t = (i + 4) / 8;
+      const y = Math.sin(t * Math.PI) * 2 + 0.5;
+      const step = makeBox(1.5, 0.4, 2, bridgeMat);
+      step.position.set(i * 1.5, y, 0);
+      bridge.add(step);
+    }
+    scene.add(bridge);
+
+    // Bamboo Grove
+    const bambooMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0x2f855a)
+    });
+    for (let i = 0; i < 20; i++) {
+      const h = Math.random() * 8 + 6;
+      const stalk = makeBox(0.5, h, 0.5, bambooMat);
+      stalk.position.set(-30 + Math.random() * 10, h / 2 - 1, -20 + Math.random() * 12);
+      scene.add(stalk);
+    }
+
+    // Sakura Trees
+    const trunkMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0x5b3a29)
+    });
+    const blossomMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0xffb7c5)
+    });
+
+    function createSakura(x, z) {
+      const tree = new THREE.Group();
+      tree.position.set(x, 0, z);
+      const trunk = makeBox(1.5, 5, 1.5, trunkMat);
+      trunk.position.y = 2.5;
+      tree.add(trunk);
+      for (let i = 0; i < 20; i++) {
+        const blob = makeBox(2, 2, 2, blossomMat);
+        blob.position.set(
+          (Math.random() - 0.5) * 4,
+          5 + (Math.random() - 0.5) * 3,
+          (Math.random() - 0.5) * 4
+        );
+        tree.add(blob);
+      }
+      scene.add(tree);
+    }
+
+    createSakura(15, 8);
+    createSakura(20, 12);
+    createSakura(12, 12);
+
+    // Sakura Petal Particles
+    const petalGeo = new THREE.BoxGeometry(0.2, 0.05, 0.2);
+    const petalMaterial = new THREE.MeshLambertMaterial({ color: 0xffb7c5 });
+    const petals = [];
+    for (let i = 0; i < 120; i++) {
+      const mesh = new THREE.Mesh(petalGeo, petalMaterial);
+      mesh.position.set(
+        12 + (Math.random() - 0.5) * 16,
+        Math.random() * 10 + 4,
+        10 + (Math.random() - 0.5) * 10
+      );
+      mesh.rotation.y = Math.random() * Math.PI * 2;
+      scene.add(mesh);
+      petals.push(mesh);
+    }
+
+    // Mountain Range (4x4 voxel terrain with snow caps)
+    const rockMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0x6b6b6b)
+    });
+    const snowMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0xf5f5f5)
+    });
+    const mountains = new THREE.Group();
+    for (let i = 0; i < 25; i++) {
+      const baseSize = 4;
+      const heightBlocks = Math.floor(Math.random() * 4) + 3;
+      const x = -40 + Math.random() * 80;
+      const z = -40 - Math.random() * 20;
+      for (let y = 0; y < heightBlocks; y++) {
+        const mat = y === heightBlocks - 1 ? snowMat : rockMat;
+        const block = makeBox(baseSize, baseSize, baseSize, mat);
+        block.position.set(x, y * baseSize + baseSize / 2 - 1, z);
+        mountains.add(block);
+      }
+    }
+    scene.add(mountains);
+
+    // Clouds (drifting blocks)
+    const cloudMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0xffffff)
+    });
+    const clouds = [];
+    for (let i = 0; i < 10; i++) {
+      const cloud = new THREE.Group();
+      const count = 4 + Math.floor(Math.random() * 4);
+      for (let j = 0; j < count; j++) {
+        const puff = makeBox(4, 2, 4, cloudMat);
+        puff.position.set(
+          (Math.random() - 0.5) * 6,
+          (Math.random() - 0.5) * 2,
+          (Math.random() - 0.5) * 6
+        );
+        cloud.add(puff);
+      }
+      cloud.position.set(
+        -50 + Math.random() * 100,
+        35 + Math.random() * 10,
+        -40 + Math.random() * 20
+      );
+      scene.add(cloud);
+      clouds.push(cloud);
+    }
+
+    // Pastoral Animals (Sheep & Alpacas with bobbing/wandering)
+    const woolMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0xffffff)
+    });
+    const sheepHeadMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0x8c7a67)
+    });
+    const alpacaMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0xfdf1e5)
+    });
+
+    const animals = [];
+
+    function createSheep(x, z) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      const body = makeBox(2, 1.5, 3, woolMat);
+      body.position.y = 1;
+      group.add(body);
+      const head = makeBox(1, 1, 1.2, sheepHeadMat);
+      head.position.set(0, 1.2, 2.1);
+      group.add(head);
+      const legH = 0.8;
+      for (const dx of [-0.6, 0.6]) {
+        for (const dz of [-1, 1]) {
+          const leg = makeBox(0.4, legH, 0.4, sheepHeadMat);
+          leg.position.set(dx, legH / 2, dz);
+          group.add(leg);
+        }
+      }
+      scene.add(group);
+      animals.push({
+        group,
+        type: 'sheep',
+        phase: Math.random() * Math.PI * 2,
+        dir: new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize()
+      });
+    }
+
+    function createAlpaca(x, z) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      const body = makeBox(2.2, 1.5, 3, alpacaMat);
+      body.position.y = 1.2;
+      group.add(body);
+      const neck = makeBox(0.7, 1.5, 0.7, alpacaMat);
+      neck.position.set(0, 2.2, 1);
+      group.add(neck);
+      const head = makeBox(1, 1, 1, alpacaMat);
+      head.position.set(0, 3, 1.3);
+      group.add(head);
+      const earsGeo = makeBox(0.2, 0.5, 0.2, alpacaMat);
+      const earL = earsGeo.clone();
+      earL.position.set(-0.3, 3.6, 1.3);
+      const earR = earsGeo.clone();
+      earR.position.set(0.3, 3.6, 1.3);
+      group.add(earL);
+      group.add(earR);
+      const legH = 0.9;
+      for (const dx of [-0.7, 0.7]) {
+        for (const dz of [-1, 1]) {
+          const leg = makeBox(0.4, legH, 0.4, alpacaMat);
+          leg.position.set(dx, legH / 2, dz);
+          group.add(leg);
+        }
+      }
+      scene.add(group);
+      animals.push({
+        group,
+        type: 'alpaca',
+        phase: Math.random() * Math.PI * 2,
+        dir: new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize()
+      });
+    }
+
+    for (let i = 0; i < 5; i++) {
+      createSheep(-10 + Math.random() * 10, 15 + Math.random() * 10);
+    }
+    for (let i = 0; i < 4; i++) {
+      createAlpaca(-5 + Math.random() * 10, 20 + Math.random() * 8);
+    }
+
+    // Samurai Guardians (micro-voxels with idle breathing)
+    const armorMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0x303030)
+    });
+    const accentMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0xb8860b)
+    });
+    const skinMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0xf2d0a4)
+    });
+
+    const samuraiActors = [];
+
+    function createSamurai(x, z) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      const scale = 0.25;
+      function voxel(w, h, d, mat) {
+        const geo = new THREE.BoxGeometry(w * scale, h * scale, d * scale);
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        return mesh;
+      }
+
+      const torso = voxel(2, 3, 1.5, armorMat);
+      torso.position.y = 3 * scale;
+      group.add(torso);
+
+      const head = voxel(1.5, 1.5, 1.5, skinMat);
+      head.position.y = 4.5 * scale;
+      group.add(head);
+
+      const helmet = voxel(2.5, 1, 2.5, armorMat);
+      helmet.position.y = 5.2 * scale;
+      group.add(helmet);
+
+      const crest = voxel(0.4, 1.2, 0.1, accentMat);
+      crest.position.set(0, 5.6 * scale, 0.9 * scale);
+      group.add(crest);
+
+      const shoulderL = voxel(1.5, 0.6, 0.3, armorMat);
+      shoulderL.position.set(-1.5 * scale, 3.4 * scale, 0);
+      group.add(shoulderL);
+      const shoulderR = shoulderL.clone();
+      shoulderR.position.x = 1.5 * scale;
+      group.add(shoulderR);
+
+      const legL = voxel(0.8, 2, 0.8, armorMat);
+      legL.position.set(-0.5 * scale, 1 * scale, 0);
+      group.add(legL);
+      const legR = legL.clone();
+      legR.position.x = 0.5 * scale;
+      group.add(legR);
+
+      const sword = voxel(0.2, 3, 0.2, accentMat);
+      sword.position.set(1.5 * scale, 2 * scale, 1 * scale);
+      group.add(sword);
+
+      scene.add(group);
+      samuraiActors.push({ group, baseY: group.position.y });
+    }
+
+    createSamurai(-3, 4);
+    createSamurai(3, 4);
+
+    // Flying Birds (micro-voxels with flapping)
+    const birdBodyMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0x333333)
+    });
+    const birdWingMat = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0x555555)
+    });
+    const birds = [];
+
+    function createBird(x, y, z) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      const body = makeBox(0.6, 0.4, 0.8, birdBodyMat);
+      body.position.y = 0;
+      group.add(body);
+      const wingL = makeBox(0.8, 0.1, 0.3, birdWingMat);
+      wingL.position.set(-0.7, 0, 0);
+      group.add(wingL);
+      const wingR = makeBox(0.8, 0.1, 0.3, birdWingMat);
+      wingR.position.set(0.7, 0, 0);
+      group.add(wingR);
+      scene.add(group);
+      birds.push({ group, wingL, wingR, phase: Math.random() * Math.PI * 2 });
+    }
+
+    for (let i = 0; i < 12; i++) {
+      createBird(-20 + Math.random() * 40, 25 + Math.random() * 10, -10 + Math.random() * 20);
+    }
+
+    // Stone stepping-stone pathways
+    const stoneMatPath = new THREE.MeshLambertMaterial({
+      map: createPixelTexture(0x888888)
+    });
+    for (let i = 0; i < 10; i++) {
+      const stone = makeBox(2, 0.3, 2, stoneMatPath);
+      stone.position.set(-15 + i * 3, -0.4, 5 + i * 1.2);
+      scene.add(stone);
+    }
+
+    // Time of day modes
+    let timeMode = 'morning';
+
+    function applyTimeMode(mode) {
+      timeMode = mode;
+      if (mode === 'morning') {
+        scene.background = new THREE.Color(0x87ceeb);
+        sunLight.color.set(0xffffff);
+        sunLight.intensity = 1.0;
+        sunLight.position.set(40, 60, 20);
+        sunVoxel.material = sunVoxelMat;
+        sunVoxel.position.copy(sunLight.position);
+        ambientLight.intensity = 0.6;
+        lanternLights.forEach((l) => (l.intensity = 0.5));
+      } else if (mode === 'sunset') {
+        scene.background = new THREE.Color(0xffb07c);
+        sunLight.color.set(0xffddaa);
+        sunLight.intensity = 0.8;
+        sunLight.position.set(-20, 40, 40);
+        sunVoxel.material = sunVoxelMat;
+        sunVoxel.position.copy(sunLight.position);
+        ambientLight.intensity = 0.4;
+        lanternLights.forEach((l) => (l.intensity = 1.0));
+      } else if (mode === 'night') {
+        scene.background = new THREE.Color(0x050814);
+        sunLight.color.set(0xb0c4de);
+        sunLight.intensity = 0.3;
+        sunLight.position.set(-10, 40, -30);
+        sunVoxel.material = moonVoxelMat;
+        sunVoxel.position.copy(sunLight.position);
+        ambientLight.intensity = 0.2;
+        lanternLights.forEach((l) => (l.intensity = 2.0));
+      }
+    }
+
+    applyTimeMode('morning');
+
+    // Camera presets
+    function setCameraPreset(name) {
+      if (name === 'pagoda') {
+        camera.position.set(25, 15, 25);
+        controls.target.set(0, 8, 0);
+      } else if (name === 'samurai') {
+        camera.position.set(8, 5, 8);
+        controls.target.set(0, 3, 0);
+      } else if (name === 'meadow') {
+        camera.position.set(-15, 12, 25);
+        controls.target.set(-5, 3, 18);
+      } else if (name === 'mountain') {
+        camera.position.set(0, 30, -50);
+        controls.target.set(0, 10, 0);
+      } else if (name === 'bird') {
+        camera.position.set(0, 45, 0);
+        controls.target.set(0, 10, 0);
+      }
+      controls.update();
+    }
+
+    setCameraPreset('pagoda');
+
+    // Hook UI buttons
+    const presetButtons = document.querySelectorAll('button[data-preset]');
+    presetButtons.forEach((btn) => {
+      btn.addEventListener('click', () => setCameraPreset(btn.dataset.preset));
+    });
+
+    const modeButtons = document.querySelectorAll('button[data-mode]');
+    modeButtons.forEach((btn) => {
+      btn.addEventListener('click', () => applyTimeMode(btn.dataset.mode));
+    });
+
+    // Web Audio API: wind + random gentle chimes
+    let audioContext = null;
+    let windGain, chimeGain;
+    let audioStarted = false;
+
+    function setupAudio() {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const bufferSize = 2 * audioContext.sampleRate;
+      const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        output[i] = (Math.random() * 2 - 1) * 0.4;
+      }
+      const noise = audioContext.createBufferSource();
+      noise.buffer = noiseBuffer;
+      noise.loop = true;
+
+      const filter = audioContext.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 500;
+
+      windGain = audioContext.createGain();
+      windGain.gain.value = 0.2;
+
+      noise.connect(filter);
+      filter.connect(windGain);
+      windGain.connect(audioContext.destination);
+      noise.start();
+
+      chimeGain = audioContext.createGain();
+      chimeGain.gain.value = 0.0;
+      chimeGain.connect(audioContext.destination);
+
+      audioStarted = true;
+    }
+
+    function triggerChime() {
+      if (!audioContext) return;
+      const now = audioContext.currentTime;
+      const osc = audioContext.createOscillator();
+      osc.type = 'sine';
+      const baseFreq = 600 + Math.random() * 600;
+      osc.frequency.setValueAtTime(baseFreq, now);
+      const gain = audioContext.createGain();
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.12, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+      osc.connect(gain);
+      gain.connect(chimeGain);
+      osc.start(now);
+      osc.stop(now + 2.5);
+    }
+
+    const audioButton = document.getElementById('audio-toggle');
+    audioButton.addEventListener('click', async () => {
+      if (!audioStarted) {
+        setupAudio();
+        audioButton.textContent = 'Audio: On (Wind & Chimes)';
+      } else {
+        if (audioContext) {
+          await audioContext.close();
+        }
+        audioContext = null;
+        audioStarted = false;
+        audioButton.textContent = 'Enable Ambient Audio';
+      }
+    });
+
+    // Animation loop
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      // Samurai breathing (gentle up/down)
+      samuraiActors.forEach((s) => {
+        const offset = Math.sin(t * 1.2) * 0.1;
+        s.group.position.y = offset;
+      });
+
+      // Animals wandering & grazing bobbing
+      animals.forEach((a) => {
+        a.phase += 0.01;
+        const bob = Math.sin(t * 3 + a.phase) * 0.2;
+        a.group.position.y = bob;
+        a.group.position.addScaledVector(a.dir, 0.01);
+        if (Math.random() < 0.002) {
+          a.dir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+          a.group.rotation.y = Math.atan2(a.dir.x, a.dir.z);
+        }
+      });
+
+      // Birds flapping & flock movement
+      birds.forEach((b) => {
+        const flap = Math.sin(t * 8 + b.phase) * 0.5;
+        b.wingL.rotation.z = flap;
+        b.wingR.rotation.z = -flap;
+        b.group.position.x += Math.sin(t * 0.2 + b.phase) * 0.02;
+        b.group.position.z += 0.03;
+        if (b.group.position.z > 30) b.group.position.z = -20;
+      });
+
+      // Clouds drifting
+      clouds.forEach((c) => {
+        c.position.x += 0.01;
+        if (c.position.x > 60) c.position.x = -60;
+      });
+
+      // Falling sakura petals
+      petals.forEach((p) => {
+        p.position.y -= 0.02;
+        p.position.x += (Math.random() - 0.5) * 0.01;
+        p.position.z += (Math.random() - 0.5) * 0.01;
+        if (p.position.y < 0) {
+          p.position.y = 10 + Math.random() * 4;
+        }
+      });
+
+      // Occasional wind chimes
+      if (audioStarted && Math.random() < 0.002) {
+        triggerChime();
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>

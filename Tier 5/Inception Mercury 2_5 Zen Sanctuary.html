@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Voxel Zen Sanctuary</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Three.js ES‑module CDN -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.166.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.0/examples/jsm/"
+  }
+}
+</script>
+<!-- Tailwind CSS (via CDN) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#111;}
+  #ui{position:absolute;top:1rem;right:1rem;z-index:10;display:flex;flex-direction:column;gap:0.5rem;}
+  .card{background:rgba(255,255,255,0.1);backdrop-filter:blur(8px);border-radius:0.75rem;padding:0.75rem 1rem;color:#fff;font-family:sans-serif;}
+  .btn{background:rgba(255,255,255,0.15);border:none;padding:0.4rem 0.8rem;margin:0.2rem;border-radius:0.4rem;color:#fff;cursor:pointer;}
+  .btn:hover{background:rgba(255,255,255,0.25);}
+  canvas{display:block;}
+</style>
+</head>
+<body>
+<div id="ui"></div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+(() => {
+  const canvas = document.createElement('canvas'); // hidden canvas for textures
+  canvas.width = canvas.height = 16;
+  const texCtx = canvas.getContext('2d');
+
+  // ------------------------------------------------------------
+  // 1️⃣  BASIC THREE.JS SETUP
+  // ------------------------------------------------------------
+  const renderer = new THREE.WebGLRenderer({ antialias: false });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setClearColor(0x111111);
+  document.body.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
+  camera.position.set(30, 30, 30);
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.07;
+
+  // ------------------------------------------------------------
+  // 2️⃣  TEXTURE GENERATOR (16×16 pixel‑art, nearest filter)
+  // ------------------------------------------------------------
+  const textureCache = {};
+
+  function makeTexture(drawFn) {
+    const key = drawFn.toString();
+    if (textureCache[key]) return textureCache[key];
+    // clear
+    texCtx.clearRect(0, 0, 16, 16);
+    drawFn(texCtx);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.magFilter = tex.minFilter = THREE.NearestFilter;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    textureCache[key] = tex;
+    return tex;
+  }
+
+  // Example textures – you can add more later
+  const tex = {
+    grass: makeTexture(ctx => {
+      ctx.fillStyle = '#3c9d33';
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#2c7d22';
+      ctx.fillRect(0, 12, 16, 4);
+    }),
+    dirt: makeTexture(ctx => {
+      ctx.fillStyle = '#8b5a2b';
+      ctx.fillRect(0, 0, 16, 16);
+    }),
+    stone: makeTexture(ctx => {
+      ctx.fillStyle = '#777777';
+      ctx.fillRect(0, 0, 16, 16);
+    }),
+    water: makeTexture(ctx => {
+      ctx.fillStyle = '#2a6ea1';
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      for (let i = 0; i < 8; i++) {
+        ctx.fillRect(i * 2, 0, 1, 16);
+      }
+    }),
+    wood: makeTexture(ctx => {
+      ctx.fillStyle = '#5b3a1a';
+      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillStyle = '#4a2e14';
+      ctx.fillRect(2, 2, 12, 12);
+    }),
+    red: makeTexture(ctx => {
+      ctx.fillStyle = '#c33';
+      ctx.fillRect(0, 0, 16, 16);
+    }),
+    gold: makeTexture(ctx => {
+      ctx.fillStyle = '#ffcc00';
+      ctx.fillRect(0, 0, 16, 16);
+    }),
+    paper: makeTexture(ctx => {
+      ctx.fillStyle = '#f5e9c3';
+      ctx.fillRect(0, 0, 16, 16);
+    }),
+    green: makeTexture(ctx => {
+      ctx.fillStyle = '#2d8a2d';
+      ctx.fillRect(0, 0, 16, 16);
+    }),
+    white: makeTexture(ctx => {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 16, 16);
+    }),
+    // … add more as needed
+  };
+
+  // ------------------------------------------------------------
+  // 3️⃣  VOXEL FACTORY (variable size)
+  // ------------------------------------------------------------
+  function createVoxelBox(size, material) {
+    const geom = new THREE.BoxGeometry(size, size, size);
+    const mesh = new THREE.Mesh(geom, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return mesh;
+  }
+
+  // ------------------------------------------------------------
+  // 4️⃣  SCENE BUILDING HELPERS
+  // ------------------------------------------------------------
+  function addGround() {
+    const size = 200;
+    const groundGeo = new THREE.PlaneGeometry(size, size);
+    const groundMat = new THREE.MeshStandardMaterial({ map: tex.grass });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+  }
+
+  // Simple hill generator (using 4‑voxel blocks)
+  function addMountains() {
+    const hillMaterial = new THREE.MeshStandardMaterial({ map: tex.stone });
+    const hillSize = 4;
+    const hill = new THREE.Group();
+    for (let y = 0; y < 12; y++) {
+      const radius = 12 - y;
+      for (let x = -radius; x <= radius; x++) {
+        for (let z = -radius; z <= radius; z++) {
+          if (Math.sqrt(x * x + z * z) <= radius) {
+            const voxel = createVoxelBox(hillSize, hillMaterial);
+            voxel.position.set(x * hillSize, y * hillSize, z * hillSize);
+            hill.add(voxel);
+          }
+        }
+      }
+    }
+    hill.position.y = -2; // sink a bit
+    scene.add(hill);
+  }
+
+  // Pagoda (4‑tiered, each tier 2‑voxel high)
+  function addPagoda() {
+    const wood = new THREE.MeshStandardMaterial({ map: tex.wood });
+    const paper = new THREE.MeshStandardMaterial({ map: tex.paper, transparent: true, opacity: 0.9 });
+    const gold = new THREE.MeshStandardMaterial({ map: tex.gold });
+
+    const pagoda = new THREE.Group();
+
+    const baseSize = 8;
+    const tierHeight = 2;
+    const tiers = 4;
+
+    for (let i = 0; i < tiers; i++) {
+      const size = baseSize - i * 2;
+      const geometry = new THREE.BoxGeometry(size, tierHeight, size);
+      const mesh = new THREE.Mesh(geometry, wood);
+      mesh.position.y = i * tierHeight;
+      pagoda.add(mesh);
+      // roof
+      const roof = new THREE.Mesh(
+        new THREE.ConeGeometry(size * 0.6, tierHeight * 0.8, 4),
+        wood
+      );
+      roof.rotation.y = Math.PI / 4;
+      roof.position.y = (i + 1) * tierHeight;
+      pagoda.add(roof);
+    }
+    // central spire
+    const spire = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.5, 0.5, 4, 6),
+      gold
+    );
+    spire.position.y = tiers * tierHeight + 2;
+    pagoda.add(spire);
+
+    // Shoji windows (paper panels)
+    const windowGeom = new THREE.PlaneGeometry(baseSize * 0.8, tierHeight * 0.6);
+    const windows = new THREE.Mesh(windowGeom, paper);
+    windows.position.y = tierHeight * 1.5;
+    windows.position.z = baseSize / 2 + 0.01;
+    pagoda.add(windows);
+
+    pagoda.position.set(0, 0, 0);
+    scene.add(pagoda);
+  }
+
+  // Red torii gate
+  function addTorii() {
+    const redMat = new THREE.MeshStandardMaterial({ map: tex.red });
+    const pole = createVoxelBox(1, redMat);
+    pole.scale.set(1, 6, 1);
+    pole.position.set(-12, 3, -12);
+    const lintel = createVoxelBox(1, redMat);
+    lintel.scale.set(6, 1, 1);
+    lintel.position.set(-12, 6, -12);
+    scene.add(pole, lintel);
+  }
+
+  // Simple water pond with lily pads
+  function addPond() {
+    const waterMat = new THREE.MeshStandardMaterial({ map: tex.water, transparent: true, opacity: 0.85 });
+    const pond = new THREE.Mesh(new THREE.BoxGeometry(20, 0.5, 12), waterMat);
+    pond.position.set(15, 0.25, -5);
+    scene.add(pond);
+
+    // lily pads (micro‑voxels 0.5)
+    const padMat = new THREE.MeshStandardMaterial({ map: tex.green });
+    for (let i = 0; i < 8; i++) {
+      const pad = createVoxelBox(0.5, padMat);
+      pad.position.set(
+        15 + Math.random() * 16 - 8,
+        0.5,
+        -5 + Math.random() * 10 - 5
+      );
+      scene.add(pad);
+    }
+  }
+
+  // Bamboo grove (tall thin 4‑voxel columns)
+  function addBamboo() {
+    const bambooMat = new THREE.MeshStandardMaterial({ map: tex.green });
+    for (let i = 0; i < 30; i++) {
+      const stalk = createVoxelBox(0.5, bambooMat);
+      stalk.scale.set(0.5, 12, 0.5);
+      stalk.position.set(
+        -30 + Math.random() * 60,
+        6,
+        -30 + Math.random() * 60
+      );
+      scene.add(stalk);
+    }
+  }
+
+  // Sakura tree (simple trunk + canopy)
+  function addSakura() {
+    const trunkMat = new THREE.MeshStandardMaterial({ map: tex.wood });
+    const leafMat = new THREE.MeshStandardMaterial({ map: tex.red });
+    for (let i = 0; i < 12; i++) {
+      const trunk = createVoxelBox(1, trunkMat);
+      trunk.scale.set(1, 6, 1);
+      const x = -40 + Math.random() * 80;
+      const z = -40 + Math.random() * 80;
+      trunk.position.set(x, 3, z);
+      scene.add(trunk);
+
+      const canopy = createVoxelBox(5, leafMat);
+      canopy.position.set(x, 9, z);
+      scene.add(canopy);
+    }
+  }
+
+  // Simple cloud (group of white voxels)
+  function addClouds() {
+    const cloudMat = new THREE.MeshStandardMaterial({ map: tex.white });
+    for (let i = 0; i < 10; i++) {
+      const cloud = new THREE.Group();
+      for (let j = 0; j < 6; j++) {
+        const voxel = createVoxelBox(2, cloudMat);
+        voxel.position.set(
+          Math.random() * 6 - 3,
+          Math.random() * 2,
+          Math.random() * 6 - 3
+        );
+        cloud.add(voxel);
+      }
+      cloud.position.set(
+        -50 + Math.random() * 100,
+        30 + Math.random() * 5,
+        -50 + Math.random() * 100
+      );
+      scene.add(cloud);
+    }
+  }
+
+  // ------------------------------------------------------------
+  // 5️⃣  ANIMATED MICRO‑VOXEL CHARACTERS
+  // ------------------------------------------------------------
+  const microGroup = new THREE.Group();
+  scene.add(microGroup);
+
+  // Helper to create a simple micro‑voxel stick‑figure
+  function createMicroVoxel(size, color) {
+    const mat = new THREE.MeshStandardMaterial({ color });
+    const voxel = createVoxelBox(size, mat);
+    return voxel;
+  }
+
+  // Samurai (tiny, 0.25‑unit voxels)
+  function addSamurai() {
+    const group = new THREE.Group();
+    const body = createMicroVoxel(0.5, 0x555555);
+    body.position.y = 0.75;
+    group.add(body);
+    const head = createMicroVoxel(0.4, 0xffc0cb);
+    head.position.y = 1.2;
+    group.add(head);
+    // armor plates
+    const armor = createMicroVoxel(0.5, 0x222222);
+    armor.position.y = 0.75;
+    group.add(armor);
+    // katana (thin)
+    const katana = createVoxelBox(0.1, new THREE.MeshStandardMaterial({ color: 0xdddddd }));
+    katana.scale.set(0.1, 0.1, 2);
+    katana.position.set(0.3, 0.75, 0);
+    group.add(katana);
+    // initial position
+    group.position.set(-5, 0, -5);
+    microGroup.add(group);
+    // idle breathing animation
+    const clock = new THREE.Clock();
+    function animateSamurai() {
+      const t = clock.getElapsedTime();
+      group.position.y = Math.sin(t * 2) * 0.1 + 0;
+    }
+    animateSamurai.update = animateSamurai;
+    return animateSamurai;
+  }
+
+  // Sheep (white fluffy)
+  function addSheep() {
+    const group = new THREE.Group();
+    const body = createMicroVoxel(0.6, 0xffffff);
+    body.position.y = 0.3;
+    group.add(body);
+    const head = createMicroVoxel(0.4, 0xffffff);
+    head.position.set(0.7, 0.5, 0);
+    group.add(head);
+    group.position.set(8, 0, -8);
+    microGroup.add(group);
+    const clock = new THREE.Clock();
+    function animateSheep() {
+      const t = clock.getElapsedTime();
+      group.position.x = 8 + Math.sin(t) * 0.5;
+      group.position.z = -8 + Math.cos(t) * 0.5;
+    }
+    animateSheep.update = animateSheep;
+    return animateSheep;
+  }
+
+  // Alpaca (long neck)
+  function addAlpaca() {
+    const group = new THREE.Group();
+    const body = createMicroVoxel(0.7, 0x8b4513);
+    body.position.y = 0.35;
+    group.add(body);
+    const head = createMicroVoxel(0.4, 0x8b4513);
+    head.position.set(0.9, 0.9, 0);
+    group.add(head);
+    group.position.set(12, 0, -4);
+    microGroup.add(group);
+    const clock = new THREE.Clock();
+    function animateAlpaca() {
+      const t = clock.getElapsedTime();
+      group.position.x = 12 + Math.sin(t * 0.8) * 0.6;
+      group.position.z = -4 + Math.cos(t * 0.8) * 0.6;
+    }
+    animateAlpaca.update = animateAlpaca;
+    return animateAlpaca;
+  }
+
+  // Birds (tiny flapping voxels)
+  function addBirds() {
+    const birds = [];
+    const birdMat = new THREE.MeshStandardMaterial({ color: 0xdddddd });
+    for (let i = 0; i < 12; i++) {
+      const bird = new THREE.Group();
+      const body = createVoxelBox(0.3, birdMat);
+      bird.add(body);
+      const wingL = createVoxelBox(0.2, birdMat);
+      wingL.position.set(-0.25, 0, 0);
+      const wingR = createVoxelBox(0.2, birdMat);
+      wingR.position.set(0.25, 0, 0);
+      bird.add(wingL, wingR);
+      bird.position.set(
+        -30 + Math.random() * 60,
+        20 + Math.random() * 5,
+        -30 + Math.random() * 60
+      );
+      microGroup.add(bird);
+      const clock = new THREE.Clock();
+      function animateBird() {
+        const t = clock.getElapsedTime() + i;
+        bird.position.x += Math.cos(t) * 0.02;
+        bird.position.z += Math.sin(t) * 0.02;
+        // simple wing flap
+        const flap = Math.abs(Math.sin(t * 8));
+        wingL.rotation.z = flap * 0.5;
+        wingR.rotation.z = -flap * 0.5;
+      }
+      animateBird.update = animateBird;
+      birds.push(animateBird);
+    }
+    return birds;
+  }
+
+  // ------------------------------------------------------------
+  // 6️⃣  LIGHTING & DAY‑NIGHT SYSTEM
+  // ------------------------------------------------------------
+  const sun = new THREE.DirectionalLight(0xffee88, 1.2);
+  sun.position.set(50, 80, 50);
+  sun.castShadow = true;
+  scene.add(sun);
+
+  const moon = new THREE.DirectionalLight(0x8899ff, 0.3);
+  moon.position.set(-50, 80, -50);
+  scene.add(moon);
+
+  const ambient = new THREE.AmbientLight(0x404040, 0.5);
+  scene.add(ambient);
+
+  // Lantern point lights (tiny)
+  function addLanterns() {
+    const lanternMat = new THREE.MeshStandardMaterial({ map: tex.gold });
+    const positions = [
+      [0, 4, 0],
+      [5, 4, -5],
+      [-5, 4, -5],
+    ];
+    positions.forEach(p => {
+      const sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.4, 8, 8),
+        lanternMat
+      );
+      sphere.position.set(...p);
+      scene.add(sphere);
+      const point = new THREE.PointLight(0xffaa33, 2, 8);
+      point.position.set(...p);
+      scene.add(point);
+    });
+  }
+
+  // ------------------------------------------------------------
+  // 7️⃣  UI (Tailwind glass‑morphism cards)
+  // ------------------------------------------------------------
+  const ui = document.getElementById('ui');
+
+  function makeCard(title, buttons) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const h = document.createElement('h3');
+    h.textContent = title;
+    h.className = 'font-bold mb-2';
+    card.appendChild(h);
+    buttons.forEach(btn => {
+      const b = document.createElement('button');
+      b.className = 'btn';
+      b.textContent = btn.label;
+      b.onclick = btn.onclick;
+      card.appendChild(b);
+    });
+    ui.appendChild(card);
+  }
+
+  // Camera presets
+  const presets = {
+    front: { pos: [30, 30, 30], target: [0, 5, 0] },
+    samurai: { pos: [-5, 5, -5], target: [-5, 1, -5] },
+    meadow: { pos: [15, 10, -5], target: [15, 0, -5] },
+    mountain: { pos: [80, 60, 80], target: [0, 0, 0] },
+    bird: { pos: [0, 80, 0], target: [0, 0, 0] },
+  };
+
+  makeCard('Camera', Object.entries(presets).map(([k, v]) => ({
+    label: k.charAt(0).toUpperCase() + k.slice(1),
+    onclick: () => {
+      controls.target.set(...v.target);
+      camera.position.set(...v.pos);
+    },
+  })));
+
+  // Time of day
+  const times = {
+    morning: { sun: 1.2, moon: 0, ambient: 0.6, bg: 0x87ceeb },
+    sunset: { sun: 0.5, moon: 0.2, ambient: 0.4, bg: 0xffa07a },
+    night: { sun: 0, moon: 0.8, ambient: 0.2, bg: 0x0b0c2c },
+  };
+
+  makeCard('Time of Day', Object.entries(times).map(([k, cfg]) => ({
+    label: k.charAt(0).toUpperCase() + k.slice(1),
+    onclick: () => {
+      sun.intensity = cfg.sun;
+      moon.intensity = cfg.moon;
+      ambient.intensity = cfg.ambient;
+      renderer.setClearColor(cfg.bg);
+    },
+  })));
+
+  // ------------------------------------------------------------
+  // 8️⃣  AUDIO – simple wind + occasional chime (Web Audio API)
+  // ------------------------------------------------------------
+  function initAudio() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
+
+      // wind – looped noise buffer through a lowpass filter
+      const len = ctx.sampleRate * 2;
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+      const wind = ctx.createBufferSource();
+      wind.buffer = buf;
+      wind.loop = true;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 400;
+      const gain = ctx.createGain();
+      gain.gain.value = 0.02;
+      wind.connect(filter).connect(gain).connect(ctx.destination);
+      wind.start();
+
+    // occasional chime – simple bell using FM synthesis
+    function chime() {
+      const carrier = ctx.createOscillator();
+      const mod = ctx.createOscillator();
+      const modGain = ctx.createGain();
+      carrier.type = 'sine';
+      mod.type = 'sine';
+      carrier.frequency.value = 800 + Math.random() * 200;
+      mod.frequency.value = 200 + Math.random() * 100;
+      modGain.gain.value = 100;
+      mod.connect(modGain);
+      modGain.connect(carrier.frequency);
+      carrier.connect(ctx.destination);
+      carrier.start();
+      carrier.stop(ctx.currentTime + 0.8);
+      mod.start();
+      mod.stop(ctx.currentTime + 0.8);
+    }
+    // random chime every 8‑15 seconds
+    function scheduleChime() {
+      const delay = 8000 + Math.random() * 7000;
+      setTimeout(() => {
+        chime();
+        scheduleChime();
+      }, delay);
+    }
+    scheduleChime();
+    } catch (e) {
+      console.warn('Audio disabled:', e);
+    }
+  }
+
+  // Browsers block AudioContext until a user gesture – start on first click.
+  window.addEventListener('pointerdown', () => initAudio(), { once: true });
+
+  // ------------------------------------------------------------
+  // 9️⃣  BUILD THE WORLD
+  // ------------------------------------------------------------
+  addGround();
+  addMountains();
+  addPagoda();
+  addTorii();
+  addPond();
+  addBamboo();
+  addSakura();
+  addClouds();
+  addLanterns();
+
+  // animated micro‑voxels
+  const animators = [
+    addSamurai(),
+    addSheep(),
+    addAlpaca(),
+    ...addBirds(),
+  ];
+  // ------------------------------------------------------------
+  // 🔟  RENDER LOOP
+  // ------------------------------------------------------------
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    animators.forEach(a => a.update && a.update());
+    renderer.render(scene, camera);
+  }
+
+  animate();
+
+  // ------------------------------------------------------------
+  // 1️⃣1️⃣  RESPONSIVE RESIZE
+  // ------------------------------------------------------------
+  window.addEventListener('resize', () => {
+    const w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  });
+})();
+</script>
+</body>
+</html>

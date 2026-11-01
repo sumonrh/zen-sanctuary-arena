@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#dcebe7">
+  <title>Zen Sanctuary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/"
+      }
+    }
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "DM Sans", sans-serif;
+      color: #293d39;
+      background: #dcebe7;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    button { font: inherit; }
+    button:focus-visible { outline: 3px solid #bc654e; outline-offset: 3px; }
+    #world { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+    .interface { position: fixed; inset: 0; pointer-events: none; }
+    .interface button, .interface a, .control-card { pointer-events: auto; }
+    .glass {
+      background: rgba(253, 252, 245, .76);
+      border: 1px solid rgba(255, 255, 255, .86);
+      box-shadow: 0 12px 40px rgba(49, 73, 67, .09), inset 0 1px rgba(255, 255, 255, .8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .topbar { position: absolute; top: 28px; left: 36px; right: 36px; display: flex; justify-content: space-between; align-items: center; }
+    .brand { display: flex; align-items: center; gap: 11px; padding: 5px 11px 5px 5px; border: 1px solid rgba(255,255,255,.55); border-radius: 15px; background: rgba(253,252,245,.56); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+    .brand-mark { width: 40px; height: 40px; background: #b94f40; color: #fffaf0; border-radius: 12px; display: grid; place-items: center; box-shadow: 0 5px 15px #8f4c3b25; }
+    .brand-name { font-family: "DM Serif Display", serif; font-size: 23px; line-height: .9; letter-spacing: -.7px; color: #29413b; }
+    .brand-sub { margin-top: 5px; font-size: 8px; line-height: 1; letter-spacing: .22em; font-weight: 700; color: #6b8176; }
+    .top-actions { display: flex; align-items: center; gap: 12px; }
+    .live-pill, .sound-button { min-height: 39px; border-radius: 999px; display: flex; align-items: center; gap: 8px; padding: 0 15px; color: #4b6259; font-size: 10px; font-weight: 700; letter-spacing: .1em; }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #79a27d; box-shadow: 0 0 0 4px #79a27d20; }
+    .sound-button { cursor: pointer; border: 1px solid rgba(255,255,255,.9); transition: background .2s, transform .2s; }
+    .sound-button:hover { background: #fffdf5; transform: translateY(-1px); }
+    .sound-button svg { width: 16px; height: 16px; }
+    .hero { position: absolute; top: 19%; left: 5%; width: min(315px, 26vw); isolation: isolate; text-shadow: 0 1px 14px rgba(244, 249, 239, .48); }
+    .hero::before { content: ""; position: absolute; z-index: -1; inset: -35px -45px -35px -30px; background: radial-gradient(ellipse at 30% 45%, rgba(232,244,234,.94) 0%, rgba(232,244,234,.72) 48%, rgba(232,244,234,0) 78%); filter: blur(12px); pointer-events: none; }
+    .eyebrow { display: flex; align-items: center; gap: 9px; color: #b05a48; font-size: 10px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
+    .eyebrow::before { content: ""; height: 1px; width: 25px; background: currentColor; }
+    .hero h1 { margin: 18px 0 13px; font-family: "DM Serif Display", Georgia, serif; font-size: clamp(40px, 4vw, 62px); line-height: .98; font-weight: 400; letter-spacing: -.045em; color: #29463e; }
+    .hero h1 em { font-weight: 400; color: #b86654; }
+    .hero-copy { max-width: 260px; color: #5b7167; font-size: 13px; line-height: 1.75; }
+    .hero-stamp { display: flex; align-items: center; gap: 10px; margin-top: 25px; color: #6f8377; font-size: 9px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+    .stamp-icon { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid #b66b59; border-radius: 50%; color: #b66b59; font-family: serif; font-size: 16px; }
+    .is-night .hero::before { background: radial-gradient(ellipse at 30% 45%, rgba(32,48,57,.9) 0%, rgba(32,48,57,.65) 48%, rgba(32,48,57,0) 78%); }
+    .is-night .hero { text-shadow: 0 1px 14px rgba(24,38,44,.7); }
+    .is-night .hero h1 { color: #f0f3e8; }
+    .is-night .hero h1 em, .is-night .eyebrow { color: #eab09f; }
+    .is-night .hero-copy, .is-night .hero-stamp { color: #d3e2d7; }
+    .control-card { position: absolute; top: 18%; right: 36px; width: 238px; padding: 20px; border-radius: 19px; }
+    .section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .section-heading h2 { margin: 0; color: #344d44; font-size: 10px; font-weight: 700; letter-spacing: .16em; }
+    .section-heading span { font-family: "DM Serif Display", serif; color: #a4b2a4; font-size: 13px; }
+    .mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .mode-button { min-width: 0; height: 62px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6px; border: 1px solid transparent; border-radius: 10px; background: rgba(226, 234, 224, .52); color: #74867a; font-size: 10px; cursor: pointer; transition: .2s ease; }
+    .mode-button svg { width: 18px; height: 18px; }
+    .mode-button:hover, .view-button:hover { background: rgba(255,255,255,.85); }
+    .mode-button.active { color: #a95342; border-color: #dfb4a6; background: #fff9f0; box-shadow: 0 3px 10px #a95f4610; }
+    .card-divider { height: 1px; margin: 19px 0; background: #dce5d9; }
+    .view-list { display: grid; gap: 4px; }
+    .view-button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px; border: 0; border-radius: 9px; background: transparent; color: #718477; cursor: pointer; text-align: left; font-size: 11px; font-weight: 600; transition: .2s ease; }
+    .view-button.active { color: #a75140; background: #f9eee4; }
+    .view-icon { flex: 0 0 auto; display: grid; place-items: center; width: 25px; height: 25px; border-radius: 7px; background: #e6ede1; color: #7e9a80; }
+    .view-button.active .view-icon { background: #efd9cb; color: #b45c48; }
+    .view-icon svg { width: 15px; height: 15px; }
+    .view-arrow { margin-left: auto; font-size: 15px; font-weight: 400; opacity: .5; }
+    .card-foot { margin: 15px 0 0; color: #9baa9c; font-size: 9px; line-height: 1.5; }
+    .bottom-bar { position: absolute; left: 36px; right: 36px; bottom: 28px; display: flex; align-items: end; justify-content: space-between; gap: 20px; }
+    .explore-pill { display: flex; align-items: center; gap: 14px; padding: 11px 15px; border-radius: 13px; color: #647a6d; font-size: 10px; font-weight: 600; }
+    .mouse-icon { width: 25px; height: 25px; display: grid; place-items: center; border-radius: 8px; background: #e8eee4; color: #719079; }
+    .explore-pill strong { display: block; color: #40594e; font-size: 10px; letter-spacing: .04em; }
+    .explore-pill span { display: block; margin-top: 2px; font-size: 9px; color: #8c9d8e; }
+    .bottom-note { color: #648074; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-align: right; text-transform: uppercase; text-shadow: 0 1px 10px #fff; }
+    .bottom-note span { display: block; margin-top: 5px; color: #9aac9c; font-weight: 500; font-size: 9px; letter-spacing: .08em; }
+    .loading { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); padding: 10px 16px; border-radius: 999px; color: #597168; font-size: 11px; font-weight: 600; transition: opacity .4s; z-index: 3; }
+    .loading.hidden { opacity: 0; pointer-events: none; }
+    @media (max-width: 760px) {
+      .topbar { top: 18px; left: 18px; right: 18px; }
+      .brand-mark { width: 36px; height: 36px; }
+      .brand-name { font-size: 20px; }
+      .live-pill { display: none; }
+      .sound-button { width: 38px; min-height: 38px; justify-content: center; padding: 0; }
+      .sound-label { display: none; }
+      .hero { top: 92px; left: 20px; width: 230px; }
+      .hero h1 { font-size: clamp(37px, 9vw, 49px); margin: 12px 0 9px; }
+      .hero-copy { font-size: 11px; line-height: 1.5; max-width: 210px; }
+      .hero-stamp { display: none; }
+      .control-card { top: auto; right: 14px; left: 14px; bottom: 14px; width: auto; padding: 13px; border-radius: 16px; }
+      .section-heading { margin-bottom: 8px; }
+      .section-heading h2 { font-size: 9px; }
+      .mode-grid { position: absolute; top: 12px; right: 13px; width: 165px; }
+      .mode-button { height: 42px; flex-direction: row; gap: 4px; font-size: 9px; }
+      .mode-button svg { width: 14px; height: 14px; }
+      .card-divider { margin: 25px 0 10px; }
+      .view-list { display: flex; overflow-x: auto; gap: 5px; scrollbar-width: none; }
+      .view-list::-webkit-scrollbar { display: none; }
+      .view-button { flex: 0 0 auto; width: auto; padding: 6px 9px; font-size: 10px; }
+      .view-icon { width: 22px; height: 22px; }
+      .view-arrow, .card-foot, .bottom-bar { display: none; }
+      .loading { bottom: 160px; }
+    }
+    @media (max-width: 380px) {
+      .hero-copy { display: none; }
+      .hero { top: 80px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="world" aria-label="Interactive voxel landscape of a Japanese sanctuary"></canvas>
+  <div class="interface">
+    <header class="topbar">
+      <div class="brand" aria-label="Kōyō Sanctuary">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9c3 1 15 1 18 0M5 8l1-2m13 2-1-2M6 10v9m12-9v9M4 13h16M8 19h8"/></svg>
+        </div>
+        <div><div class="brand-name">kōyō</div><div class="brand-sub">VOXEL SANCTUARY</div></div>
+      </div>
+      <div class="top-actions">
+        <div class="glass live-pill border border-white/80 bg-white/70 shadow-xl backdrop-blur-xl"><span class="live-dot"></span> A LITTLE WORLD OF CALM</div>
+        <button id="sound-toggle" class="glass sound-button border border-white/80 bg-white/70 shadow-xl backdrop-blur-xl" type="button" aria-pressed="false" aria-label="Turn ambient sound on">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5ZM16 9l5 6m0-6-5 6"/></svg>
+          <span class="sound-label">SOUND OFF</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="hero">
+      <div class="eyebrow">A moment just for you</div>
+      <h1>Find your<br><em>quiet place.</em></h1>
+      <p class="hero-copy">A tiny world, a little farther away. Take a breath and wander awhile.</p>
+      <div class="hero-stamp"><span class="stamp-icon">静</span><span>Made for slowing down</span></div>
+    </main>
+
+    <aside class="glass control-card border border-white/80 bg-white/70 shadow-xl backdrop-blur-xl" aria-label="Scene controls">
+      <div class="section-heading"><h2>SET THE MOOD</h2><span>01</span></div>
+      <div class="mode-grid" role="group" aria-label="Time of day">
+        <button class="mode-button active" type="button" data-mode="morning" aria-pressed="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
+          Morning
+        </button>
+        <button class="mode-button" type="button" data-mode="sunset" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 17h18M5 20h14M7 17a5 5 0 0 1 10 0M12 4v3M4.9 8.9l2.1 2.1m12.1-2.1L17 11"/></svg>
+          Sunset
+        </button>
+        <button class="mode-button" type="button" data-mode="night" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 15.3A8 8 0 0 1 8.7 4.5a8.1 8.1 0 1 0 10.8 10.8Z"/><path d="M17 4v3m-1.5-1.5h3"/></svg>
+          Night
+        </button>
+      </div>
+      <div class="card-divider"></div>
+      <div class="section-heading"><h2>FIND YOUR VIEW</h2><span>02</span></div>
+      <div class="view-list" role="group" aria-label="Camera presets">
+        <button class="view-button active" type="button" data-view="pagoda" aria-pressed="true"><span class="view-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v2M5 10l7-4 7 4M7 10v4m10-4v4M3 15l9-4 9 4M5 15v4h14v-4M3 20h18"/></svg></span>Pagoda Front<span class="view-arrow">↗</span></button>
+        <button class="view-button" type="button" data-view="samurai" aria-pressed="false"><span class="view-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8c0 6 3 10 7 12 4-2 7-6 7-12M7 8h10M8 4c0 3 2 4 4 4s4-1 4-4M9 13h.01M15 13h.01M10 16h4"/></svg></span>Samurai Closeup<span class="view-arrow">↗</span></button>
+        <button class="view-button" type="button" data-view="meadow" aria-pressed="false"><span class="view-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 20v-9m0 5c-3 0-5-2-5-5 3 0 5 2 5 5Zm0-3c0-3 2-5 5-5 0 3-2 5-5 5ZM5 20h14"/></svg></span>Pastoral Meadow<span class="view-arrow">↗</span></button>
+        <button class="view-button" type="button" data-view="mountain" aria-pressed="false"><span class="view-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2 19 7-13 4 7 2-3 7 9H2ZM7 10l2 2 2-2"/></svg></span>Mountain Vista<span class="view-arrow">↗</span></button>
+        <button class="view-button" type="button" data-view="birdseye" aria-pressed="false"><span class="view-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8c4 0 6 2 10 6 4-4 6-6 10-6-2 4-5 7-10 8C7 15 4 12 2 8Z"/></svg></span>Bird's Eye<span class="view-arrow">↗</span></button>
+      </div>
+      <p class="card-foot">A different perspective, whenever you need one.</p>
+    </aside>
+
+    <div class="bottom-bar">
+      <div class="glass explore-pill border border-white/80 bg-white/70 shadow-xl backdrop-blur-xl">
+        <div class="mouse-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 6v4"/></svg></div>
+        <div><strong>Make yourself at home</strong><span>Drag to explore · Scroll to zoom</span></div>
+      </div>
+      <div class="bottom-note">A quiet corner of the world<span>BUILT ONE LITTLE BLOCK AT A TIME</span></div>
+    </div>
+  </div>
+  <div id="loading" class="glass loading border border-white/80 bg-white/70 shadow-xl backdrop-blur-xl" role="status">Creating your little world…</div>
+  <script>
+    window.setTimeout(function () {
+      var loading = document.getElementById('loading');
+      if (!loading.classList.contains('hidden')) {
+        loading.textContent = 'The scene is taking a while to load. Please check your connection.';
+      }
+    }, 15000);
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const canvas = document.getElementById('world');
+    const loading = document.getElementById('loading');
+    const scene = new THREE.Scene();
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.7));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+
+    const camera = new THREE.PerspectiveCamera(window.innerWidth / window.innerHeight < 0.8 ? 58 : 39, window.innerWidth / window.innerHeight, 0.1, 260);
+    camera.position.set(45, 33, 64);
+    const controls = new OrbitControls(camera, canvas);
+    controls.target.set(0, 7, -5);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.065;
+    controls.minDistance = 11;
+    controls.maxDistance = 125;
+    controls.maxPolarAngle = Math.PI / 2.04;
+    controls.minPolarAngle = 0.08;
+    controls.enablePan = false;
+    controls.update();
+
+    let seed = 89173;
+    function random() {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 4294967296;
+    }
+    function range(min, max) { return min + random() * (max - min); }
+    function pick(items) { return items[Math.floor(random() * items.length)]; }
+
+    function pixelTexture(hex, variation = 14) {
+      const image = document.createElement('canvas');
+      image.width = image.height = 16;
+      const context = image.getContext('2d');
+      const base = new THREE.Color(hex).getRGB({}, THREE.SRGBColorSpace);
+      for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 16; x++) {
+          const value = Math.floor((random() - 0.5) * variation);
+          const r = Math.max(0, Math.min(255, Math.round(base.r * 255) + value));
+          const g = Math.max(0, Math.min(255, Math.round(base.g * 255) + value));
+          const b = Math.max(0, Math.min(255, Math.round(base.b * 255) + value));
+          context.fillStyle = `rgb(${r},${g},${b})`;
+          context.fillRect(x, y, 1, 1);
+        }
+      }
+      const texture = new THREE.CanvasTexture(image);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.magFilter = THREE.NearestFilter;
+      texture.minFilter = THREE.NearestFilter;
+      return texture;
+    }
+    function material(color, options = {}) {
+      const { variation = 12, ...materialOptions } = options;
+      return new THREE.MeshStandardMaterial({ map: pixelTexture(color, variation), roughness: 0.9, ...materialOptions });
+    }
+    const mat = {
+      grass: material('#83aa6e'), grass2: material('#91b57b'), grassDark: material('#6f9965'),
+      earth: material('#817e6b'), earthDark: material('#666d60'), rock: material('#8e9890'),
+      rockLight: material('#adb8ad'), mountain: material('#879992'), mountainDark: material('#70877f'),
+      snow: material('#edf1e9', { variation: 8 }), snowShade: material('#cedbd5'),
+      wood: material('#65473b'), woodDark: material('#443d38'), woodLight: material('#98705a'),
+      roof: material('#465951'), roofDark: material('#394b47'), roofEdge: material('#617269'),
+      red: material('#bb5542'), redLight: material('#d06a51'), redDark: material('#873e35'),
+      gold: material('#e9bd62', { metalness: 0.3, roughness: 0.55 }),
+      paper: material('#ffe1a0', { emissive: '#e9a85d', emissiveIntensity: 0.25 }),
+      lantern: material('#ffe3a3', { emissive: '#ffb65c', emissiveIntensity: 0.65 }),
+      water: material('#78b7b0', { metalness: 0.05, roughness: 0.38 }),
+      waterLight: material('#a8d1c5'), lily: material('#6e9b65'), flower: material('#f5cad2'),
+      pink: material('#e9a9ad'), pinkLight: material('#f6c5c6'), pinkDark: material('#d88f9d'),
+      bamboo: material('#73965b'), bambooLight: material('#a2b878'), leaf: material('#708f61'),
+      leafLight: material('#91ad76'), white: material('#f3eee1'), wool: material('#f2f1e7'),
+      woolShade: material('#d7ded0'), skin: material('#d4a681'), black: material('#393c37'),
+      armor: material('#464b46'), armorRed: material('#95483d'), steel: material('#aeb5a6'),
+      cloud: material('#f7f6ec', { variation: 5 }), bird: material('#5f6e67')
+    };
+    const unitBox = new THREE.BoxGeometry(1, 1, 1);
+    const buckets = new Map();
+    function box(x, y, z, w, h, d, materialValue) {
+      if (!buckets.has(materialValue)) buckets.set(materialValue, []);
+      buckets.get(materialValue).push([x, y, z, w, h, d]);
+    }
+    function flushBoxes() {
+      const transform = new THREE.Object3D();
+      for (const [materialValue, items] of buckets) {
+        const mesh = new THREE.InstancedMesh(unitBox, materialValue, items.length);
+        items.forEach((item, index) => {
+          transform.position.set(item[0], item[1], item[2]);
+          transform.scale.set(item[3], item[4], item[5]);
+          transform.updateMatrix();
+          mesh.setMatrixAt(index, transform.matrix);
+        });
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.instanceMatrix.needsUpdate = true;
+        scene.add(mesh);
+      }
+      buckets.clear();
+    }
+    function model(parts) {
+      const group = new THREE.Group();
+      const byMaterial = new Map();
+      const transform = new THREE.Object3D();
+      for (const part of parts) {
+        if (!byMaterial.has(part[6])) byMaterial.set(part[6], []);
+        byMaterial.get(part[6]).push(part);
+      }
+      for (const [materialValue, items] of byMaterial) {
+        const mesh = new THREE.InstancedMesh(unitBox, materialValue, items.length);
+        items.forEach((part, index) => {
+          transform.position.set(part[0], part[1], part[2]);
+          transform.scale.set(part[3], part[4], part[5]);
+          transform.updateMatrix();
+          mesh.setMatrixAt(index, transform.matrix);
+        });
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        group.add(mesh);
+      }
+      return group;
+    }
+
+    const hemisphere = new THREE.HemisphereLight('#eaf5e9', '#8a987b', 1.65);
+    scene.add(hemisphere);
+    const sunLight = new THREE.DirectionalLight('#fff0ce', 2.1);
+    sunLight.position.set(-35, 55, 32);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.set(2048, 2048);
+    sunLight.shadow.camera.left = -55;
+    sunLight.shadow.camera.right = 55;
+    sunLight.shadow.camera.top = 55;
+    sunLight.shadow.camera.bottom = -55;
+    sunLight.shadow.camera.near = 1;
+    sunLight.shadow.camera.far = 160;
+    sunLight.shadow.bias = -0.00035;
+    sunLight.shadow.normalBias = 0.03;
+    sunLight.target.position.set(0, 0, -6);
+    scene.add(sunLight, sunLight.target);
+    const skyBodyMaterial = new THREE.MeshBasicMaterial({ color: '#fff2ca' });
+    const skyBody = new THREE.Mesh(unitBox, skyBodyMaterial);
+    skyBody.scale.set(5, 5, 1);
+    skyBody.position.set(-38, 35, -65);
+    scene.add(skyBody);
+    const lanternLights = [];
+    function addLanternLight(x, y, z, intensity = 1) {
+      const light = new THREE.PointLight('#ffbb70', intensity, 11, 2);
+      light.position.set(x, y, z);
+      scene.add(light);
+      lanternLights.push(light);
+    }
+
+    // The island's broad blocks make a visible cross-section beneath the garden.
+    for (let x = -32; x < 32; x += 4) {
+      for (let z = -24; z < 28; z += 4) {
+        const edge = Math.abs(x + 2) > 27 || z < -20 || z > 22;
+        if (edge && random() < 0.13) continue;
+        const depth = 2.8 + Math.floor(random() * 3) * 0.55;
+        box(x + 2, -depth / 2, z + 2, 4, depth, 4, pick([mat.earth, mat.earth, mat.earthDark]));
+        box(x + 2, 0.08, z + 2, 4, 0.3, 4, pick([mat.grass, mat.grass, mat.grass2, mat.grassDark]));
+        if (edge && random() > 0.55) box(x + 2, -depth - 0.3, z + 2, 3.6, 0.7, 3.6, mat.earthDark);
+      }
+    }
+
+    // Mountains are built in large voxel columns, with individual snow blocks near each summit.
+    const peaks = [
+      { x: -39, h: 31, width: 11 }, { x: -20, h: 37, width: 11 },
+      { x: 2, h: 28, width: 12 }, { x: 22, h: 38, width: 11 }, { x: 42, h: 31, width: 11 }
+    ];
+    for (let x = -51; x <= 51; x += 3) {
+      for (let z = -48; z <= -27; z += 3) {
+        let height = 0;
+        for (const peak of peaks) {
+          const dx = (x - peak.x) / peak.width;
+          const dz = (z + 39) / 12;
+          height = Math.max(height, peak.h * Math.exp(-(dx * dx * 0.72 + dz * dz * 0.5)));
+        }
+        height += range(-2, 2);
+        const layers = Math.max(0, Math.floor(height / 3));
+        for (let level = 0; level < layers; level++) {
+          const y = level * 3 + 1.5;
+          const snowy = y > 22 && level > layers - 4;
+          const stone = snowy ? pick([mat.snow, mat.snow, mat.snowShade]) : pick([mat.mountain, mat.mountain, mat.mountainDark, mat.rock]);
+          box(x, y, z, 3.05, 3.05, 3.05, stone);
+        }
+      }
+    }
+
+    function roof(cx, cz, width, depth, y) {
+      const roofWidth = width + 3.6;
+      const roofDepth = depth + 3.2;
+      box(cx, y, cz, roofWidth, 0.35, roofDepth, mat.roofDark);
+      box(cx, y + 0.18, cz + roofDepth / 2, roofWidth + 0.4, 0.25, 0.28, mat.roofEdge);
+      box(cx, y + 0.18, cz - roofDepth / 2, roofWidth + 0.4, 0.25, 0.28, mat.roofEdge);
+      for (let i = 0; i < 4; i++) {
+        box(cx, y + 0.35 + i * 0.28, cz, roofWidth - i * 0.82, 0.32, roofDepth - i * 0.72, i % 2 ? mat.roofDark : mat.roof);
+      }
+      for (const sx of [-1, 1]) {
+        for (const sz of [-1, 1]) {
+          box(cx + sx * (roofWidth / 2 - 0.2), y + 0.44, cz + sz * (roofDepth / 2 - 0.2), 0.8, 0.38, 0.8, mat.roof);
+          box(cx + sx * (roofWidth / 2 + 0.15), y + 0.68, cz + sz * (roofDepth / 2 + 0.15), 0.45, 0.32, 0.45, mat.roofEdge);
+        }
+      }
+      for (let x = -roofWidth / 2 + 0.7; x < roofWidth / 2; x += 1.1) {
+        box(cx + x, y + 0.28, cz + roofDepth / 2 + 0.02, 0.16, 0.2, 0.32, mat.roofDark);
+      }
+    }
+    function tier(cx, cz, width, depth, y, height, panels) {
+      box(cx, y + height / 2, cz, width, height, depth, mat.wood);
+      box(cx, y + 0.18, cz, width + 0.3, 0.36, depth + 0.3, mat.woodDark);
+      box(cx, y + height - 0.18, cz, width + 0.3, 0.36, depth + 0.3, mat.woodDark);
+      for (const sx of [-1, 1]) {
+        for (const sz of [-1, 1]) box(cx + sx * width / 2, y + height / 2, cz + sz * depth / 2, 0.46, height, 0.46, mat.woodDark);
+      }
+      const panelWidth = (width - 1.2) / panels;
+      for (let i = 0; i < panels; i++) {
+        const px = cx - width / 2 + 0.6 + panelWidth * (i + 0.5);
+        box(px, y + height * 0.53, cz + depth / 2 + 0.035, panelWidth - 0.2, height - 1.05, 0.1, mat.paper);
+        box(px, y + height * 0.53, cz + depth / 2 + 0.1, 0.09, height - 1.05, 0.1, mat.wood);
+        box(px, y + height * 0.53, cz + depth / 2 + 0.12, panelWidth - 0.2, 0.1, 0.1, mat.wood);
+      }
+      for (let i = 0; i < 3; i++) {
+        const pz = cz - depth / 2 + 0.6 + (depth - 1.2) * (i + 0.5) / 3;
+        box(cx + width / 2 + 0.035, y + height * 0.53, pz, 0.1, height - 1.05, (depth - 1.2) / 3 - 0.2, mat.paper);
+        box(cx + width / 2 + 0.1, y + height * 0.53, pz, 0.1, 0.1, (depth - 1.2) / 3 - 0.2, mat.wood);
+      }
+      roof(cx, cz, width, depth, y + height);
+    }
+    const templeZ = -7;
+    box(0, 0.42, templeZ, 13, 0.8, 11, mat.rock);
+    box(0, 0.86, templeZ, 12, 0.25, 10, mat.woodDark);
+    tier(0, templeZ, 10.5, 8.5, 1, 3.8, 5);
+    tier(0, templeZ, 8.1, 6.7, 6.15, 3.3, 4);
+    tier(0, templeZ, 5.8, 5.1, 10.8, 2.9, 3);
+    box(0, 15.25, templeZ, 0.48, 2.4, 0.48, mat.gold);
+    for (let i = 0; i < 5; i++) box(0, 14.45 + i * 0.38, templeZ, 1.1 - i * 0.1, 0.13, 1.1 - i * 0.1, mat.gold);
+    box(0, 16.65, templeZ, 0.28, 1.2, 0.28, mat.gold);
+    box(0, 17.35, templeZ, 0.45, 0.45, 0.45, mat.gold);
+    for (const x of [-4.3, 4.3]) {
+      box(x, 4.4, -2.35, 0.08, 0.5, 0.08, mat.woodDark);
+      box(x, 4.03, -2.35, 0.65, 0.72, 0.65, mat.lantern);
+      box(x, 4.42, -2.35, 0.78, 0.12, 0.78, mat.woodDark);
+      box(x, 3.64, -2.35, 0.78, 0.12, 0.78, mat.woodDark);
+      addLanternLight(x, 4, -1.9, 1.3);
+    }
+    // A front stair and stepping stones lead through the torii.
+    box(0, 0.35, -1.1, 5.5, 0.45, 1.7, mat.rockLight);
+    box(0, 0.22, 0.15, 6.2, 0.28, 1.2, mat.rock);
+    for (let z = 1; z < 27; z += 1.55) {
+      box(range(-0.2, 0.2), 0.27, z, range(1.7, 2.6), 0.16, range(0.75, 1.1), pick([mat.rockLight, mat.rock, mat.snowShade]));
+      if (random() > 0.45) box(range(-2.1, 2.1), 0.24, z + 0.5, 0.55, 0.1, 0.45, mat.rock);
+    }
+    function torii(x, z) {
+      for (const side of [-1, 1]) {
+        box(x + side * 3.2, 3.55, z, 0.7, 7.1, 0.7, mat.red);
+        box(x + side * 3.2, 0.35, z, 0.98, 0.7, 0.98, mat.rock);
+        box(x + side * 3.2, 6.85, z, 0.85, 0.35, 0.85, mat.redDark);
+      }
+      box(x, 5.35, z, 7.8, 0.45, 0.6, mat.red);
+      box(x, 7.15, z, 8.7, 0.7, 1.05, mat.red);
+      box(x, 7.58, z, 9.5, 0.3, 1.15, mat.redDark);
+      for (const side of [-1, 1]) box(x + side * 4.65, 7.83, z, 0.65, 0.35, 1.15, mat.redDark);
+      box(x, 6.25, z + 0.38, 0.65, 1.15, 0.18, mat.redDark);
+    }
+    torii(0, 14);
+
+    function groundLantern(x, z) {
+      box(x, 0.25, z, 1.4, 0.45, 1.4, mat.rock);
+      box(x, 0.9, z, 0.55, 1, 0.55, mat.rockLight);
+      box(x, 1.55, z, 1.1, 0.35, 1.1, mat.rock);
+      box(x, 2.05, z, 0.8, 0.8, 0.8, mat.lantern);
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(x + sx * 0.43, 2.05, z + sz * 0.43, 0.12, 0.9, 0.12, mat.rock);
+      box(x, 2.57, z, 1.35, 0.28, 1.35, mat.rock);
+      box(x, 2.78, z, 0.85, 0.2, 0.85, mat.rockLight);
+      box(x, 2.96, z, 0.25, 0.2, 0.25, mat.rock);
+      addLanternLight(x, 2.15, z, 1.2);
+    }
+    groundLantern(-4.8, 19);
+    groundLantern(5.2, 19);
+    groundLantern(9, -1);
+
+    // The pond sits in a border of irregular stone voxels; the arched bridge crosses it.
+    box(15, 0.2, 8, 15.2, 0.28, 12, mat.rock);
+    box(15, 0.37, 8, 14.2, 0.14, 11, mat.water);
+    for (let i = 0; i < 24; i++) {
+      const x = range(8.5, 21.5), z = range(3.2, 12.8);
+      if (Math.abs(x - 15) < 2.3) continue;
+      box(x, 0.47, z, range(0.6, 1.2), 0.07, range(0.5, 0.9), mat.lily);
+      if (random() > 0.6) box(x, 0.56, z, 0.25, 0.15, 0.25, mat.flower);
+    }
+    for (let i = 0; i < 14; i++) {
+      const x = range(8.3, 21.8), z = range(3, 13);
+      if (Math.abs(x - 15) > 2.3) box(x, 0.46, z, range(0.5, 1.2), 0.035, 0.08, mat.waterLight);
+    }
+    for (let i = -7; i <= 7; i++) {
+      const z = 8 + i;
+      const y = 0.65 + 1.65 * (1 - (i / 7) ** 2);
+      box(15, y, z, 3.4, 0.36, 1.04, mat.red);
+      box(15, y + 0.2, z, 3.1, 0.08, 0.1, mat.redDark);
+      for (const side of [-1, 1]) {
+        box(15 + side * 1.75, y + 0.84, z, 0.18, 0.2, 1.08, mat.red);
+        if (i % 2 === 0) box(15 + side * 1.75, y + 0.55, z, 0.23, 1.1, 0.23, mat.redDark);
+      }
+    }
+
+    function sakura(x, z, scale = 1) {
+      box(x, 3.3 * scale, z, 1.1 * scale, 6.6 * scale, 1.1 * scale, mat.wood);
+      for (let i = 0; i < 5; i++) {
+        const angle = i * Math.PI * 2 / 5 + 0.4;
+        const bx = x + Math.cos(angle) * 1.7 * scale;
+        const bz = z + Math.sin(angle) * 1.7 * scale;
+        box((x + bx) / 2, 5.7 * scale, (z + bz) / 2, 2.4 * scale, 0.6 * scale, 0.6 * scale, mat.wood);
+        for (let j = 0; j < 5; j++) {
+          box(bx + range(-1.6, 1.6) * scale, range(6.6, 9) * scale, bz + range(-1.6, 1.6) * scale,
+            range(1.5, 2.6) * scale, range(1.1, 1.9) * scale, range(1.5, 2.6) * scale,
+            pick([mat.pink, mat.pink, mat.pinkLight, mat.pinkDark]));
+        }
+      }
+      box(x, 8.8 * scale, z, 3 * scale, 1.7 * scale, 3 * scale, mat.pinkLight);
+    }
+    sakura(-13.5, -8, 1.1);
+    sakura(22, -9, 1.05);
+    sakura(-26, -17, 0.82);
+
+    function bamboo(x, z, height) {
+      box(x, height / 2, z, 0.34, height, 0.34, mat.bamboo);
+      for (let y = 1; y < height; y += 1.2) box(x, y, z, 0.44, 0.12, 0.44, mat.bambooLight);
+      for (let i = 0; i < 3; i++) {
+        const side = i % 2 ? -1 : 1;
+        const y = height - 0.8 - i * 1.2;
+        box(x + side * 0.72, y, z, 1.25, 0.13, 0.25, mat.leaf);
+        box(x + side * 1.22, y - 0.2, z, 0.7, 0.12, 0.2, mat.leafLight);
+      }
+    }
+    for (let i = 0; i < 23; i++) bamboo(range(-31, -23), range(-9, 1), range(5, 9));
+    for (let i = 0; i < 14; i++) bamboo(range(25, 30), range(-14, -4), range(5, 8));
+    for (let i = 0; i < 42; i++) {
+      const x = range(-30, 30), z = range(-20, 25);
+      if ((Math.abs(x) < 7 && z > -14 && z < 22) || (x > 7 && x < 23 && z > 1 && z < 16)) continue;
+      box(x, 0.45, z, range(0.7, 1.5), range(0.5, 0.9), range(0.7, 1.5), pick([mat.leaf, mat.leafLight, mat.grassDark]));
+      if (random() > 0.65) box(x + 0.3, 1, z, 0.25, 0.35, 0.25, pick([mat.pinkLight, mat.white]));
+    }
+    flushBoxes();
+
+    function samurai(x, z, facing = 0) {
+      const parts = [];
+      const p = (a, b, c, d, e, f, m) => parts.push([a, b, c, d, e, f, m]);
+      // Armor, limbs and lamellar plates are assembled on a quarter-block grid.
+      p(0, 1.55, 0, 1.15, 1.2, 0.65, mat.armor);
+      p(0, 1.42, 0.36, 1.05, 0.78, 0.16, mat.armorRed);
+      for (let y = 1.12; y <= 1.75; y += 0.2) p(0, y, 0.46, 1.05, 0.07, 0.08, mat.gold);
+      p(0, 0.95, 0, 1.3, 0.25, 0.75, mat.armorRed);
+      for (const side of [-1, 1]) {
+        p(side * 0.34, 0.55, 0, 0.42, 0.85, 0.48, mat.armor);
+        p(side * 0.34, 0.17, 0.1, 0.46, 0.25, 0.62, mat.woodDark);
+        p(side * 0.78, 1.5, 0, 0.3, 0.95, 0.35, mat.armor);
+        p(side * 0.8, 1.92, 0, 0.55, 0.4, 0.8, mat.armorRed);
+        p(side * 0.8, 1.7, 0.05, 0.6, 0.12, 0.8, mat.gold);
+        p(side * 0.8, 1.03, 0, 0.28, 0.25, 0.3, mat.skin);
+      }
+      p(0, 2.32, 0.04, 0.64, 0.57, 0.57, mat.skin);
+      p(0, 2.18, 0.34, 0.66, 0.18, 0.12, mat.woodDark);
+      p(-0.17, 2.37, 0.34, 0.08, 0.08, 0.06, mat.black);
+      p(0.17, 2.37, 0.34, 0.08, 0.08, 0.06, mat.black);
+      p(0, 2.75, 0, 0.9, 0.36, 0.75, mat.armor);
+      p(0, 2.96, 0, 0.68, 0.15, 0.62, mat.armorRed);
+      p(0, 2.58, -0.38, 1.04, 0.4, 0.2, mat.armor);
+      p(0, 2.78, 0.43, 0.18, 0.42, 0.12, mat.gold);
+      for (const side of [-1, 1]) {
+        p(side * 0.33, 3.08, 0.44, 0.16, 0.48, 0.13, mat.gold);
+        p(side * 0.22, 2.87, 0.44, 0.25, 0.12, 0.13, mat.gold);
+        p(side * 0.43, 3.3, 0.44, 0.15, 0.18, 0.13, mat.gold);
+      }
+      p(-0.94, 0.92, -0.12, 0.14, 1.65, 0.16, mat.woodDark);
+      p(-0.94, 1.82, -0.12, 0.17, 0.35, 0.17, mat.gold);
+      p(-0.94, 1.65, -0.12, 0.33, 0.08, 0.3, mat.gold);
+      const guardian = model(parts);
+      guardian.position.set(x, 0.2, z);
+      guardian.rotation.y = facing;
+      scene.add(guardian);
+      return guardian;
+    }
+    const guardians = [samurai(-5.4, 9.2, -0.12), samurai(5.4, 9.2, 0.12)];
+
+    function animal(kind, x, z, phase) {
+      const parts = [];
+      const p = (a, b, c, d, e, f, m) => parts.push([a, b, c, d, e, f, m]);
+      const alpaca = kind === 'alpaca';
+      p(0, 1, 0, 1.5, 1, 2, mat.wool);
+      p(0, 1.38, -0.1, 1.35, 0.45, 1.7, mat.wool);
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+        p(sx * 0.48, 0.4, sz * 0.65, 0.3, 0.75, 0.34, mat.woolShade);
+        p(sx * 0.48, 0.12, sz * 0.65, 0.32, 0.2, 0.36, mat.woodDark);
+      }
+      const neckY = alpaca ? 1.15 : 1;
+      const headParts = [];
+      const headPart = (a, b, c, d, e, f, m) => headParts.push([a, b - neckY, c - 0.7, d, e, f, m]);
+      if (alpaca) {
+        headPart(0, 1.75, 0.75, 0.7, 1.45, 0.7, mat.wool);
+        headPart(0, 2.5, 0.9, 0.8, 0.6, 0.8, mat.wool);
+        headPart(0, 2.38, 1.35, 0.5, 0.32, 0.3, mat.woolShade);
+        for (const side of [-1, 1]) {
+          headPart(side * 0.28, 2.94, 0.85, 0.18, 0.48, 0.18, mat.wool);
+          headPart(side * 0.3, 2.53, 1.31, 0.09, 0.09, 0.06, mat.black);
+        }
+      } else {
+        headPart(0, 1.23, 1.12, 0.85, 0.72, 0.65, mat.woolShade);
+        headPart(0, 1.12, 1.48, 0.55, 0.4, 0.18, mat.skin);
+        for (const side of [-1, 1]) {
+          headPart(side * 0.6, 1.45, 1.08, 0.4, 0.2, 0.3, mat.wool);
+          headPart(side * 0.25, 1.33, 1.48, 0.08, 0.08, 0.06, mat.black);
+        }
+        for (let i = 0; i < 8; i++) p(range(-0.55, 0.55), range(1.32, 1.55), range(-0.8, 0.6), 0.5, 0.4, 0.5, mat.wool);
+      }
+      const creature = model(parts);
+      const head = model(headParts);
+      head.position.set(0, neckY, 0.7);
+      creature.add(head);
+      creature.position.set(x, 0.18, z);
+      scene.add(creature);
+      return { mesh: creature, head, x, z, phase, speed: alpaca ? 0.19 : 0.25 };
+    }
+    const animals = [
+      animal('sheep', -19, 7, 0), animal('sheep', -25, 14, 2.1),
+      animal('sheep', -15, 17, 4.2), animal('alpaca', -23, 4, 1.1),
+      animal('alpaca', -27, 19, 3.4)
+    ];
+
+    const clouds = [];
+    for (let i = 0; i < 8; i++) {
+      const parts = [];
+      const size = range(0.8, 1.5);
+      for (let j = 0; j < 6; j++) parts.push([(j - 2.5) * 1.7 * size, range(-0.3, 0.5) * size, range(-0.8, 0.8) * size, range(2, 3.4) * size, range(0.8, 1.6) * size, range(1.8, 3) * size, mat.cloud]);
+      const cloud = model(parts);
+      cloud.position.set(range(-60, 60), range(30, 42), range(-55, -30));
+      scene.add(cloud);
+      clouds.push({ mesh: cloud, speed: range(0.3, 0.7) });
+    }
+    const birds = [];
+    for (let i = 0; i < 9; i++) {
+      const group = new THREE.Group();
+      const body = model([[0, 0, 0, 0.42, 0.28, 0.7, mat.bird], [0, 0.04, 0.45, 0.25, 0.22, 0.25, mat.bird]]);
+      const left = model([[-0.55, 0, 0, 1.05, 0.1, 0.38, mat.bird]]);
+      const right = model([[0.55, 0, 0, 1.05, 0.1, 0.38, mat.bird]]);
+      group.add(body, left, right);
+      scene.add(group);
+      birds.push({ mesh: group, left, right, phase: i * 0.7, offset: i });
+    }
+
+    const petalCount = 100;
+    const petalPositions = new Float32Array(petalCount * 3);
+    const petals = [];
+    for (let i = 0; i < petalCount; i++) {
+      const tree = i % 2 ? [-13.5, -8] : [22, -9];
+      petals.push({ x: tree[0] + range(-5, 5), y: range(0.4, 10), z: tree[1] + range(-5, 5), phase: range(0, 6.28), speed: range(0.25, 0.65) });
+    }
+    const petalGeometry = new THREE.BufferGeometry();
+    petalGeometry.setAttribute('position', new THREE.BufferAttribute(petalPositions, 3));
+    const petalMaterial = new THREE.PointsMaterial({ color: '#f5bec8', size: 0.24, sizeAttenuation: true });
+    const petalPoints = new THREE.Points(petalGeometry, petalMaterial);
+    scene.add(petalPoints);
+
+    const modes = {
+      morning: { sky: '#c9e5e0', fog: '#d8e8df', sun: '#fff0ca', ground: '#8a987b', intensity: 2.1, ambient: 1.65, lantern: 1.2, glow: 0.65, exposure: 1.15, orb: '#fff2ca', position: [-78, 32, -60] },
+      sunset: { sky: '#efc3ab', fog: '#eecbbb', sun: '#ffbb82', ground: '#a37672', intensity: 1.8, ambient: 1.2, lantern: 2.2, glow: 1.2, exposure: 1.06, orb: '#ffdc9b', position: [-78, 24, -60] },
+      night: { sky: '#263c50', fog: '#536a70', sun: '#a7c7ed', ground: '#35434b', intensity: 0.65, ambient: 0.68, lantern: 5.5, glow: 2.3, exposure: 1.0, orb: '#e4eff0', position: [-78, 32, -60] }
+    };
+    function setMode(name) {
+      const mode = modes[name];
+      document.body.classList.toggle('is-night', name === 'night');
+      scene.background = new THREE.Color(mode.sky);
+      scene.fog = new THREE.Fog(mode.fog, 90, 190);
+      sunLight.color.set(mode.sun);
+      sunLight.intensity = mode.intensity;
+      hemisphere.groundColor.set(mode.ground);
+      hemisphere.intensity = mode.ambient;
+      skyBodyMaterial.color.set(mode.orb);
+      skyBody.position.set(...mode.position);
+      sunLight.position.set(...mode.position);
+      renderer.toneMappingExposure = mode.exposure;
+      mat.lantern.emissiveIntensity = mode.glow;
+      mat.paper.emissiveIntensity = name === 'night' ? 0.8 : 0.25;
+      lanternLights.forEach(light => { light.intensity = mode.lantern; });
+      document.querySelectorAll('[data-mode]').forEach(button => {
+        const selected = button.dataset.mode === name;
+        button.classList.toggle('active', selected);
+        button.setAttribute('aria-pressed', String(selected));
+      });
+    }
+    setMode('morning');
+    document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => setMode(button.dataset.mode)));
+
+    const views = {
+      pagoda: { position: [45, 33, 64], target: [0, 7, -5] },
+      samurai: { position: [-11.5, 6.2, 18], target: [-5.4, 1.9, 9.2] },
+      meadow: { position: [-34, 13, 30], target: [-21, 2, 8] },
+      mountain: { position: [35, 34, 48], target: [0, 16, -30] },
+      birdseye: { position: [2, 77, 12], target: [0, 0, -5] }
+    };
+    let cameraTransition = null;
+    function setView(name) {
+      const view = views[name];
+      cameraTransition = {
+        start: performance.now(),
+        fromPosition: camera.position.clone(),
+        fromTarget: controls.target.clone(),
+        toPosition: new THREE.Vector3(...view.position),
+        toTarget: new THREE.Vector3(...view.target)
+      };
+      document.querySelectorAll('[data-view]').forEach(button => {
+        const selected = button.dataset.view === name;
+        button.classList.toggle('active', selected);
+        button.setAttribute('aria-pressed', String(selected));
+      });
+    }
+    document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => setView(button.dataset.view)));
+    controls.addEventListener('start', () => {
+      cameraTransition = null;
+      document.querySelectorAll('[data-view]').forEach(button => {
+        button.classList.remove('active');
+        button.setAttribute('aria-pressed', 'false');
+      });
+    });
+
+    const soundButton = document.getElementById('sound-toggle');
+    let audioContext;
+    let windGain;
+    let chimeTimer;
+    let soundOn = false;
+    function playChime() {
+      if (!soundOn || !audioContext) return;
+      const now = audioContext.currentTime;
+      const frequency = pick([523.25, 587.33, 659.25, 783.99, 880]);
+      const tone = audioContext.createOscillator();
+      const overtone = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      tone.type = 'sine';
+      overtone.type = 'sine';
+      tone.frequency.value = frequency;
+      overtone.frequency.value = frequency * 2.01;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.022, now + 0.035);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.8);
+      tone.connect(gain);
+      overtone.connect(gain);
+      gain.connect(audioContext.destination);
+      tone.start(now);
+      overtone.start(now);
+      tone.stop(now + 3);
+      overtone.stop(now + 3);
+      chimeTimer = window.setTimeout(playChime, range(7000, 15000));
+    }
+    async function toggleSound() {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) {
+        soundButton.setAttribute('aria-label', 'Ambient sound is not supported in this browser');
+        soundButton.querySelector('.sound-label').textContent = 'SOUND UNAVAILABLE';
+        return;
+      }
+      if (!audioContext) {
+        audioContext = new AudioContext();
+        const buffer = audioContext.createBuffer(1, audioContext.sampleRate * 4, audioContext.sampleRate);
+        const samples = buffer.getChannelData(0);
+        for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
+        const noise = audioContext.createBufferSource();
+        noise.buffer = buffer;
+        noise.loop = true;
+        const filter = audioContext.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 430;
+        windGain = audioContext.createGain();
+        windGain.gain.value = 0.035;
+        const breeze = audioContext.createOscillator();
+        const breezeDepth = audioContext.createGain();
+        breeze.frequency.value = 0.12;
+        breezeDepth.gain.value = 0.018;
+        breeze.connect(breezeDepth);
+        breezeDepth.connect(windGain.gain);
+        noise.connect(filter);
+        filter.connect(windGain);
+        windGain.connect(audioContext.destination);
+        noise.start();
+        breeze.start();
+      }
+      if (soundOn) {
+        soundOn = false;
+        window.clearTimeout(chimeTimer);
+        await audioContext.suspend();
+      } else {
+        await audioContext.resume();
+        soundOn = true;
+        chimeTimer = window.setTimeout(playChime, 2500);
+      }
+      soundButton.setAttribute('aria-pressed', String(soundOn));
+      soundButton.setAttribute('aria-label', `Turn ambient sound ${soundOn ? 'off' : 'on'}`);
+      soundButton.querySelector('.sound-label').textContent = `SOUND ${soundOn ? 'ON' : 'OFF'}`;
+      soundButton.querySelector('svg').innerHTML = soundOn
+        ? '<path d="M11 5 6 9H3v6h3l5 4V5ZM15 9a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/>'
+        : '<path d="M11 5 6 9H3v6h3l5 4V5ZM16 9l5 6m0-6-5 6"/>';
+    }
+    soundButton.addEventListener('click', () => {
+      toggleSound().catch(error => {
+        console.error('Unable to change ambient sound:', error);
+        soundButton.setAttribute('aria-label', 'Ambient sound could not be started');
+        soundButton.querySelector('.sound-label').textContent = 'SOUND UNAVAILABLE';
+      });
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.fov = camera.aspect < 0.8 ? 58 : 39;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.7));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = Math.min(clock.getDelta(), 0.05);
+      const time = clock.elapsedTime;
+      if (cameraTransition) {
+        const progress = Math.min(1, (performance.now() - cameraTransition.start) / 1250);
+        const eased = 1 - (1 - progress) ** 3;
+        camera.position.lerpVectors(cameraTransition.fromPosition, cameraTransition.toPosition, eased);
+        controls.target.lerpVectors(cameraTransition.fromTarget, cameraTransition.toTarget, eased);
+        if (progress === 1) cameraTransition = null;
+      }
+      controls.update();
+      guardians.forEach((guardian, i) => {
+        guardian.scale.y = 1 + Math.sin(time * 1.5 + i) * 0.012;
+      });
+      animals.forEach(animalData => {
+        const t = time * animalData.speed + animalData.phase;
+        animalData.mesh.position.x = animalData.x + Math.sin(t) * 1.7;
+        animalData.mesh.position.z = animalData.z + Math.cos(t * 0.7) * 1.2;
+        animalData.mesh.position.y = 0.18 + Math.abs(Math.sin(t * 3)) * 0.045;
+        animalData.mesh.rotation.y = Math.atan2(Math.cos(t) * 1.7, -Math.sin(t * 0.7) * 0.84);
+        animalData.mesh.rotation.x = Math.sin(time * 1.4 + animalData.phase) * 0.035;
+        animalData.head.rotation.x = Math.max(0, Math.sin(time * 0.6 + animalData.phase)) * 0.45;
+      });
+      clouds.forEach(cloud => {
+        cloud.mesh.position.x += cloud.speed * delta;
+        if (cloud.mesh.position.x > 70) cloud.mesh.position.x = -70;
+      });
+      birds.forEach(bird => {
+        const t = time * 0.18 + bird.phase;
+        bird.mesh.position.set(Math.sin(t) * 19 + (bird.offset % 3) * 2, 24 + Math.sin(t * 2) * 1.1 + (bird.offset % 3), -17 + Math.cos(t) * 10 + Math.floor(bird.offset / 3) * 1.8);
+        bird.mesh.rotation.y = t + Math.PI / 2;
+        bird.left.rotation.z = Math.sin(time * 7 + bird.phase) * 0.5;
+        bird.right.rotation.z = -Math.sin(time * 7 + bird.phase) * 0.5;
+      });
+      petals.forEach((petal, i) => {
+        petal.y -= petal.speed * delta;
+        if (petal.y < 0.4) petal.y = 9.5;
+        petalPositions[i * 3] = petal.x + Math.sin(time * 0.8 + petal.phase) * 0.8;
+        petalPositions[i * 3 + 1] = petal.y;
+        petalPositions[i * 3 + 2] = petal.z + Math.cos(time * 0.6 + petal.phase) * 0.5;
+      });
+      petalGeometry.attributes.position.needsUpdate = true;
+      renderer.render(scene, camera);
+    }
+    animate();
+    loading.classList.add('hidden');
+  </script>
+</body>
+</html>

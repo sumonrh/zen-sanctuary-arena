@@ -1,0 +1,10 @@
+{
+  "name": "zen-sanctuary-arena",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:strict": "node scripts/build.mjs --strict"
+  }
+}
