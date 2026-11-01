@@ -72,7 +72,7 @@ passphrase.
 ## Deploy
 
 ```bash
-firebase deploy --only hosting:zen-arena,firestore:rules \
+firebase deploy --only "hosting:zen-arena,firestore:rules" \
   --project cozy-sanctuary-app-2026
 ```
 

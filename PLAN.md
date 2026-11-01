@@ -164,7 +164,7 @@ writes ballots.
 - New, separate Hosting site: `zen-sanctuary-arena` →
   `https://zen-sanctuary-arena.web.app`.
 - Firestore database: `(default)`, `asia-south1` (Mumbai).
-- Deploy: `firebase deploy --only hosting:zen-arena,firestore:rules`.
+- Deploy: `firebase deploy --only "hosting:zen-arena,firestore:rules"`.
 - Never deploy the default site from this repo; the target `zen-arena` is pinned
   in `.firebaserc`.
 - Passphrase rotation: edit `private/passphrase.txt`, run
